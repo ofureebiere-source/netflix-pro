@@ -33,6 +33,11 @@ seek preview, lock, speed, aspect ratio and subtitles all work.
 | A14 | A-B repeat / loop | Niche but loved | **Missing** | P2 |
 | A15 | Playback speed presets + pitch correction | Speed exists; verify pitch handling | **Partial** | P2 |
 | A16 | Data-saver mode that actually caps quality | `dataSaver` toggle does nothing | **Partial** | P1 |
+| A17 | Audio EQ (5-10 band) with presets | MX Player signature; see TODO section 11 | **Missing** | P1 |
+| A18 | Volume amplifier past device maximum | MX Player signature; software gain with limiter | **Missing** | P1 |
+| A19 | Video filters (contrast/saturation/sharpness/hue) | MX Player-class picture control | **Missing** | P2 |
+| A20 | Night mode / blue-light filter | Eye comfort on long sessions | **Missing** | P2 |
+| A21 | Aspect ratio / crop presets | `useAspectRatio` exists; extend to presets | **Partial** | P2 |
 
 ---
 
@@ -67,8 +72,8 @@ was deliberately removed, so this needs a decision on the auth backend.
 
 | # | Feature | Why it matters | Status today | Pri |
 |---|---------|----------------|--------------|-----|
-| C1 | Sign-in (email, Google, Apple) | Required for cross-device sync and multi-user | **Missing** — no auth service | P0 |
-| C2 | Multiple profiles per account | Industry default; drives household retention | **Missing** — no profile screen | P0 |
+| C1 | ~~Sign-in (email, Google, Apple)~~ | **Excluded** — replaced by anonymous device fingerprint (TODO section 9) | Dropped | — |
+| C2 | ~~Multiple profiles per account~~ | **Excluded** — follows from no accounts; one implicit profile per device | Dropped | — |
 | C3 | Per-profile watch history and recommendations | Follows from C2 | **Missing** | P0 |
 | C4 | Kids profile with restricted catalogue | Table stakes for a household product | **Missing** | P0 |
 | C5 | Parental controls: PIN, maturity ratings | 20 files mention maturity but no UI enforces it | **Partial** | P0 |
@@ -131,12 +136,12 @@ Currently nothing. Netflix and Disney+ treat this as a hard requirement.
 
 | # | Feature | Why it matters | Status today | Pri |
 |---|---------|----------------|--------------|-----|
-| G1 | Comments / episode discussions | Service and `CommentItem` exist, entirely unwired | **Partial** | P2 |
+| G1 | ~~Comments / episode discussions~~ | **Excluded** by owner decision | Dropped | — |
 | G2 | Watch party with synced playback | Genuine differentiator; nothing comparable in the codebase | **Missing** | P1 |
 | G3 | Share title / deep link to a title | `deepLinking.ts` exists, unwired | **Partial** | P1 |
 | G4 | Ratings and reviews | Rating plumbing across 51 files, no user-facing submit | **Partial** | P1 |
-| G5 | Follow friends / activity feed | Follows from C1 | **Missing** | P2 |
-| G6 | Referral / invite flow | Growth lever | **Missing** | P2 |
+| G5 | ~~Follow friends / activity feed~~ | **Excluded** by owner decision | Dropped | — |
+| G6 | ~~Referral / invite flow~~ | **Excluded** by owner decision | Dropped | — |
 
 ---
 
@@ -158,7 +163,7 @@ Currently nothing. Netflix and Disney+ treat this as a hard requirement.
 | # | Feature | Why it matters | Status today | Pri |
 |---|---------|----------------|--------------|-----|
 | I1 | **Remove `vidsrc.extractor.module` and `tmdb-embed-providers`** | These are still declared in `package.json` and pinned to a GitHub repo. They are the piracy layer the termux work set out to delete. This is a legal and store-review risk, not a feature | **Present — must go** | **P0** |
-| I2 | Crash reporting and analytics | Cannot operate a streaming app blind | **Missing** — no Sentry/Firebase | P0 |
+| I2 | ~~Sentry / crash reporting~~ | **Excluded** — verified in the sandbox before pushing | Dropped | — |
 | I3 | Error boundaries per screen | `ErrorBoundary.tsx` exists, unwired | **Partial** | P1 |
 | I4 | Offline-first caching strategy | Two competing cache implementations run in parallel today | **Partial** | P1 |
 | I5 | Startup performance budget | Preloader exists; needs measurement | **Partial** | P1 |
@@ -174,9 +179,9 @@ Currently nothing. Netflix and Disney+ treat this as a hard requirement.
 
 | Tier | Count | Themes |
 |------|-------|--------|
-| **P0 — ship blockers** | 24 | Player quality/audio/skip-intro, profiles and parental controls, downloads routed, i18n and geo, accessibility labels, piracy deps removed, tests and CI, crash reporting |
-| **P1 — differentiators** | 30 | Personalised recommendations, top 10 by country, watch party, cast and TV builds, subtitle offset, sleep timer, cross-device sync |
-| **P2 — polish** | 17 | Haptics, avatars, widgets, RTL refinements, niche player modes |
+| **P0 — ship blockers** | 21 | Player quality/audio/skip-intro, parental controls, downloads routed, i18n and geo, accessibility labels, piracy deps removed, tests and CI |
+| **P1 — differentiators** | 32 | Personalised recommendations, top 10 by country, watch party, cast and TV builds, subtitle offset, sleep timer, cross-device sync |
+| **P2 — polish** | 19 | Haptics, avatars, widgets, RTL refinements, niche player modes |
 
 ## The honest read
 
@@ -192,3 +197,10 @@ sitting in `package.json` (I1) are a legal and app-store risk that contradicts
 the entire point of the termux cleanup. And the ~57 hardcoded English strings
 plus the hardcoded `US_REGION` mean the app is currently a US product wearing
 a global label.
+
+## Excluded by owner decision
+
+Not to be built: sign-in and accounts (replaced by an anonymous device
+fingerprint), profile selection, following friends, discussions/comments,
+referral flows, and Sentry. See TODO section 9 for the device-fingerprint
+design that stands in for sign-in.

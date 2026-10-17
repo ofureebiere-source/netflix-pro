@@ -224,6 +224,142 @@ Open questions to confirm before implementing:
 
 ---
 
+## 9. Decisions locked (do not add these)
+
+Confirmed by the owner. Drafted here so nobody re-adds them later.
+
+| Excluded | Why | What replaces it |
+|----------|-----|------------------|
+| Sign-in / accounts (C1) | Anonymous by design. A device fingerprint registers the device instead, so the user never sees a login wall | Device fingerprint identity |
+| Profile selection screen (C2) | Follows from no accounts | Single implicit profile per device |
+| Following friends (G5) | Explicitly out of scope | — |
+| Discussions / comments (G1) | Explicitly out of scope | — |
+| Referral / invites (G6) | Explicitly out of scope | — |
+| Sentry / crash reporting (I2) | Verification happens in this sandbox before pushing | Local compile + test gate |
+
+### Device fingerprint identity (replaces sign-in)
+
+- [ ] Generate a stable device id on first launch and persist it in
+      `expo-secure-store` (already a dependency) so it survives app
+      reinstalls on the same device. Do **not** use a hardware serial —
+      iOS and Android both restrict that; a generated UUID in secure
+      storage is the portable choice.
+- [ ] Register the device against the backend on first run, and send the
+      id on every state call so watch progress, continue-watching and
+      preferences follow the device.
+- [ ] Reinstall behaviour: if secure-store survives reinstall (Keychain on
+      iOS generally does; Android Keystore-backed storage does not always),
+      the user resumes where they left off. If it does not survive, fall
+      back to a server-side match on a weaker signal rather than showing a
+      login screen.
+- [ ] Explicitly **no** login UI anywhere, including "restore account".
+
+## 10. Real backend contract (verified against the live service)
+
+**This is the most important correction in this document.** The code assumes
+a contract the real backend does not implement. Verified by calling the live
+service at `https://netflix-tf79.onrender.com` (the host the player already
+references as a `Referer` at `VideoPlayerScreen.tsx:148`).
+
+The service identifies itself as **"Streaming API" v13.0.0**, providers
+`["vidapi","fzmovies","o2tv","kissasian","dramacool","shortdrama","torrents"]`,
+subtitle sources "SubDL + OpenSubtitles".
+
+| Assumed by `LicensedPlaybackService.ts` | Actually implemented |
+|---|---|
+| `GET /v1/playback?tmdbId=&mediaType=&season=&episode=` | **does not exist (404)** |
+| `GET /v1/download?...` | **does not exist (404)** |
+| Response `{url, type:'hls'\|'dash'\|'mp4', headers?, expiresAt?}` | `{status, info, sources:[{name, data:{stream, subtitle:[…]}}]}` |
+| API key required | **no auth** — works with no key, and a bogus key still returns 200 |
+
+The real endpoints:
+
+| Method | Path | Params |
+|--------|------|--------|
+| GET | `/stream/{dbid}` | `s`, `e`, `title`, `year` |
+| GET | `/smart/{dbid}` | `s`, `e`, `q` |
+| GET | `/rcp/{dbid}` | `type` |
+| GET | `/prorcp/{dbid}` | `type`, `s`, `e`, `title`, `year` |
+| GET | `/fallback/{title}` | `q`, `year` |
+| GET | `/asian` | `title`, `s`, `e`, `provider` |
+| GET | `/shortdrama` | `title`, `site`, `episode` |
+| GET | `/torrent/search` | `title`, `quality` |
+| GET | `/torrent/{dbid}` | `s`, `e`, `title`, `quality` |
+| GET | `/subs` | `url` |
+| GET | `/health`, `/cache/stats`, `POST /cache/clear` | — |
+
+Notes from live probing:
+
+- `/stream/550` returns a working HLS `master.m3u8` plus a SubDL subtitle
+  array. `{dbid}` is the **TMDB id**, which is what the app already has.
+- Subtitles come back inline as `{lang, file, label}`, so the app should
+  consume them from the same response rather than calling OpenSubtitles or
+  SubDL separately. Those two providers become redundant.
+- `/health` reports the provider list; useful for a startup capability check.
+- **No API key is enforced.** The `EXPO_PUBLIC_LICENSED_BACKEND_API_KEY`
+  plumbing in `LicensedPlaybackService.ts` is dead weight — keep it as an
+  optional header for a future gate, but do not treat it as required.
+
+- [ ] **Rewrite `LicensedPlaybackService.ts` against the real contract.**
+      Point it at `/stream/{tmdbId}` (with `s`/`e` for TV), parse
+      `sources[0].data.stream` as the HLS URL, and map `subtitle[]` into the
+      player's existing `subtitlesParam` shape. This is the single highest
+      priority wiring task — playback currently cannot work.
+- [ ] Set `EXPO_PUBLIC_LICENSED_BACKEND_URL=https://netflix-tf79.onrender.com`
+      and drop the placeholder `netflix-pro-backend.onrender.com`.
+- [ ] Decide the fallback chain: `/stream` → `/smart` → `/fallback/{title}`
+      → `/torrent/{dbid}`. `/smart/1399` returned "No streams found" in
+      testing and `/fallback/Inception` returned a **500 with a Python
+      ImportError** (`cannot import name 'get_fallback_stream' from
+      'models.fzmovies'`), so that fallback is currently broken server-side
+      and needs fixing on the Render service, not in the app.
+- [ ] Add a `/health` capability probe on startup so the app degrades
+      gracefully when a provider is down.
+- [ ] Confirm the `Referer` strategy at `VideoPlayerScreen.tsx:148` is still
+      needed now that the real host is known — it was added as a guess.
+
+## 11. MX Player-class playback controls (requested)
+
+The player already has brightness, volume, gesture seek and a subtitle
+settings modal. These are the extras that make it match MX Player.
+
+- [ ] **Audio EQ.** A multi-band equaliser (at minimum 5-band, ideally
+      10-band) with presets — Flat, Bass Boost, Treble, Vocal, Loudness.
+      `expo-audio`/`expo-video` do not expose EQ, so this needs a native
+      audio effect module (Android `AudioEffect`/`Equalizer`, iOS
+      `AVAudioUnitEQ`) behind an Expo config plugin. This is the largest
+      piece of native work in the roadmap.
+- [ ] **Volume amplifier beyond the device maximum.** MX Player's signature
+      feature — software gain above 100% system volume. Implement as a
+      pre-amp/gain stage in the same native audio chain as the EQ, with
+      clipping protection and a visible warning above ~150%. Must not
+      distort; a hard limiter is required, not just multiplication.
+- [ ] **Per-title audio profile memory** — remember EQ and gain per title,
+      same mechanism as A6.
+- [ ] **Subtitle styling beyond size**: font family (including a
+      dyslexia-friendly option), weight, colour, background box opacity,
+      outline/shadow thickness, vertical position, and per-line vs whole
+      caption. `SubtitleSettingsModal.tsx` and `useSubtitles.stylePrefs`
+      already exist and need extending plus wiring to the Settings values.
+- [ ] **Video filters**: brightness, contrast, saturation, sharpness,
+      hue, and a night-mode/blue-light filter. Android `SurfaceView` +
+      OpenGL shader or `MediaCodec` effects; iOS `AVPlayerItemVideoOutput`
+      with a Core Image chain.
+- [ ] **Aspect ratio / crop presets** — fit, fill, stretch, 16:9, 4:3,
+      zoom. `useAspectRatio.ts` exists; extend it from a toggle into a
+      preset list.
+- [ ] **Night mode / eye protection** overlay with a colour-temperature
+      slider.
+- [ ] **Gesture customisation** (A12) — user picks which side does volume
+      vs brightness vs seek.
+
+Note on scope: EQ, volume amplification and video filters are **native
+modules**, not JavaScript. They need config plugins and a custom dev client,
+which means they cannot be tested in a plain Expo Go build. This is worth
+confirming before starting, because it changes the build workflow.
+
+---
+
 ## Suggested order
 
 1. Wire the settings that already have UI (skip-intro, quality, subtitle
@@ -236,4 +372,8 @@ Open questions to confirm before implementing:
 7. Add ipapi.co country detection, then wire language and region through the
    preloader, home screen and recommendation path (section 8).
 8. Add the UI i18n layer so the interface follows the locale too.
-9. Decide and build the recognition engine.
+9. Rewrite LicensedPlaybackService against the real /stream contract (section 10)
+   — playback cannot work until this lands.
+10. Add device-fingerprint identity in place of sign-in (section 9).
+11. Build the MX Player-class audio chain: EQ then volume amplifier (section 11).
+12. Decide and build the recognition engine.
