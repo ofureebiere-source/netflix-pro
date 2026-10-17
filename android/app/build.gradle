@@ -92,7 +92,6 @@ android {
 }
 
 dependencies {
-    implementation project(':boxoffice')
     implementation("com.facebook.react:react-android")
 
     if (hermesEnabled.toBoolean()) {
