@@ -11,28 +11,12 @@ const MAX_SEARCH_HISTORY_ITEMS = 15;
 const LAST_SUBTITLE_LANG_KEY = 'lastSubtitleLanguage';
 const SUBTITLES_ENABLED_KEY = 'subtitlesEnabled'; // New key for enabled state
 
-// --- Stream Source Order ---
-const STREAM_SOURCE_ORDER_KEY = 'streamSourceOrder';
-const STREAM_SOURCE_SIGNATURE_KEY = 'streamSourceSignature';
-
 export const STORAGE_KEYS = {
   DOWNLOADS_INDEX: 'downloads_index',
   DOWNLOAD_SETTINGS: 'download_settings',
-  STREAM_SOURCES_ORDER: 'stream_sources_order',
   CHECK_UPDATES: 'check_updates',
   LAST_UPDATE_CHECK: 'last_update_check',
 };
-
-export const FLUX_SOURCE_URL = 'https://streamprovider.byteful.me/';
-
-// Define default sources here, so it's accessible by other modules if needed
-// This should match the `name` property of the sources in vidsrcApi.js
-// Also include defaultBaseUrl which will be used by vidsrcApi.js if a source is newly added.
-export const DEFAULT_STREAM_SOURCES = [
-  { name: 'FluxSource', timeoutInSeconds: 15, type: 'direct', defaultBaseUrl: FLUX_SOURCE_URL },
-  // { name: 'hexa.su', timeoutInSeconds: 10, type: 'direct', defaultBaseUrl: 'https://hexa.su/watch' },
-  { name: 'cineby.gd', timeoutInSeconds: 10, type: 'direct', defaultBaseUrl: 'https://cineby.gd' },
-];
 
 // --- Downloads Directory / Content Path Helpers ---
 
@@ -404,69 +388,68 @@ export const getLastSelectedSubtitleLanguage = getSubtitleLanguagePreference;
 
 // --- End Subtitle Preference Functions ---
 
-export const saveStreamSourceOrder = async (sourceOrder: any[]) => {
-  // sourceOrder should be an array of objects like: { name: 'vidsrc.cc', timeoutInSeconds: 20 }
-  // We only really need to store the names and their order. Timeouts can be part of this object too.
+// --- Subtitle Style/Delay Preferences (MX-Player-style customization) ---
+const SUBTITLE_STYLE_KEY = 'subtitleStylePrefs';
+
+export interface SubtitleStylePrefs {
+  fontScale: number; // multiplier applied to the base font size, e.g. 0.8-1.6
+  delaySeconds: number; // positive = subtitles appear later, negative = earlier
+  backgroundOpacity: number; // 0 (transparent) - 1 (solid)
+}
+
+export const DEFAULT_SUBTITLE_STYLE: SubtitleStylePrefs = {
+  fontScale: 1.0,
+  delaySeconds: 0,
+  backgroundOpacity: 0.65,
+};
+
+export const saveSubtitleStylePrefs = async (prefs: SubtitleStylePrefs) => {
   try {
-    const storableOrder = sourceOrder.map(s => ({ name: s.name, timeoutInSeconds: s.timeoutInSeconds }));
-    await AsyncStorage.setItem(STREAM_SOURCE_ORDER_KEY, JSON.stringify(storableOrder));
+    await AsyncStorage.setItem(SUBTITLE_STYLE_KEY, JSON.stringify(prefs));
+    return true;
   } catch (error) {
-    console.error('Error saving stream source order:', error);
+    console.error('Error saving subtitle style prefs:', error);
+    return false;
   }
 };
 
-export const getStreamSourceOrder = async () => {
+export const getSubtitleStylePrefs = async (): Promise<SubtitleStylePrefs> => {
   try {
-    // Create a signature of the current default sources to detect updates
-    const defaultSourceSignature = JSON.stringify(DEFAULT_STREAM_SOURCES.map(s => s.name));
-    const storedSignature = await AsyncStorage.getItem(STREAM_SOURCE_SIGNATURE_KEY);
-
-    let storedOrderJson = null;
-
-    // If the signature has changed, it means the default list was updated.
-    // In this case, we reset the user's stored order to the new defaults.
-    if (defaultSourceSignature !== storedSignature) {
-      await AsyncStorage.removeItem(STREAM_SOURCE_ORDER_KEY);
-      await AsyncStorage.setItem(STREAM_SOURCE_SIGNATURE_KEY, defaultSourceSignature);
-      // storedOrderJson remains null, so the logic below will use the new defaults.
-    } else {
-      // Signatures match, so we can safely load the user's custom order.
-      storedOrderJson = await AsyncStorage.getItem(STREAM_SOURCE_ORDER_KEY);
-    }
-
-    let effectiveOrder = [...DEFAULT_STREAM_SOURCES.map(s => ({ ...s }))]; // Start with a deep copy of defaults
-
-    if (storedOrderJson) {
-      const storedOrder = JSON.parse(storedOrderJson);
-      // Create a new array based on storedOrder, validating against DEFAULT_STREAM_SOURCES
-      const orderedFromStorage = storedOrder.map((storedSource: any) => {
-        const defaultDetail = DEFAULT_STREAM_SOURCES.find(ds => ds.name === storedSource.name);
-        if (defaultDetail) {
-          // Merge stored order with default details to ensure consistency
-          return {
-            ...defaultDetail, // Start with all default properties
-            name: storedSource.name, // The name is the key identifier
-          };
-        }
-        return null; // This source from storage is no longer in defaults
-      }).filter(Boolean); // Remove nulls
-
-      // Add any new default sources that weren't in the stored order
-      const newSources = DEFAULT_STREAM_SOURCES.filter((defaultSource: any) =>
-        !orderedFromStorage.some((os: any) => os.name === defaultSource.name)
-      );
-
-      effectiveOrder = [...orderedFromStorage, ...newSources.map((s: any) => ({ ...s }))];
-    }
-
-    return effectiveOrder;
-
+    const raw = await AsyncStorage.getItem(SUBTITLE_STYLE_KEY);
+    if (!raw) return { ...DEFAULT_SUBTITLE_STYLE };
+    const parsed = JSON.parse(raw);
+    return { ...DEFAULT_SUBTITLE_STYLE, ...parsed };
   } catch (error) {
-    console.error('Error getting stream source order:', error);
-    return [...DEFAULT_STREAM_SOURCES.map(s => ({ ...s }))]; // Return a deep copy on error
+    console.error('Error getting subtitle style prefs:', error);
+    return { ...DEFAULT_SUBTITLE_STYLE };
   }
 };
-// --- End Stream Source Order ---
+// --- End Subtitle Style/Delay Preferences ---
+
+// --- Playback Speed Preference ---
+const PLAYBACK_SPEED_KEY = 'playbackSpeedPreference';
+
+export const savePlaybackSpeedPreference = async (speed: number) => {
+  try {
+    await AsyncStorage.setItem(PLAYBACK_SPEED_KEY, String(speed));
+    return true;
+  } catch (error) {
+    console.error('Error saving playback speed preference:', error);
+    return false;
+  }
+};
+
+export const getPlaybackSpeedPreference = async (): Promise<number> => {
+  try {
+    const raw = await AsyncStorage.getItem(PLAYBACK_SPEED_KEY);
+    const parsed = raw ? parseFloat(raw) : 1.0;
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 1.0;
+  } catch (error) {
+    console.error('Error getting playback speed preference:', error);
+    return 1.0;
+  }
+};
+// --- End Playback Speed Preference ---
 
 export default {
   saveWatchProgress,
@@ -490,13 +473,8 @@ export default {
   getSubtitleLanguagePreference,
   saveLastSelectedSubtitleLanguage,
   getLastSelectedSubtitleLanguage,
-  // Stream Source Order
-  saveStreamSourceOrder,
-  getStreamSourceOrder,
-  DEFAULT_STREAM_SOURCES,
   // Downloads helpers
   STORAGE_KEYS,
-  FLUX_SOURCE_URL,
   getDownloadsDirectory,
   getContentDirectory,
   generateDownloadId,

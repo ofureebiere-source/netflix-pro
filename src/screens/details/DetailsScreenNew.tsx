@@ -10,6 +10,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 }
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import ReanimatedAnimated, { FadeInDown, useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -29,7 +30,9 @@ import {
 } from '../../services/unified/metadata/TMDBMetadata';
 import { getDownloadSettings } from '../../utils/downloadStorage';
 import { buildFFmpegHeaders } from '../../utils/streamHeaders';
-import { apiService } from '../../api/ApiService';
+import { getPlaybackSource, LicensedPlaybackSource } from '../../services/licensedPlayback/LicensedPlaybackService';
+import { GlassButton } from '../../components/glass';
+import { SPACING, RADIUS } from '../../theme/tokens';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -94,49 +97,9 @@ interface Comment {
   id: string; username: string; text: string; timestamp: string; likes: number; rating?: number;
 }
 type EpisodeViewMode = 'grid' | 'list';
-interface SupabaseAdBanner {
-  id: string; image_url: string; link_url: string; cpm: number; click_count: number; is_active: boolean;
-}
-interface ApiStreamResponse {
-  status: number; info?: string; provider?: string;
-  sources?: Array<{ name: string; data: { stream: string; subtitle: string[]; quality: string; title: string; imdb_id: string; thumbnails: string; is_torrent?: boolean; magnet?: string; }; }>;
-  stream_url?: string; meta?: any;
-}
 
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-
-async function fetchActiveAdBanner(): Promise<SupabaseAdBanner | null> {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
-  try {
-    const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/ad_banners?select=*&is_active=eq.true&order=created_at.desc&limit=1`,
-      { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
-    );
-    if (!response.ok) return null;
-    const rows: SupabaseAdBanner[] = await response.json();
-    return rows && rows.length > 0 ? rows[0] : null;
-  } catch (error) {
-    console.warn('[AdBanner] Fetch error:', error);
-    return null;
-  }
-}
-
-async function trackAdBannerClick(bannerId: string, currentClickCount: number): Promise<void> {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
-  try {
-    await fetch(`${SUPABASE_URL}/rest/v1/ad_banners?id=eq.${bannerId}`, {
-      method: 'PATCH',
-      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-      body: JSON.stringify({ click_count: currentClickCount + 1 }),
-    });
-  } catch (error) {
-    console.warn('[AdBanner] Click tracking error:', error);
-  }
-}
-
-const QUALITY_ORDER = ['1080p', '720p', '480p'];
 const MAX_RECOMMENDATIONS = 12;
+const AnimatedImage = ReanimatedAnimated.createAnimatedComponent(Image);
 const WATCHLIST_KEY = 'search_screen_watchlist_ids';
 
 const getWatchlistIds = async (): Promise<Set<string>> => {
@@ -170,33 +133,6 @@ const chunkEpisodesIntoPages = <T,>(items: T[], pageSize: number): T[][] => {
   const pages: T[][] = [];
   for (let i = 0; i < items.length; i += pageSize) pages.push(items.slice(i, i + pageSize));
   return pages;
-};
-
-const extractQuality = (source: any): string => {
-  if (source.data?.quality) {
-    const q = source.data.quality.toLowerCase();
-    if (q.includes('1080')) return '1080p';
-    if (q.includes('720')) return '720p';
-    if (q.includes('480')) return '480p';
-    return q;
-  }
-  return '720p';
-};
-
-const getBestStream = (sources: any[]): { url: string; quality: string; isTorrent: boolean } => {
-  if (!sources || sources.length === 0) return { url: '', quality: '720p', isTorrent: false };
-  const sorted = [...sources].sort((a, b) => {
-    const qA = extractQuality(a); const qB = extractQuality(b);
-    const idxA = QUALITY_ORDER.indexOf(qA); const idxB = QUALITY_ORDER.indexOf(qB);
-    if (idxA === -1 && idxB === -1) return 0;
-    if (idxA === -1) return 1;
-    if (idxB === -1) return -1;
-    return idxA - idxB;
-  });
-  const bestSource = sorted[0];
-  const url = bestSource.data?.stream || bestSource.data?.url || '';
-  const isTorrent = bestSource.data?.is_torrent === true || (url && url.includes('webtor.io/embed'));
-  return { url, quality: extractQuality(bestSource), isTorrent };
 };
 
 const isTorrentUrl = (url: string): boolean => {
@@ -298,7 +234,8 @@ const DetailsScreenNew: React.FC = () => {
   const commentScrollY = useRef(new Animated.Value(0)).current;
   const commentLoopRef = useRef<Animated.CompositeAnimation | null>(null);
   const [showFullSynopsis, setShowFullSynopsis] = useState(false);
-  const [adBanner, setAdBanner] = useState<SupabaseAdBanner | null>(null);
+  const backdropOpacity = useSharedValue(0);
+  const backdropAnimatedStyle = useAnimatedStyle(() => ({ opacity: backdropOpacity.value }));
   const [isOffline, setIsOffline] = useState(false);
   const [isExtractingStream, setIsExtractingStream] = useState(false);
   const [watcherCount, setWatcherCount] = useState(0);
@@ -415,7 +352,6 @@ const DetailsScreenNew: React.FC = () => {
     return () => loop.stop();
   }, []);
 
-  useEffect(() => { let c = false; fetchActiveAdBanner().then(b => { if (!c) setAdBanner(b); }); return () => { c = true; }; }, []);
   useEffect(() => { const unsub = NetInfo.addEventListener((s) => setIsOffline(s.isConnected === false || s.isInternetReachable === false)); return () => unsub(); }, []);
   useEffect(() => {
     let c = false;
@@ -463,85 +399,36 @@ const DetailsScreenNew: React.FC = () => {
     try {
       const seasonToUse = seasonNum || selectedSeason || 1;
       const episodeToUse = episodeNum || 1;
-      console.log(`[Details] 🔍 Fetching stream from API for TMDB ID: ${tmdbId}, S${seasonToUse}E${episodeToUse}`);
+      console.log(`[Details] 🔍 Fetching licensed playback source for TMDB ID: ${tmdbId}, S${seasonToUse}E${episodeToUse}`);
 
-      // Check preloaded streams
-      const preloadedStreams = usePreloadedMediaStore.getState().getPreloadedStreams(String(mediaId));
-      if (preloadedStreams && preloadedStreams.streams.length > 0) {
-        console.log('[Details] ⚡ Using preloaded stream');
-        const stream = preloadedStreams.streams[0];
-        const isTorrent = stream.url && stream.url.includes('webtor.io/embed');
-        const result = { url: stream.url, quality: '720p', isTorrent, allSources: preloadedStreams.streams.map((s: any) => ({ data: { stream: s.url, quality: '720p' } })), provider: 'preloaded' };
-        setStreamData(result);
-        setSelectedStreamUrl(result.url);
-        setSelectedProvider('preloaded');
-        setIsTorrentStream(result.isTorrent);
-        const qualities: DownloadQuality[] = preloadedStreams.qualities.map(q => ({ label: q, resolution: q, size: 'Unknown', sizeBytes: 0, url: result.url, provider: 'preloaded', isRecommended: q === '480p' }));
-        setDownloadQualities(qualities);
-        if (!isTVShow && qualities.length > 0) setPendingQuality(qualities[0]);
-        setIsExtractingStream(false);
-        return result;
-      }
+      const source: LicensedPlaybackSource = await getPlaybackSource({
+        tmdbId,
+        mediaType: isTVShow ? 'tv' : 'movie',
+        season: isTVShow ? seasonToUse : undefined,
+        episode: isTVShow ? episodeToUse : undefined,
+      });
 
-      // Fetch from API
-      let apiUrl = '';
-      if (isTVShow) {
-        apiUrl = `${apiService.baseUrl}/stream/${tmdbId}?s=${seasonToUse}&e=${episodeToUse}&title=${encodeURIComponent(displayTitle)}`;
-      } else {
-        apiUrl = `${apiService.baseUrl}/stream/${tmdbId}?title=${encodeURIComponent(displayTitle)}`;
-      }
-      console.log(`[Details] 📡 Calling API: ${apiUrl}`);
+      console.log(`[Details] ✅ Playback source: ${source.url} (${source.type})`);
 
-      const response = await fetch(apiUrl, { method: 'GET', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' } });
-      if (!response.ok) throw new Error(`API returned ${response.status}: ${response.statusText}`);
-
-      const responseData: ApiStreamResponse = await response.json();
-      console.log(`[Details] ✅ API Response received`);
-
-      let streamUrl = ''; let isTorrent = false; let quality = '720p'; let allSources: any[] = []; let provider = responseData.provider || 'api';
-
-      if (responseData && responseData.sources && responseData.sources.length > 0) {
-        allSources = responseData.sources;
-        const best = getBestStream(responseData.sources);
-        streamUrl = best.url; quality = best.quality; isTorrent = best.isTorrent;
-        if (!isTorrent) isTorrent = responseData.sources.some((s: any) => s.data?.is_torrent === true || (s.data?.stream && s.data.stream.includes('webtor.io/embed')));
-        console.log(`[Details] ✅ Stream URL: ${streamUrl}, Quality: ${quality}, Torrent: ${isTorrent}`);
-      } else if (responseData && responseData.stream_url) {
-        streamUrl = responseData.stream_url;
-        isTorrent = streamUrl && streamUrl.includes('webtor.io/embed');
-        quality = '720p';
-        allSources = [{ data: { stream: streamUrl, quality: '720p' } }];
-        provider = responseData.provider || 'api';
-        console.log(`[Details] ✅ Using stream_url: ${streamUrl}, Torrent: ${isTorrent}`);
-      } else {
-        console.warn('[Details] ❌ No sources in API response');
-        setIsExtractingStream(false);
-        return null;
-      }
-
-      if (!streamUrl) { setIsExtractingStream(false); return null; }
-
-      const result = { url: streamUrl, quality, isTorrent, allSources, provider };
+      const result = { url: source.url, quality: 'HD', isTorrent: false, allSources: [source], provider: 'licensed' };
       setStreamData(result);
-      setSelectedStreamUrl(streamUrl);
-      setSelectedProvider(provider);
-      setIsTorrentStream(isTorrent);
+      setSelectedStreamUrl(result.url);
+      setSelectedProvider('licensed');
+      setIsTorrentStream(false);
 
-      const qualities: DownloadQuality[] = allSources.map((source, index) => ({
-        label: extractQuality(source), resolution: extractQuality(source), size: 'Unknown', sizeBytes: 0,
-        url: source.data?.stream || source.data?.url || streamUrl, provider, isRecommended: index === 0,
-      }));
-      const uniqueQualities = qualities.filter((q, index, self) => index === self.findIndex(t => t.label === q.label));
-      setDownloadQualities(uniqueQualities);
-      if (!isTVShow && uniqueQualities.length > 0) setPendingQuality(uniqueQualities[0]);
+      const qualities: DownloadQuality[] = [
+        { label: 'HD', resolution: 'HD', size: 'Unknown', sizeBytes: 0, url: result.url, provider: 'licensed', isRecommended: true },
+      ];
+      setDownloadQualities(qualities);
+      if (!isTVShow) setPendingQuality(qualities[0]);
       setIsExtractingStream(false);
       return result;
     } catch (error) {
-      console.error('[Details] ❌ API stream extraction failed:', error);
+      console.warn('[Details] Licensed playback source unavailable:', error);
       setIsExtractingStream(false);
       return null;
     }
-  }, [tmdbId, mediaId, isTVShow, selectedSeason, displayTitle]);
+  }, [tmdbId, isTVShow, selectedSeason]);
 
   useEffect(() => { extractStreamFromAPI(); }, [extractStreamFromAPI]);
 
@@ -646,7 +533,8 @@ const DetailsScreenNew: React.FC = () => {
     try {
       const probeSession = await FFprobeKit.getMediaInformation(streamUrl);
       const mediaInfo = await probeSession.getMediaInformation();
-      const durationSec = mediaInfo ? parseFloat(mediaInfo.getDuration()) : NaN;
+      const durationVal = mediaInfo ? mediaInfo.getDuration() : NaN;
+      const durationSec = typeof durationVal === 'number' ? durationVal : parseFloat(String(durationVal));
       if (!Number.isNaN(durationSec) && durationSec > 0) totalDurationMs = durationSec * 1000;
     } catch (probeError) {
       console.warn('[Download] Could not probe duration, falling back to indeterminate progress:', probeError);
@@ -673,7 +561,7 @@ const DetailsScreenNew: React.FC = () => {
           resolveResult({ success: false, failLog });
         }
       },
-      (log) => { try { const message = log?.getMessage?.(); if (message) liveLogLines.push(message); } catch {} },
+      (log) => { try { const message = log?.getMessage?.(); if (message) liveLogLines.push(String(message)); } catch {} },
       (statistics) => { if (totalDurationMs > 0 && onProgress) onProgress(Math.min((statistics.getTime() / totalDurationMs) * 100, 100)); }
     );
     return { sessionId: session.getSessionId(), result };
@@ -703,32 +591,29 @@ const DetailsScreenNew: React.FC = () => {
           const outputPath = `${downloadsDir}/${id}_${quality.label}.mp4`;
           try {
             let epStreamUrl = streamData.url;
+            let epReferer: string | undefined;
             try {
-              const apiUrl = `${apiService.baseUrl}/stream/${tmdbId}?s=${ep.seasonNumber}&e=${ep.episodeNumber}&title=${encodeURIComponent(displayTitle)}`;
-              const response = await fetch(apiUrl);
-              if (response.ok) {
-                const data: ApiStreamResponse = await response.json();
-                if (data && data.sources && data.sources.length > 0) {
-                  const best = getBestStream(data.sources);
-                  if (best.url) { if (best.isTorrent) throw new Error('Torrent streams cannot be downloaded'); epStreamUrl = best.url; }
-                } else if (data && data.stream_url) {
-                  const url = data.stream_url;
-                  if (url && url.includes('webtor.io/embed')) throw new Error('Torrent streams cannot be downloaded');
-                  epStreamUrl = url;
-                }
+              const epSource = await getPlaybackSource({
+                tmdbId,
+                mediaType: 'tv',
+                season: ep.seasonNumber,
+                episode: ep.episodeNumber,
+              });
+              if (epSource.url) {
+                epStreamUrl = epSource.url;
+                epReferer = epSource.headers?.Referer;
               }
             } catch (extractError) {
-              console.warn(`[Download] Per-episode API extraction failed for S${ep.seasonNumber}E${ep.episodeNumber}:`, extractError);
+              console.warn(`[Download] Per-episode licensed source lookup failed for S${ep.seasonNumber}E${ep.episodeNumber}:`, extractError);
               throw new Error('Failed to fetch episode stream');
             }
             if (!epStreamUrl) throw new Error('No stream URL available for this episode');
-            addDownload({ id, title, mediaType: 'tv', tmdbId: String(mediaId), posterPath: displayPoster, quality: quality.label, size: quality.size, sizeBytes: quality.sizeBytes, provider: quality.provider || 'api', season: ep.seasonNumber, episode: ep.episodeNumber, episodeTitle: ep.title, filePath: outputPath });
-            const referer = `https://netflix-tf79.onrender.com/`;
+            addDownload({ id, title, mediaType: 'tv', tmdbId: String(mediaId), posterPath: displayPoster, quality: quality.label, size: quality.size, sizeBytes: quality.sizeBytes, provider: quality.provider || 'licensed', season: ep.seasonNumber, episode: ep.episodeNumber, episodeTitle: ep.title, filePath: outputPath });
             const { sessionId, result } = await startFFmpegDownload(epStreamUrl, outputPath, (percent) => {
               const totalProgress = ((completedCount + percent / 100) / total) * 100;
               setDownloadProgress(totalProgress);
               setDownloadStatusText(`Downloading ${completedCount + 1}/${total} episodes`);
-            }, referer);
+            }, epReferer);
             episodeFfmpegSessionIdsRef.current.set(id, sessionId);
             const outcome = await result;
             episodeFfmpegSessionIdsRef.current.delete(id);
@@ -756,14 +641,14 @@ const DetailsScreenNew: React.FC = () => {
 
       const outputPath = `${downloadsDir}/${mediaType}_${mediaId}_${quality.label}.mp4`;
       ffmpegSessionIdRef.current = null;
-      const referer = `https://netflix-tf79.onrender.com/`;
+      const referer = (streamData.allSources?.[0] as LicensedPlaybackSource | undefined)?.headers?.Referer;
       const { sessionId, result } = await startFFmpegDownload(streamData.url, outputPath, (percent) => setDownloadProgress(percent), referer);
       ffmpegSessionIdRef.current = sessionId;
       const outcome = await result;
       ffmpegSessionIdRef.current = null;
       if (outcome.success) {
         setIsDownloading(false); setDownloadProgress(0); setDownloadStatusText('Download Now'); setPendingQuality(null); setIsDownloadDropdownOpen(false);
-        addDownload({ id: `${mediaType}_${mediaId}`, title: displayTitle, mediaType: mediaType as 'movie' | 'tv', tmdbId: String(mediaId), posterPath: displayPoster, quality: quality.label, size: quality.size, sizeBytes: quality.sizeBytes, provider: quality.provider || 'api', filePath: outputPath });
+        addDownload({ id: `${mediaType}_${mediaId}`, title: displayTitle, mediaType: mediaType as 'movie' | 'tv', tmdbId: String(mediaId), posterPath: displayPoster, quality: quality.label, size: quality.size, sizeBytes: quality.sizeBytes, provider: quality.provider || 'licensed', filePath: outputPath });
       } else if (outcome.cancelled) {
         setIsDownloading(false); setDownloadProgress(0); setDownloadStatusText('Download Now');
       } else {
@@ -1135,15 +1020,6 @@ const DetailsScreenNew: React.FC = () => {
     );
   };
 
-  const renderAdBanner = () => {
-    if (!adBanner) return null;
-    return (
-      <TouchableOpacity style={styles.adBannerContainer} onPress={async () => { trackAdBannerClick(adBanner.id, adBanner.click_count); try { await Linking.openURL(adBanner.link_url); } catch (e) { console.warn('[AdBanner] Failed to open link:', e); showToast('Unable to open ad link'); } }} activeOpacity={0.9}>
-        <Image source={{ uri: adBanner.image_url }} style={styles.adBannerImage} resizeMode="cover" />
-      </TouchableOpacity>
-    );
-  };
-
   const renderMetadata = () => {
     const hasSynopsis = displayOverview && displayOverview.length > 0;
     return (
@@ -1189,10 +1065,6 @@ const DetailsScreenNew: React.FC = () => {
         <Ionicons name="arrow-back" size={20} color="#fff" />
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.watchlistButton} onPress={handleToggleWatchlist} activeOpacity={0.8} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-        <Ionicons name={isInWatchlist ? 'bookmark' : 'bookmark-outline'} size={20} color={isInWatchlist ? colors.gold : '#fff'} />
-      </TouchableOpacity>
-
       {isOffline && (
         <View style={styles.offlineBanner}>
           <Ionicons name="cloud-offline-outline" size={13} color="#fff" />
@@ -1204,7 +1076,12 @@ const DetailsScreenNew: React.FC = () => {
         refreshControl={<RefreshControl refreshing={false} onRefresh={onRefresh} tintColor={colors.gold} />}>
         <View style={styles.headerContainer}>
           {displayBackdrop ? (
-            <Image source={{ uri: displayBackdrop }} style={styles.backdropImage} resizeMode="cover" />
+            <AnimatedImage
+              source={{ uri: displayBackdrop }}
+              style={[styles.backdropImage, backdropAnimatedStyle]}
+              resizeMode="cover"
+              onLoad={() => { backdropOpacity.value = withTiming(1, { duration: 350 }); }}
+            />
           ) : (
             <View style={[styles.backdropPlaceholder, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]} />
           )}
@@ -1226,42 +1103,58 @@ const DetailsScreenNew: React.FC = () => {
               </View>
             ))}
           </View>
-          <TouchableOpacity style={[styles.watchNowButton, { backgroundColor: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.5)', borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.2)' }]} onPress={handleWatchNow} activeOpacity={0.8}>
-            <LinearGradient colors={['rgba(232,168,56,0.3)', 'rgba(232,168,56,0.1)']} style={styles.watchNowGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
-            <Ionicons name="play" size={14} color="#fff" />
-            <Text style={styles.watchNowText}>Watch Now</Text>
-          </TouchableOpacity>
         </View>
 
-        {/* ─── DOWNLOAD SECTION - HIDDEN FOR TORRENT STREAMS ─── */}
-        {!isTorrentStream && (
-          <View style={styles.downloadSection}>
-            <TouchableOpacity style={[styles.downloadButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)', borderWidth: 1 }]}
-              onPress={() => {
-                if (isOffline) { showToast("You're offline — downloads need an internet connection"); return; }
-                if (!isDownloading) {
-                  const newState = !isDownloadDropdownOpen;
-                  setIsDownloadDropdownOpen(newState);
-                  if (newState && downloadQualities.length === 0 && !streamData) loadStreamsForDownload();
-                  if (!isTVShow && downloadQualities.length > 0 && !pendingQuality) setPendingQuality(downloadQualities[0]);
-                }
-              }} activeOpacity={0.7}>
-              <Ionicons name={isDownloading ? 'download' : 'download-outline'} size={20} color={isDownloading ? colors.gold : colors.text} />
-              <Text style={[styles.downloadButtonText, { color: isDownloading ? colors.gold : colors.text }]}>{isDownloading ? downloadStatusText : 'Download Now'}</Text>
-              {isDownloading && <View style={styles.downloadProgressBar}><View style={[styles.downloadProgressFill, { backgroundColor: colors.gold, width: `${downloadProgress}%` }]} /></View>}
-              <Ionicons name={isDownloadDropdownOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textMuted} />
-            </TouchableOpacity>
-            {renderDownloadDropdown()}
+        {/* ─── Unified glass action bar: play / download / add to list ─── */}
+        <View style={styles.actionBarSection}>
+          <View style={styles.actionBarRow}>
+            <GlassButton
+              icon={<Ionicons name="play" size={18} color={colors.text} />}
+              label="Watch Now"
+              onPress={handleWatchNow}
+              style={styles.actionBarPrimary}
+            />
+            {!isTorrentStream && (
+              <GlassButton
+                icon={<Ionicons name={isDownloading ? 'download' : 'download-outline'} size={18} color={isDownloading ? colors.gold : colors.text} />}
+                label={isDownloading ? downloadStatusText : 'Download'}
+                onPress={() => {
+                  if (isOffline) { showToast("You're offline — downloads need an internet connection"); return; }
+                  if (!isDownloading) {
+                    const newState = !isDownloadDropdownOpen;
+                    setIsDownloadDropdownOpen(newState);
+                    if (newState && downloadQualities.length === 0 && !streamData) loadStreamsForDownload();
+                    if (!isTVShow && downloadQualities.length > 0 && !pendingQuality) setPendingQuality(downloadQualities[0]);
+                  }
+                }}
+                style={styles.actionBarSecondary}
+              />
+            )}
+            <GlassButton
+              icon={<Ionicons name={isInWatchlist ? 'bookmark' : 'bookmark-outline'} size={18} color={isInWatchlist ? colors.gold : colors.text} />}
+              onPress={handleToggleWatchlist}
+            />
           </View>
-        )}
+          {isDownloading && (
+            <View style={[styles.actionBarProgressTrack, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }]}>
+              <View style={[styles.actionBarProgressFill, { backgroundColor: colors.gold, width: `${downloadProgress}%` }]} />
+            </View>
+          )}
+          {!isTorrentStream && renderDownloadDropdown()}
+        </View>
 
-        {renderMetadata()}
+        <ReanimatedAnimated.View entering={FadeInDown.delay(50).duration(400)}>
+          {renderMetadata()}
+        </ReanimatedAnimated.View>
 
         {/* ─── NEW: PLAYABLE EPISODES SECTION ─── */}
-        {renderEpisodesSection()}
+        <ReanimatedAnimated.View entering={FadeInDown.delay(120).duration(400)}>
+          {renderEpisodesSection()}
+        </ReanimatedAnimated.View>
 
-        {renderRecommendations()}
-        {renderAdBanner()}
+        <ReanimatedAnimated.View entering={FadeInDown.delay(190).duration(400)}>
+          {renderRecommendations()}
+        </ReanimatedAnimated.View>
         <View style={styles.bottomSpacer} />
       </ScrollView>
       {renderCommentsOverlay()}
@@ -1272,7 +1165,13 @@ const DetailsScreenNew: React.FC = () => {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   backButton: { position: 'absolute', top: 12, left: 16, zIndex: 200, width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
-  watchlistButton: { position: 'absolute', top: 12, right: 16, zIndex: 200, width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  actionBarSection: { paddingHorizontal: SPACING.lg, paddingTop: SPACING.md, paddingBottom: SPACING.sm, position: 'relative', zIndex: 100 },
+  actionBarRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  actionBarPrimary: { flex: 1 },
+  actionBarSecondary: { flex: 1 },
+  actionBarProgressTrack: { height: 3, borderRadius: RADIUS.xs, marginTop: SPACING.sm, overflow: 'hidden' },
+  actionBarProgressFill: { height: '100%', borderRadius: RADIUS.xs },
+
   offlineBanner: { position: 'absolute', top: 12, left: 60, right: 60, zIndex: 200, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 6, paddingHorizontal: 10, borderRadius: 14, backgroundColor: 'rgba(0,0,0,0.6)' },
   offlineBannerText: { fontSize: 11, fontWeight: '600', color: '#fff' },
   scrollContent: { paddingBottom: 20 },
@@ -1294,16 +1193,6 @@ const styles = StyleSheet.create({
   posterOverlay: { position: 'absolute', bottom: 70, left: 16, width: 80, height: 120, borderRadius: 8, overflow: 'hidden', zIndex: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 8, elevation: 8 },
   posterImage: { width: '100%', height: '100%' },
   posterShadow: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '30%', backgroundColor: 'rgba(0,0,0,0.3)' },
-
-  watchNowButton: { position: 'absolute', bottom: 20, right: 16, flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, zIndex: 10, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6 },
-  watchNowGradient: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  watchNowText: { fontSize: 12, fontWeight: '600', color: '#fff', marginLeft: 6 },
-
-  downloadSection: { paddingHorizontal: 16, paddingVertical: 12, position: 'relative', zIndex: 100 },
-  downloadButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1, position: 'relative', overflow: 'hidden' },
-  downloadButtonText: { fontSize: 14, fontWeight: '600', marginLeft: 8, flex: 1 },
-  downloadProgressBar: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 3, backgroundColor: 'rgba(255,255,255,0.1)' },
-  downloadProgressFill: { height: '100%', borderRadius: 2 },
 
   dropdownContainer: { marginTop: 6, borderRadius: 10, borderWidth: 1, padding: 8, maxHeight: SCREEN_HEIGHT * 0.6, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 8, zIndex: 999 },
   dropdownHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
@@ -1413,8 +1302,6 @@ const styles = StyleSheet.create({
   hdBadgeText: { fontSize: 9, fontWeight: '800', color: '#fff' },
   bookmarkButton: { position: 'absolute', bottom: 4, right: 4, width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center' },
 
-  adBannerContainer: { marginHorizontal: 16, marginVertical: 12, height: 60, borderRadius: 8, overflow: 'hidden' },
-  adBannerImage: { width: '100%', height: '100%' },
 });
 
 export default DetailsScreenNew;
