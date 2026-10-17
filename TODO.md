@@ -254,69 +254,90 @@ Confirmed by the owner. Drafted here so nobody re-adds them later.
       login screen.
 - [ ] Explicitly **no** login UI anywhere, including "restore account".
 
-## 10. Real backend contract (verified against the live service)
+## 10. Backend: two systems, one superseded (verified in the source)
 
-**This is the most important correction in this document.** The code assumes
-a contract the real backend does not implement. Verified by calling the live
-service at `https://netflix-tf79.onrender.com` (the host the player already
-references as a `Referer` at `VideoPlayerScreen.tsx:148`).
+Corrected after reading the Net-web source at `King-Fisher000/Net-web`
+(commit `9d70563`), not from docs.
 
-The service identifies itself as **"Streaming API" v13.0.0**, providers
-`["vidapi","fzmovies","o2tv","kissasian","dramacool","shortdrama","torrents"]`,
-subtitle sources "SubDL + OpenSubtitles".
+**There are two backends, and I had them backwards.**
 
-| Assumed by `LicensedPlaybackService.ts` | Actually implemented |
-|---|---|
-| `GET /v1/playback?tmdbId=&mediaType=&season=&episode=` | **does not exist (404)** |
-| `GET /v1/download?...` | **does not exist (404)** |
-| Response `{url, type:'hls'\|'dash'\|'mp4', headers?, expiresAt?}` | `{status, info, sources:[{name, data:{stream, subtitle:[…]}}]}` |
-| API key required | **no auth** — works with no key, and a bogus key still returns 200 |
+| | Old backend | Net-web (current) |
+|---|---|---|
+| Host | `netflix-tf79.onrender.com` | not deployed yet |
+| Version | "Streaming API" v13.0.0 | merged TUI, 18 handlers |
+| Providers | `vidapi, fzmovies, o2tv, kissasian, dramacool, shortdrama, torrents` | 18 handlers / 29 scraper modules |
+| Shape | HTTP JSON API | terminal TUI, no HTTP API |
+| Status | **superseded — do not wire to this** | baked GHCR image, **not yet pointed at a Render service** |
 
-The real endpoints:
+`netflix-tf79.onrender.com` is the pre-merge service. It still answers, which
+is why I mistook it for current. It is not the target. Wiring the app to it
+would build against the thing you replaced.
 
-| Method | Path | Params |
-|--------|------|--------|
-| GET | `/stream/{dbid}` | `s`, `e`, `title`, `year` |
-| GET | `/smart/{dbid}` | `s`, `e`, `q` |
-| GET | `/rcp/{dbid}` | `type` |
-| GET | `/prorcp/{dbid}` | `type`, `s`, `e`, `title`, `year` |
-| GET | `/fallback/{title}` | `q`, `year` |
-| GET | `/asian` | `title`, `s`, `e`, `provider` |
-| GET | `/shortdrama` | `title`, `site`, `episode` |
-| GET | `/torrent/search` | `title`, `quality` |
-| GET | `/torrent/{dbid}` | `s`, `e`, `title`, `quality` |
-| GET | `/subs` | `url` |
-| GET | `/health`, `/cache/stats`, `POST /cache/clear` | — |
+### Why Net-web cannot serve HTTP as it stands (from the code)
 
-Notes from live probing:
+- `src/netweb/proxy.py:17` — the only HTTP listener is
+  `ThreadingHTTPServer`, bound to `PROXY_HOST = "127.0.0.1"` (`proxy.py:26`).
+  Loopback only, started lazily on first playback, random port.
+- There is no web framework anywhere. Grepping all of `src/` for
+  `FastAPI|Flask|uvicorn|aiohttp|bottle|tornado` returns only **comments**
+  saying Flask was removed (`proxy.py:2`, `proxy.py:505`, `main.py:42`).
+- `main.py` is `readchar`-driven; without a TTY `cli_utils` raises
+  `RuntimeError("not a tty")`.
 
-- `/stream/550` returns a working HLS `master.m3u8` plus a SubDL subtitle
-  array. `{dbid}` is the **TMDB id**, which is what the app already has.
-- Subtitles come back inline as `{lang, file, label}`, so the app should
-  consume them from the same response rather than calling OpenSubtitles or
-  SubDL separately. Those two providers become redundant.
-- `/health` reports the provider list; useful for a startup capability check.
-- **No API key is enforced.** The `EXPO_PUBLIC_LICENSED_BACKEND_API_KEY`
-  plumbing in `LicensedPlaybackService.ts` is dead weight — keep it as an
-  optional header for a future gate, but do not treat it as required.
+So a Render service has no port to bind and nothing to serve. This matches
+what `AGENTS.md` says, but it is now confirmed in the code.
 
-- [ ] **Rewrite `LicensedPlaybackService.ts` against the real contract.**
-      Point it at `/stream/{tmdbId}` (with `s`/`e` for TV), parse
-      `sources[0].data.stream` as the HLS URL, and map `subtitle[]` into the
-      player's existing `subtitlesParam` shape. This is the single highest
-      priority wiring task — playback currently cannot work.
-- [ ] Set `EXPO_PUBLIC_LICENSED_BACKEND_URL=https://netflix-tf79.onrender.com`
-      and drop the placeholder `netflix-pro-backend.onrender.com`.
-- [ ] Decide the fallback chain: `/stream` → `/smart` → `/fallback/{title}`
-      → `/torrent/{dbid}`. `/smart/1399` returned "No streams found" in
-      testing and `/fallback/Inception` returned a **500 with a Python
-      ImportError** (`cannot import name 'get_fallback_stream' from
-      'models.fzmovies'`), so that fallback is currently broken server-side
-      and needs fixing on the Render service, not in the app.
-- [ ] Add a `/health` capability probe on startup so the app degrades
-      gracefully when a provider is down.
-- [ ] Confirm the `Referer` strategy at `VideoPlayerScreen.tsx:148` is still
-      needed now that the real host is known — it was added as a guess.
+### The good news: the scraper layer is already a clean library
+
+This is what makes the conversion straightforward. Every module under
+`src/netweb/scraping/` is **pure** — zero TUI calls. Counting
+`select_from_list|get_user_input|print_info|pause|spinner|skeleton` across all
+29 modules returns **0 for every one**.
+
+Their only internal imports are infrastructure: `net_config`, `httpcache`,
+`cloudflare`, `i18n`, `config_loader`, `defaults`. None import `cli_utils`,
+`player_manager`, `rich`, `readchar` or `mpv`. So the scraping layer can be
+imported and called from a web server with no refactor. The TUI consumes the
+scrapers; it is not a dependency of them.
+
+`framextv.py` is the best fit for the app and is **TMDB-id based**, which is
+exactly what the client already has:
+
+```python
+search(tmdb_id=550, media_type="movie")            # -> [{source, url, quality, type, headers}]
+search(tmdb_id=1399, media_type="tv", season=1, episode=1)
+providers(anime=False)                              # -> live provider registry
+```
+
+The return shape is already `{source, url, quality, type, headers}` — close to
+what the player needs, and it is browser-free.
+
+### Blocker: the baked image has no Chromium
+
+9 providers drive headless Chromium through `browser_engine.py`:
+`anime_sama, asianc, coflix, french_manga, french_stream, goldenanime,
+goldenms, nyaa, papystreaming`.
+
+The `Dockerfile` runtime stage installs only `aria2, ffmpeg, mpv,
+ca-certificates` plus `yt-dlp`. **No Chromium.** Those 9 will fail on a Render
+service built from the current image.
+
+Browser-free and ready to serve today: `framextv, o2tv, shortdrama, moviebox,
+dramachi, fourkhdhub, fzmovies, kissasian`.
+
+- [ ] **Rewrite `LicensedPlaybackService.ts` against Net-web, not the old host.**
+      Once the API exists, point it at
+      `GET /v1/stream?tmdbId=&mediaType=&season=&episode=` and map
+      `{source, url, quality, type, headers}` into the player's source shape.
+      Drop the placeholder `netflix-pro-backend.onrender.com` and do **not**
+      use `netflix-tf79.onrender.com` — that is the old service.
+- [ ] Remove the stale `Referer: https://netflix-tf79.onrender.com/` at
+      `VideoPlayerScreen.tsx:148`. It points at the superseded backend.
+- [ ] Treat `EXPO_PUBLIC_LICENSED_BACKEND_API_KEY` as optional. The old service
+      enforced no key (a bogus key still returned 200); the new one should, but
+      do not block on it.
+- [ ] `/health` capability probe on startup so the app degrades gracefully
+      when a provider is down.
 
 ## 11. MX Player-class playback controls (requested)
 
@@ -360,20 +381,88 @@ confirming before starting, because it changes the build workflow.
 
 ---
 
+## 12. Converting Net-web to a Render web service
+
+Keep the TUI working for terminal users, and expose the same scrapers over
+HTTP so the app can call them. Additive — it does not replace the TUI.
+
+### Architecture
+
+- [ ] Add an ASGI app (FastAPI or Starlette) that imports `netweb.scraping`
+      directly. No scraping logic is duplicated; the server is a second
+      consumer of the same modules the TUI uses.
+- [ ] Bind `0.0.0.0:$PORT` (Render injects `PORT`). This is the missing piece —
+      everything today binds `127.0.0.1`.
+- [ ] Keep `proxy.py` as-is for local playback, but the server needs its own
+      stream passthrough: many provider URLs carry per-host `Origin`/`Referer`
+      requirements a native player cannot set. `_source_headers()` in
+      `framextv.py` already computes them, so the server proxies segments with
+      the right headers instead of handing a raw URL to the client.
+- [ ] Endpoints, mirroring what the client needs:
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/health` | status + which providers are live |
+| GET | `/v1/stream` | `tmdbId`, `mediaType`, `season`, `episode` -> playable sources |
+| GET | `/v1/sources` | provider list, for a settings or debug screen |
+| GET | `/v1/subtitles` | `tmdbId`, `mediaType`, `season`, `episode` |
+| GET | `/proxy` | header-correct stream passthrough |
+
+- [ ] Provider selection: accept a `providers=` filter defaulting to the
+      browser-free set. Do not let a request hang on a provider that needs
+      Chromium the image lacks — fail fast and report what was skipped.
+- [ ] Response envelope should mirror the old service so the client change is
+      small: `{status, info, sources:[{name, data:{stream, subtitle}}]}`.
+      That keeps `LicensedPlaybackService.ts` to a URL change plus a parser
+      rather than a rewrite.
+- [ ] Per-provider timeouts and an overall deadline. Render free-tier cold
+      starts take 30-60s; the client already retries with
+      `COLD_START_TIMEOUT_MS = 65000`, so the server should not add its own
+      long wait on top.
+- [ ] Cache resolved streams in-process with a TTL. `httpcache.py` already
+      exists and can back this.
+
+### Chromium decision (needed before building)
+
+- [ ] Choose one:
+      **(a)** install Chromium in the image — enables all 18 providers, but adds
+      roughly 400MB and needs a matching browser-driver pin, which is heavy on
+      Render's free tier;
+      **(b)** serve only the 8 browser-free providers now, adding Chromium later
+      if a specific provider proves worth it;
+      **(c)** resolve Chromium-dependent providers on the user's own device.
+      **Recommendation: (b).** It gets real playback soonest and keeps the image
+      small. The browser-free set includes framextv, which is TMDB-id based and
+      needs no search step.
+
+### Deployment steps
+
+- [ ] Add `render.yaml` (or configure in the Render dashboard) with `PORT`
+      binding and the GHCR image as the source.
+- [ ] The image is already baked and published, but it is **not yet pointed at
+      a Render service** — that is the outstanding step.
+- [ ] Confirm the GHCR package visibility. Anonymous pulls currently fail, so
+      Render needs either a public package or registry credentials.
+- [ ] Verify `--doctor` still passes in the image after any Dockerfile change.
+- [ ] Smoke test from the sandbox: hit `/health`, then `/v1/stream` for a known
+      TMDB id, and confirm a playable URL comes back before touching the app.
+
+---
+
 ## Suggested order
 
 1. Wire the settings that already have UI (skip-intro, quality, subtitle
    size/language, data-saver) or remove the toggles.
 2. Add quality and audio-track selection from `expo-video`'s track APIs.
 3. Route `DownloadsScreen` and `NotificationsScreen`.
-4. Confirm the licensed backend URL, key and response shape, then test playback.
+4. Add the ASGI server to Net-web and deploy it to Render (section 12).
 5. Delete the confirmed-dead components and stale comments.
 6. Consolidate the two caches and the two state systems.
 7. Add ipapi.co country detection, then wire language and region through the
    preloader, home screen and recommendation path (section 8).
 8. Add the UI i18n layer so the interface follows the locale too.
-9. Rewrite LicensedPlaybackService against the real /stream contract (section 10)
-   — playback cannot work until this lands.
+9. Rewrite LicensedPlaybackService against the Net-web API (section 10)
+   — playback cannot work until this lands, and the old host must not be used.
 10. Add device-fingerprint identity in place of sign-in (section 9).
 11. Build the MX Player-class audio chain: EQ then volume amplifier (section 11).
 12. Decide and build the recognition engine.
