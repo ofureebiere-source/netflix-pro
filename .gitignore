@@ -461,3 +461,16 @@ expo-env.d.ts
 
 # ESLint
 .eslintcache
+
+# Secrets - never commit these (see HANDOVER.md 'Urgent, not done')
+env.b64
+keystore.b64
+*.b64
+release.keystore
+android/keystore.properties
+*.jks
+*.p12
+
+# Editor/agent scratch files
+*.bak
+*.backup

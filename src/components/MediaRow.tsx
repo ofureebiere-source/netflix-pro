@@ -2,6 +2,7 @@
 import React from 'react';
 import { View, Text, FlatList, StyleSheet, Dimensions } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
+import { SPACING, TYPOGRAPHY } from '../theme/tokens';
 import MediaCard from './MediaCard';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -43,7 +44,9 @@ const MediaRow: React.FC<MediaRowProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+      <Text style={[TYPOGRAPHY.h2, { color: colors.text, marginBottom: SPACING.md, marginLeft: SPACING.md }]}>
+        {title}
+      </Text>
       <FlatList
         horizontal
         data={data}
@@ -71,12 +74,6 @@ const MediaRow: React.FC<MediaRowProps> = ({
 const styles = StyleSheet.create({
   container: {
     marginBottom: 24,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    marginLeft: 10,
   },
   listContainer: {
     paddingHorizontal: 6,

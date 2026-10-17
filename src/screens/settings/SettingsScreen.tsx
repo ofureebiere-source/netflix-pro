@@ -19,13 +19,14 @@ import Constants from 'expo-constants';
 import { useAppStore, useSettings } from '../../store/zustand';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAlert } from '../../contexts/AlertContext';
+import { SPACING, RADIUS, TYPOGRAPHY } from '../../theme/tokens';
 
 // Services
 import { getDownloadStorageUsage, formatFileSize, getAllDownloads, clearAllDownloads } from '../../utils/downloadStorage';
 import downloadManager from '../../services/downloadManager';
 
 const SettingsScreen = () => {
-  const { colors, isDark, toggleTheme } = useTheme();
+  const { colors, isDark, mode, setMode } = useTheme();
   const { showToast, showDestructiveAlert } = useAlert();
 
   // Zustand state
@@ -183,16 +184,41 @@ const SettingsScreen = () => {
         {/* Theme Section */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.gold }]}>Appearance</Text>
-          {renderSetting(
-            isDark ? 'moon' : 'sunny',
-            isDark ? 'Dark Mode' : 'Light Mode',
-            <Switch
-              value={isDark}
-              onValueChange={toggleTheme}
-              trackColor={{ false: '#444', true: colors.gold }}
-              thumbColor="#fff"
-            />
-          )}
+          <View style={[styles.appearanceItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={styles.settingLeft}>
+              <View style={[styles.iconContainer, { backgroundColor: colors.surfaceRaised }]}>
+                <Ionicons name={isDark ? 'moon' : 'sunny'} size={20} color={colors.gold} />
+              </View>
+              <View style={styles.settingContent}>
+                <Text style={[styles.settingTitle, { color: colors.text }]}>Theme</Text>
+                <Text style={[styles.settingDescription, { color: colors.textSub }]}>
+                  {mode === 'system' ? `Following device (currently ${isDark ? 'dark' : 'light'})` : mode === 'dark' ? 'Dark' : 'Light'}
+                </Text>
+              </View>
+            </View>
+            <View style={[styles.themeSegmented, { backgroundColor: colors.surfaceRaised, borderColor: colors.border }]}>
+              {([
+                { key: 'system' as const, icon: 'phone-portrait-outline' as const, label: 'System' },
+                { key: 'light' as const, icon: 'sunny-outline' as const, label: 'Light' },
+                { key: 'dark' as const, icon: 'moon-outline' as const, label: 'Dark' },
+              ]).map((option) => {
+                const isSelected = mode === option.key;
+                return (
+                  <TouchableOpacity
+                    key={option.key}
+                    onPress={() => setMode(option.key)}
+                    activeOpacity={0.75}
+                    style={[styles.themeSegment, isSelected && { backgroundColor: colors.gold }]}
+                  >
+                    <Ionicons name={option.icon} size={15} color={isSelected ? '#000' : colors.textSub} />
+                    <Text style={[TYPOGRAPHY.caption, { color: isSelected ? '#000' : colors.textSub, marginTop: 2 }]}>
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
         </View>
 
         {/* Playback Section */}
@@ -387,6 +413,14 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     borderWidth: 0.5,
   },
+  appearanceItem: {
+    flexDirection: 'column',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 8,
+    borderWidth: 0.5,
+    gap: 12,
+  },
   settingLeft: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -403,6 +437,20 @@ const styles = StyleSheet.create({
   settingContent: { flex: 1 },
   settingTitle: { fontSize: 15, fontWeight: '500' },
   settingDescription: { fontSize: 12, marginTop: 2 },
+  themeSegmented: {
+    flexDirection: 'row',
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    padding: 4,
+    gap: 4,
+  },
+  themeSegment: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.sm,
+  },
   qualityButtons: {
     flexDirection: 'row',
     gap: 6,

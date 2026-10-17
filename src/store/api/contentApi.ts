@@ -9,7 +9,7 @@ export const contentApi = createApi({
   baseQuery: fetchBaseQuery({ 
     baseUrl: TMDB_BASE_URL,
   }),
-  tagTypes: ['Trending', 'Popular', 'TopRated', 'Upcoming', 'NowPlaying', 'StreamLinks', 'Subtitles', 'SearchResults'],
+  tagTypes: ['Trending', 'Popular', 'TopRated', 'Upcoming', 'NowPlaying'],
   keepUnusedDataFor: 3600,
   endpoints: (builder) => ({
     // ============================================
@@ -72,40 +72,6 @@ export const contentApi = createApi({
       providesTags: ['NowPlaying'],
     }),
     
-    // ============================================
-    // CONSUMET API ENDPOINTS (Streaming)
-    // ============================================
-    
-    searchMovies: builder.query({
-      query: ({ query, page = 1 }) => 
-        `/movies/${query}?page=${page}`,
-      transformResponse: (response: any) => response.results || [],
-      providesTags: ['SearchResults'],
-    }),
-    
-    getStreamLinks: builder.query({
-      query: ({ type, id, season, episode }) => {
-        let url = `/media/${type}/${id}`;
-        if (season && episode) {
-          url += `?season=${season}&episode=${episode}`;
-        }
-        return url;
-      },
-      transformResponse: (response: any) => response.sources || [],
-      providesTags: ['StreamLinks'],
-    }),
-    
-    getSubtitles: builder.query({
-      query: ({ id, season, episode }) => {
-        let url = `/subtitles/${id}`;
-        if (season && episode) {
-          url += `?season=${season}&episode=${episode}`;
-        }
-        return url;
-      },
-      transformResponse: (response: any) => response.subtitles || [],
-      providesTags: ['Subtitles'],
-    }),
   }),
 });
 
@@ -113,7 +79,6 @@ export const contentApi = createApi({
 // EXPORTS
 // ============================================
 
-// TMDB Content Exports
 export const {
   useGetTrendingQuery,
   useGetPopularMoviesQuery,
@@ -123,13 +88,6 @@ export const {
   useGetUpcomingMoviesQuery,
   useGetAiringTodayTVQuery,
   useGetOnTheAirTVQuery,
-} = contentApi;
-
-// Consumet API Exports
-export const {
-  useSearchMoviesQuery,
-  useGetStreamLinksQuery,
-  useGetSubtitlesQuery,
 } = contentApi;
 
 export default contentApi;

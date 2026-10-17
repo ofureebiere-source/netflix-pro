@@ -4,19 +4,20 @@ import {
   View, Text, Alert, StyleSheet, ActivityIndicator, BackHandler,
   Animated, TouchableOpacity, Platform,
 } from 'react-native';
-import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { VideoView, useVideoPlayer } from 'expo-video';
-import { WebView } from 'react-native-webview';
 import { StatusBar } from 'expo-status-bar';
 import { useEventListener } from 'expo';
 import { GestureHandlerRootView, GestureDetector } from 'react-native-gesture-handler';
+import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { getLanguageName } from '../../utils/languageUtils';
 import { formatTime } from '../../utils/timeUtils';
 
 import { useVideoControls } from '../../hooks/useVideoControls';
 import { useBrightness } from '../../hooks/useBrightness';
+import { useVolume } from '../../hooks/useVolume';
 import { useBuffering } from '../../hooks/useBuffering';
 import { useSeekBar } from '../../hooks/useSeekBar';
 import { useGestures } from '../../hooks/useGestures';
@@ -24,10 +25,15 @@ import { useWatchProgress } from '../../hooks/useWatchProgress';
 import { useSubtitles } from '../../hooks/useSubtitles';
 import { useAutoPlay } from '../../hooks/useAutoPlay';
 import { useEpisodeNavigation } from '../../hooks/useEpisodeNavigation';
-import { useStreamExtraction } from '../../hooks/useStreamExtraction';
+import { useLicensedPlaybackSource } from '../../hooks/useLicensedPlaybackSource';
+import { usePlaybackSpeed } from '../../hooks/usePlaybackSpeed';
+import { useAspectRatio } from '../../hooks/useAspectRatio';
+import { useScreenLock } from '../../hooks/useScreenLock';
 
-import SourceSelectionModal from '../../components/SourceSelectionModal';
 import SubtitlesModal from '../../components/SubtitlesModal';
+import PlaybackSpeedModal from '../../components/video/PlaybackSpeedModal';
+import SubtitleSettingsModal from '../../components/video/SubtitleSettingsModal';
+import LockScreenOverlay from '../../components/video/LockScreenOverlay';
 import {
   SubtitleOverlay, SeekIndicators, LoadingOverlay, ErrorOverlay,
   BufferingAlertModal, NextEpisodeButton, EpisodesModal, VideoControlsOverlay,
@@ -44,28 +50,17 @@ const logWarn = (message: string, data?: any) => { console.warn(`${LOG_TAG} ⚠�
 const logInfo = (message: string, data?: any) => { console.log(`${LOG_TAG} ℹ️ ${message}`, data || ''); };
 const logDebug = (message: string, data?: any) => { console.log(`${LOG_TAG} 🐞 ${message}`, data || ''); };
 
-type PlayerMode = 'native' | 'embed' | 'torrent' | 'offline';
+// Licensed sources are either played natively (HLS/DASH/MP4 via expo-video)
+// or, for downloaded content, from a local file. There's no embed/iframe
+// or torrent mode anymore — those only existed to route around piracy
+// sources that returned an embed page or a magnet/webtor.io link instead
+// of a direct file.
+type PlayerMode = 'native' | 'offline';
 
 const classifyPlayerMode = (
-  url: string | null, isTorrentParam: string, isOfflineParam: string,
-  offlinePath: string, streamTypeParam?: string
+  isOfflineParam: string, offlinePath: string
 ): PlayerMode => {
   if (isOfflineParam === 'true' && offlinePath) return 'offline';
-  if (isTorrentParam === 'true') return 'torrent';
-  if (streamTypeParam === 'torrent') return 'torrent';
-  if (streamTypeParam === 'embed') return 'embed';
-  if (!url) return 'native';
-  const lower = url.toLowerCase();
-  if (lower.includes('webtor.io') || lower.startsWith('magnet:') || lower.endsWith('.torrent')) return 'torrent';
-  const embedPatterns = [
-    '/embed/', '/iframe/', '/player/', 'streamtape.com', 'dood.', 'vidoza.net',
-    'ok.ru/videoembed', 'filemoon.sx', 'streamhub.icu', 'multiembed.mov',
-    'embedrise.com', 'guccihide.com', 'superembed.xyz', '2embed.ru',
-    'vidsrc.me/embed', 'youtube.com/embed', 'player.vimeo.com',
-    'streamlink.to', 'vidcloud.co', 'mixdrop.co/e/', 'userload.co/embed',
-    'mp4upload.com/embed', 'dood.ws', 'dood.sh', 'dood.to',
-  ];
-  if (embedPatterns.some(p => lower.includes(p))) return 'embed';
   return 'native';
 };
 
@@ -170,17 +165,13 @@ const getStreamHeaders = (url: string, strategyIndex: number = 0): Record<string
 
 const VideoPlayerScreen = () => {
   const router = useRouter();
-  const navigation = useNavigation();
-  const navigationRef = useRef(navigation);
   const routerRef = useRef(router);
 
   const params = useLocalSearchParams();
 
   const {
     mediaId, mediaType, title, episodeTitle, poster_path, season, episode,
-    air_date: currentEpisodeAirDateFromParams, isLive, streameastUrl,
-    isOffline, offlineFilePath, isTorrent = 'false', streamUrl,
-    streamType: streamTypeParam, isEmbed: isEmbedParam, subtitles: subtitlesParam,
+    isLive, isOffline, offlineFilePath, streamUrl, subtitles: subtitlesParam,
   } = params;
 
   const directStreamUrl = useMemo(() => {
@@ -190,16 +181,11 @@ const VideoPlayerScreen = () => {
   }, [streamUrl]);
 
   const playerMode = useMemo(() => {
-    const mode = classifyPlayerMode(
-      directStreamUrl, String(isTorrent || 'false'), String(isOffline || 'false'),
-      String(offlineFilePath || ''), String(streamTypeParam || '')
-    );
+    const mode = classifyPlayerMode(String(isOffline || 'false'), String(offlineFilePath || ''));
     logInfo('Player mode determined', { mode, hasUrl: !!directStreamUrl });
     return mode;
-  }, [directStreamUrl, isTorrent, isOffline, offlineFilePath, streamTypeParam]);
+  }, [directStreamUrl, isOffline, offlineFilePath]);
 
-  const isTorrentMode = playerMode === 'torrent';
-  const isEmbedMode = playerMode === 'embed';
   const isNativeMode = playerMode === 'native';
   const isOfflineMode = playerMode === 'offline';
 
@@ -241,12 +227,10 @@ const VideoPlayerScreen = () => {
   const [isAtLiveEdge, setIsAtLiveEdge] = useState(true);
   const [showSubtitlesModal, setShowSubtitlesModal] = useState(false);
   const [retryAttempts, setRetryAttempts] = useState(0);
-  const [showSourceSelectionModal, setShowSourceSelectionModal] = useState(false);
   const [playerReady, setPlayerReady] = useState(false);
   const [isLoadingStream, setIsLoadingStream] = useState(false);
   const [subtitleTracks, setSubtitleTracks] = useState<any[]>([]);
   const [selectedSubtitleTrack, setSelectedSubtitleTrack] = useState<any>(null);
-  const [currentSubtitleText, setCurrentSubtitleText] = useState('');
 
   useEffect(() => {
     const lockLandscape = async () => {
@@ -289,23 +273,6 @@ const VideoPlayerScreen = () => {
     }
   }, [subtitlesParam]);
 
-  const loadSubtitleContent = useCallback(async (subtitle: any) => {
-    if (!subtitle?.file) return;
-    try {
-      logDebug('Loading subtitle:', subtitle.file);
-      const response = await fetch(subtitle.file);
-      if (!response.ok) throw new Error('Failed to fetch subtitle');
-      const content = await response.text();
-      setCurrentSubtitleText('Subtitle loaded');
-      (global as any).__subtitleContent = content;
-      (global as any).__subtitleTracks = subtitleTracks;
-    } catch (e) { logError('Failed to load subtitle', e); }
-  }, [subtitleTracks]);
-
-  useEffect(() => {
-    if (selectedSubtitleTrack) loadSubtitleContent(selectedSubtitleTrack);
-  }, [selectedSubtitleTrack, loadSubtitleContent]);
-
   const videoControls = useVideoControls(activePlayer);
   const {
     showControls, isPlaying, isMuted, opacityAnim, setShowControls, setIsPlaying,
@@ -314,7 +281,10 @@ const VideoPlayerScreen = () => {
   } = videoControls;
 
   const brightness = useBrightness(showControls);
-  const { brightnessLevel, hasBrightnessPermission, brightnessSliderRef, brightnessPanResponder } = brightness;
+  const { brightnessLevel, hasBrightnessPermission, brightnessSliderRef, brightnessPanResponder, handleBrightnessChange } = brightness;
+
+  const volume = useVolume(showControls);
+  const { volumeLevel, hasVolumePermission, volumeSliderRef, volumePanResponder, handleVolumeChange } = volume;
 
   const watchProgress = useWatchProgress({
     mediaId: String(mediaId || ''), mediaType: String(mediaType || 'movie'),
@@ -335,7 +305,56 @@ const VideoPlayerScreen = () => {
   const {
     availableLanguages, selectedLanguage, loadingSubtitles, setSubtitlesEnabled,
     loadSubtitlePreference, findSubtitles, selectSubtitle,
+    subtitlesEnabled, currentSubtitleText: hookSubtitleText,
+    updateCurrentSubtitle, loadTrackSubtitle, loadLocalSubtitle, localSubtitleName,
+    stylePrefs: subtitleStylePrefs, updateStylePrefs: updateSubtitleStylePrefs, resetStylePrefs: resetSubtitleStylePrefs,
   } = subtitles;
+
+  // Loads a licensed-backend-supplied subtitle track (from subtitlesParam,
+  // parsed into subtitleTracks above) through the same real parsing/timing
+  // pipeline useSubtitles already drives for OpenSubtitles/local files —
+  // this previously just fetched the file and set a permanent placeholder
+  // string instead of ever showing real timed subtitle text.
+  const loadSubtitleContent = useCallback(async (subtitle: any) => {
+    if (!subtitle?.file) return;
+    const result = await loadTrackSubtitle(subtitle.file, subtitle.label || subtitle.lang);
+    if (!result.success) {
+      logError('Failed to load subtitle track', result.error);
+    }
+  }, [loadTrackSubtitle]);
+
+  useEffect(() => {
+    if (selectedSubtitleTrack) loadSubtitleContent(selectedSubtitleTrack);
+  }, [selectedSubtitleTrack, loadSubtitleContent]);
+
+  // Lets the user pick a .srt file already on their device (their own
+  // downloaded subtitles) instead of relying only on OpenSubtitles search
+  // or whatever the licensed backend happens to supply.
+  const handleImportLocalSubtitle = useCallback(async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['text/plain', 'application/x-subrip', '*/*'],
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled || !result.assets?.[0]) return;
+
+      const asset = result.assets[0];
+      const outcome = await loadLocalSubtitle(asset.uri, asset.name);
+      if (!outcome.success) {
+        Alert.alert('Subtitle import failed', outcome.error || 'Could not read that file.');
+      }
+    } catch (e) {
+      logError('Subtitle import failed', e);
+      Alert.alert('Subtitle import failed', 'Something went wrong picking that file.');
+    }
+  }, [loadLocalSubtitle]);
+
+  const { playbackSpeed, speedModalVisible, openSpeedModal, closeSpeedModal, setPlaybackSpeed } = usePlaybackSpeed(activePlayer);
+  const { aspectRatioMode, cycleAspectRatio, aspectRatioLabel, labelVisible: aspectLabelVisible, labelOpacity: aspectLabelOpacity } = useAspectRatio();
+  const { isLocked, toggleLock, showUnlockHint, hintOpacity: lockHintOpacity, handleLockedScreenTap, unlock } = useScreenLock(
+    useCallback((locked: boolean) => { if (locked) setShowControls(false); }, [setShowControls])
+  );
+  const [subtitleSettingsVisible, setSubtitleSettingsVisible] = useState(false);
 
   const handleReload = useCallback(async () => {
     logInfo('handleReload called', { retryAttempts: retryAttempts + 1 });
@@ -352,7 +371,6 @@ const VideoPlayerScreen = () => {
     setError(null);
     setLoading(true);
     setIsInitialLoading(true);
-    streamExtraction.reset();
     setResumeTime(0); setPosition(0); setDuration(0);
     lastPositionRef.current = 0; lastPositionTimeRef.current = 0;
     manualFinishTriggeredRef.current = false; pendingPlayRef.current = false;
@@ -407,7 +425,7 @@ const VideoPlayerScreen = () => {
     mediaId: String(mediaId || ''), mediaType: String(mediaType || 'movie'),
     season: season ? Number(season) : undefined, episode: episode ? Number(episode) : undefined,
     title: String(title || ''), poster_path: String(poster_path || ''),
-    position, duration, isLiveStream: false, player: activePlayer, navigation,
+    position, duration, isLiveStream: false, player: activePlayer, router,
     handleGoBack, setIsUnmounting,
   });
   const {
@@ -415,24 +433,19 @@ const VideoPlayerScreen = () => {
     loadAutoPlaySetting, findNextEpisode, playNextEpisode,
   } = autoPlay;
 
-  const streamExtraction = useStreamExtraction({
+  const playback = useLicensedPlaybackSource({
     mediaId: String(mediaId || ''), mediaType: String(mediaType || 'movie'),
     season: season ? Number(season) : undefined, episode: episode ? Number(episode) : undefined,
-    episodeTitle: String(episodeTitle || ''), title: String(title || ''),
-    currentEpisodeAirDate: currentEpisodeAirDateFromParams ? String(currentEpisodeAirDateFromParams) : undefined,
-    isLive: isLive === 'true', streameastUrl: String(streameastUrl || ''),
     isOffline: isOffline === 'true', offlineFilePath: String(offlineFilePath || ''),
-    player: activePlayer, contentId, onError: setError, onFindSubtitles: findSubtitles,
-    setAutoPlayEnabled, loadAutoPlaySetting, loadSubtitlePreference, checkSavedProgress,
     directStreamUrl: isNativeMode ? directStreamUrl : null,
   });
-  const {
-    videoUrl, streamExtractionComplete, currentWebViewConfig, currentSourceAttemptKey,
-    currentAttemptingSource, currentPlayingSourceName, manualWebViewVisible, captchaUrl,
-    isChangingSource, isLiveStream, availableSourcesList, sourceAttemptStatus,
-    setManualWebViewVisible, setCaptchaUrl, openChangeSourceModal,
-    handleSelectSourceFromModal, closeSourceModal,
-  } = streamExtraction;
+  const { videoUrl, isResolved: streamExtractionComplete, isLoading: isChangingSource, error: playbackError } = playback;
+  const currentPlayingSourceName = 'licensed';
+  const isLiveStream = false;
+
+  useEffect(() => {
+    if (playbackError) setError({ message: playbackError });
+  }, [playbackError]);
 
   const seekBar = useSeekBar({
     player: activePlayer, duration, position, isPlaying, showControls,
@@ -441,10 +454,15 @@ const VideoPlayerScreen = () => {
   });
   const {
     isSeeking, seekPreviewPosition, seekPreviewXPosition, progressBarRef, progressPanResponder,
+    beginExternalSeek, previewExternalSeek, commitExternalSeek, cancelExternalSeek,
   } = seekBar;
 
   const gestures = useGestures({
     player: activePlayer, isLiveStream, isPlaying, toggleControls, startControlsTimer,
+    duration, position,
+    beginExternalSeek, previewExternalSeek, commitExternalSeek, cancelExternalSeek,
+    handleBrightnessChange, brightnessLevel,
+    handleVolumeChange, volumeLevel,
   });
   const {
     isZoomed, screenDimensions, animatedScale, leftSeekAmount, rightSeekAmount,
@@ -535,7 +553,8 @@ const VideoPlayerScreen = () => {
   // escalates through header strategies until one actually plays.
   // ─────────────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!isNativeMode || !directStreamUrl) return;
+    const activeStreamUrl = directStreamUrl || videoUrl;
+    if (!isNativeMode || !activeStreamUrl) return;
     if (!activePlayer) { logWarn('Player not available for stream loading'); return; }
 
     const loadStream = async () => {
@@ -561,9 +580,9 @@ const VideoPlayerScreen = () => {
           setPlayerReady(false);
           playerReadyRef.current = false;
 
-          const headers = getStreamHeaders(directStreamUrl, attempt);
+          const headers = getStreamHeaders(activeStreamUrl, attempt);
           await activePlayer.replaceAsync({
-            uri: directStreamUrl,
+            uri: activeStreamUrl,
             headers: Object.keys(headers).length > 0 ? headers : undefined,
           });
 
@@ -621,7 +640,7 @@ const VideoPlayerScreen = () => {
     };
 
     loadStream();
-  }, [isNativeMode, directStreamUrl, activePlayer]);
+  }, [isNativeMode, directStreamUrl, videoUrl, activePlayer]);
 
   useEffect(() => {
     if (!isNativeMode || !playerReadyRef.current) return;
@@ -633,11 +652,12 @@ const VideoPlayerScreen = () => {
           const dur = activePlayer.duration || 0;
           setPosition(pos);
           if (dur > 0) setDuration(dur);
+          updateCurrentSubtitle(pos);
         } catch {}
       }, 250);
     }
     return () => { if (interval) clearInterval(interval); };
-  }, [isNativeMode, playerReadyRef.current]);
+  }, [isNativeMode, playerReadyRef.current, updateCurrentSubtitle]);
 
   useEffect(() => {
     if (!isNativeMode) return;
@@ -662,15 +682,14 @@ const VideoPlayerScreen = () => {
     ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch((e) => logError('Failed to lock orientation', e));
 
     if (isNativeMode) {
-      if (!directStreamUrl && !offlineFilePath) {
-        logDebug('Initializing stream extraction...');
-        streamExtraction.initializePlayer(isMountedRef);
-      } else {
+      if (directStreamUrl || offlineFilePath) {
         logDebug('Using direct stream, skipping extraction');
         setLoading(false); setIsInitialLoading(false);
+      } else {
+        logDebug('Resolving licensed playback source...');
       }
     } else {
-      if (directStreamUrl || videoUrl) { logDebug('WebView mode, setting loading false'); setLoading(false); setIsInitialLoading(false); }
+      if (directStreamUrl || videoUrl) { logDebug('Offline mode, setting loading false'); setLoading(false); setIsInitialLoading(false); }
     }
     setShowControls(true);
 
@@ -702,6 +721,17 @@ const VideoPlayerScreen = () => {
     const loadPref = async () => { try { await loadSubtitlePreference(); } catch (e) {} };
     loadPref();
   }, [loadSubtitlePreference]);
+
+  useEffect(() => {
+    // findSubtitles was previously imported but never called, so the
+    // OpenSubtitles language list was always empty. Only run it if the
+    // licensed backend hasn't already supplied its own subtitle track(s)
+    // for this title (subtitleTracks, populated below from subtitlesParam).
+    if (mediaId && subtitleTracks.length === 0) {
+      findSubtitles();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mediaId]);
 
   useEffect(() => {
     if (isPlaying && isBufferingVideo) {
@@ -765,99 +795,6 @@ const VideoPlayerScreen = () => {
     setShowControls(true);
   };
 
-  const injectedJavaScript = `(function() { window.alert = function() {}; })();`;
-
-  const renderEmbedPlayer = () => {
-    const embedUrl = directStreamUrl || videoUrl || '';
-    logDebug('Rendering Embed Player', { url: embedUrl.substring(0, 80) });
-    if (!embedUrl) {
-      return (
-        <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle" size={64} color="#ff4444" />
-          <Text style={styles.errorText}>No embed URL available</Text>
-          <TouchableOpacity style={styles.backButtonTorrent} onPress={() => handleGoBack()}>
-            <Text style={styles.backButtonText}>Go Back</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-    return (
-      <View style={styles.embedContainer}>
-        <WebView
-          source={{ uri: embedUrl }} style={styles.webview}
-          javaScriptEnabled={true} domStorageEnabled={true}
-          allowsInlineMediaPlayback={true} mediaPlaybackRequiresUserAction={false}
-          thirdPartyCookiesEnabled={true} sharedCookiesEnabled={true}
-          originWhitelist={['*']} mixedContentMode="compatibility"
-          userAgent={BROWSER_UA}
-          startInLoadingState={true}
-          renderLoading={() => (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#e8a838" />
-              <Text style={styles.loadingText}>Loading video player...</Text>
-            </View>
-          )}
-          onError={(syntheticEvent) => {
-            const { nativeEvent } = syntheticEvent;
-            logError('Embed WebView error', nativeEvent);
-            setError({ message: 'Failed to load video player. The source may be unavailable or blocked.' });
-          }}
-          onHttpError={(syntheticEvent) => {
-            const { nativeEvent } = syntheticEvent;
-            logError('Embed WebView HTTP error', null, { status: nativeEvent.statusCode });
-            if (nativeEvent.statusCode >= 400) setError({ message: `Player load failed (HTTP ${nativeEvent.statusCode})` });
-          }}
-        />
-        <TouchableOpacity style={styles.embedBackButton} onPress={() => handleGoBack()}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-      </View>
-    );
-  };
-
-  const renderTorrentPlayer = () => {
-    const webtorUrl = directStreamUrl || videoUrl || '';
-    logDebug('Rendering Torrent Player', { url: webtorUrl.substring(0, 80) });
-    if (!webtorUrl || !webtorUrl.includes('webtor.io/embed')) {
-      return (
-        <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle" size={64} color="#ff4444" />
-          <Text style={styles.errorText}>No torrent stream available</Text>
-          <TouchableOpacity style={styles.backButtonTorrent} onPress={() => handleGoBack()}>
-            <Text style={styles.backButtonText}>Go Back</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-    return (
-      <View style={styles.torrentContainer}>
-        <WebView
-          source={{ uri: webtorUrl }} style={styles.webview}
-          javaScriptEnabled={true} domStorageEnabled={true}
-          allowsInlineMediaPlayback={true} mediaPlaybackRequiresUserAction={false}
-          thirdPartyCookiesEnabled={true} sharedCookiesEnabled={true}
-          originWhitelist={['*']} mixedContentMode="compatibility"
-          userAgent={BROWSER_UA}
-          startInLoadingState={true}
-          renderLoading={() => (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#e8a838" />
-              <Text style={styles.loadingText}>Loading torrent stream...</Text>
-            </View>
-          )}
-          onError={(syntheticEvent) => {
-            const { nativeEvent } = syntheticEvent;
-            logError('Webtor WebView error', nativeEvent);
-            setError({ message: 'Failed to load torrent stream' });
-          }}
-        />
-        <TouchableOpacity style={styles.torrentBackButton} onPress={() => handleGoBack()}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-      </View>
-    );
-  };
-
   const renderNativePlayer = () => {
     const hasSource = !!(videoUrl || directStreamUrl || offlineFilePath);
     logDebug('Rendering Native Player', { hasSource, playerReady: playerReadyRef.current, url: directStreamUrl?.substring(0, 80), isPlaying });
@@ -880,7 +817,7 @@ const VideoPlayerScreen = () => {
               player={activePlayer} style={StyleSheet.absoluteFill}
               nativeControls={false} allowsPictureInPicture={true}
               startsPictureInPictureAutomatically={true}
-              contentFit={isZoomed ? 'cover' : 'contain'}
+              contentFit={aspectRatioMode !== 'auto' ? aspectRatioMode : (isZoomed ? 'cover' : 'contain')}
               pointerEvents="none"
             />
           </Animated.View>
@@ -900,43 +837,19 @@ const VideoPlayerScreen = () => {
       <View style={styles.container} onLayout={onLayoutRootView}>
         <StatusBar hidden />
 
-        {isNativeMode && currentWebViewConfig && !streamExtractionComplete && (
-          <View style={manualWebViewVisible || __DEV__ ? styles.visibleWebViewForCaptcha : styles.hiddenWebView}>
-            <WebView
-              key={currentSourceAttemptKey}
-              source={manualWebViewVisible && captchaUrl ? { uri: captchaUrl, headers: currentWebViewConfig.source.headers } : currentWebViewConfig.source}
-              injectedJavaScript={currentWebViewConfig.injectedJavaScript}
-              onMessage={currentWebViewConfig.onMessage}
-              onError={currentWebViewConfig.onError}
-              onHttpError={currentWebViewConfig.onHttpError}
-              userAgent={currentWebViewConfig.userAgent}
-              javaScriptEnabled={true} domStorageEnabled={true}
-              allowsInlineMediaPlayback={true} mediaPlaybackRequiresUserAction={false}
-              originWhitelist={['*']} mixedContentMode="compatibility"
-              incognito={false} thirdPartyCookiesEnabled={true} sharedCookiesEnabled={true}
-              injectedJavaScriptForMainFrameOnly={false}
-              injectedJavaScriptBeforeContentLoadedForMainFrameOnly={false}
-              onShouldStartLoadWithRequest={() => true}
-              injectedJavaScriptBeforeContentLoaded={currentWebViewConfig.injectedJavaScriptBeforeContentLoaded || injectedJavaScript}
-            />
-          </View>
-        )}
-
         {isNativeMode && (
           <LoadingOverlay
             isInitialLoading={isInitialLoading || isLoadingStream}
-            manualWebViewVisible={manualWebViewVisible}
+            manualWebViewVisible={false}
             streamExtractionComplete={streamExtractionComplete && playerReadyRef.current}
-            currentAttemptingSource={currentAttemptingSource}
+            currentAttemptingSource={currentPlayingSourceName}
             onGoBack={() => handleGoBack()}
-            onCaptchaDone={() => setManualWebViewVisible(false)}
+            onCaptchaDone={() => {}}
           />
         )}
 
         <ErrorOverlay error={error} onRetry={handleReload} onGoBack={() => handleGoBack()} />
 
-        {isTorrentMode && renderTorrentPlayer()}
-        {isEmbedMode && renderEmbedPlayer()}
         {isNativeMode && renderNativePlayer()}
         {isOfflineMode && renderNativePlayer()}
 
@@ -947,7 +860,12 @@ const VideoPlayerScreen = () => {
               leftSeekOpacity={leftSeekOpacity} rightSeekOpacity={rightSeekOpacity}
               leftArrowTranslate={leftArrowTranslate} rightArrowTranslate={rightArrowTranslate}
             />
-            <SubtitleOverlay subtitlesEnabled={true} currentSubtitleText={currentSubtitleText} />
+            <SubtitleOverlay
+              subtitlesEnabled={subtitlesEnabled}
+              currentSubtitleText={hookSubtitleText}
+              fontScale={subtitleStylePrefs.fontScale}
+              backgroundOpacity={subtitleStylePrefs.backgroundOpacity}
+            />
             {isBufferingVideo && !isInitialLoading && (
               <View style={styles.bufferingIndicatorContainer}>
                 <ActivityIndicator size="large" color="#FFF" />
@@ -964,14 +882,44 @@ const VideoPlayerScreen = () => {
               onGoBack={() => handleGoBack()}
               onTogglePlayPause={() => { if (isPlaying) activePlayer.pause(); else activePlayer.play(); }}
               onToggleMute={toggleMute} onSeekBackward={seekBackward} onSeekForward={seekForward}
-              onOpenSourceModal={() => openChangeSourceModal(isInitialLoading)}
               onToggleEpisodes={toggleEpisodesModal} onToggleSubtitles={toggleSubtitlesModal}
-              subtitlesEnabled={true} selectedLanguage={selectedLanguage || 'en'}
+              subtitlesEnabled={subtitlesEnabled} selectedLanguage={selectedLanguage || 'en'}
               isChangingSource={isChangingSource} isInitialLoading={isInitialLoading}
               videoUrl={directStreamUrl || videoUrl || ''} player={activePlayer}
               brightnessLevel={brightnessLevel} hasBrightnessPermission={hasBrightnessPermission}
               brightnessSliderRef={brightnessSliderRef} brightnessPanResponder={brightnessPanResponder}
+              volumeLevel={volumeLevel} hasVolumePermission={hasVolumePermission}
+              volumeSliderRef={volumeSliderRef} volumePanResponder={volumePanResponder}
+              playbackSpeed={playbackSpeed} onCycleSpeed={openSpeedModal}
+              aspectRatioLabel={aspectRatioLabel} onCycleAspectRatio={cycleAspectRatio}
+              onOpenSubtitleSettings={() => setSubtitleSettingsVisible(true)}
+              onLock={toggleLock}
             />
+            <LockScreenOverlay
+              visible={isLocked}
+              showUnlockHint={showUnlockHint}
+              hintOpacity={lockHintOpacity}
+              onScreenTap={handleLockedScreenTap}
+              onUnlock={unlock}
+            />
+            <PlaybackSpeedModal
+              visible={speedModalVisible}
+              onClose={closeSpeedModal}
+              currentSpeed={playbackSpeed}
+              onSelectSpeed={setPlaybackSpeed}
+            />
+            <SubtitleSettingsModal
+              visible={subtitleSettingsVisible}
+              onClose={() => setSubtitleSettingsVisible(false)}
+              prefs={subtitleStylePrefs}
+              onChange={updateSubtitleStylePrefs}
+              onReset={resetSubtitleStylePrefs}
+            />
+            {aspectLabelVisible && (
+              <Animated.View style={[styles.aspectRatioLabelBox, { opacity: aspectLabelOpacity }]} pointerEvents="none">
+                <Text style={styles.seekPreviewText}>{aspectRatioLabel}</Text>
+              </Animated.View>
+            )}
             {!isLiveStream && isSeeking && seekPreviewPosition !== null && seekPreviewXPosition > 0 && (
               <View style={[styles.seekPreviewBox, { left: Math.max(10, Math.min(seekPreviewXPosition - 40, screenDimensions.width - 90)) }]}>
                 <Text style={styles.seekPreviewText}>{formatTime(seekPreviewPosition)}</Text>
@@ -1001,10 +949,6 @@ const VideoPlayerScreen = () => {
                     season: String(episodeDetails.season || season || 1),
                     episode: String(episodeDetails.episode || episode || 1),
                     episodeTitle: encodeURIComponent(episodeDetails.episodeTitle || `Episode ${episodeDetails.episode || episode || 1}`),
-                    streamUrl: encodeURIComponent(String(directStreamUrl || videoUrl || '')),
-                    isTorrent: isTorrentMode ? 'true' : 'false',
-                    streamType: streamTypeParam || 'hls',
-                    isEmbed: isEmbedMode ? 'true' : 'false',
                     subtitles: encodeURIComponent(JSON.stringify(subtitleTracks)),
                   });
                   routerRef.current?.push(`/player?${queryParams.toString()}`);
@@ -1017,14 +961,6 @@ const VideoPlayerScreen = () => {
               visible={showBufferingAlert} onKeepBuffering={handleKeepBuffering}
               onRetryExtraction={handleRetryExtraction}
             />
-            <SourceSelectionModal
-              visible={showSourceSelectionModal}
-              onClose={() => closeSourceModal(isUnmounting)}
-              sources={availableSourcesList}
-              onSelectSource={(source) => handleSelectSourceFromModal(source, position, isUnmounting, setShowControls)}
-              currentAttemptStatus={sourceAttemptStatus}
-              currentPlayingSourceName={currentPlayingSourceName}
-            />
             <SubtitlesModal
               visible={showSubtitlesModal}
               onClose={() => {
@@ -1036,12 +972,22 @@ const VideoPlayerScreen = () => {
               availableLanguages={[
                 ...Object.values(availableLanguages || {}).map((langInfo: any) => ({ code: langInfo.language, name: getLanguageName(langInfo.language) })),
                 ...subtitleTracks.map((track) => ({ code: track.lang || 'en', name: track.label || track.lang || 'English' })),
+                ...(localSubtitleName ? [{ code: selectedLanguage, name: `📁 ${localSubtitleName}` }] : []),
+                { code: '__import_local__', name: '📁 Import subtitle from device…' },
               ]}
               selectedLanguage={selectedLanguage || 'en'}
               onSelectLanguage={(langCode) => {
+                if (langCode === '__import_local__') {
+                  handleImportLocalSubtitle();
+                  return;
+                }
                 const track = subtitleTracks.find((t: any) => (t.lang || 'en') === langCode);
-                if (track) { setSelectedSubtitleTrack(track); loadSubtitleContent(track); }
-                selectSubtitle(langCode);
+                if (track) {
+                  setSelectedSubtitleTrack(track);
+                  loadSubtitleContent(track);
+                } else if (!langCode.startsWith('local:')) {
+                  selectSubtitle(langCode);
+                }
                 setShowSubtitlesModal(false);
               }}
               loading={loadingSubtitles}
@@ -1080,6 +1026,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5, shadowRadius: 4, elevation: 5,
   },
   seekPreviewText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  aspectRatioLabelBox: {
+    position: 'absolute', top: '45%', alignSelf: 'center', backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    paddingVertical: 8, paddingHorizontal: 20, borderRadius: 8, zIndex: 100,
+  },
   torrentContainer: { flex: 1, backgroundColor: '#000', position: 'relative' },
   embedContainer: { flex: 1, backgroundColor: '#000', position: 'relative' },
   webview: { flex: 1, backgroundColor: '#000' },

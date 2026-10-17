@@ -1,12 +1,13 @@
 // src/components/MediaCard.tsx
-import React, { useState } from 'react';
-import { StyleSheet, Image, TouchableOpacity, Dimensions, View, Text, Alert } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { StyleSheet, Image, TouchableOpacity, Dimensions, View, Text, Alert, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { getImageUrl } from '../services/unified/metadata/TMDBMetadata';
+import { RADIUS, getElevation } from '../theme/tokens';
 import ImagePlaceholder from './ImagePlaceholder';
 import Badge from './Badge';
-import { SPORT_LOGO_MAP } from '../api/ApiService';
+// Live sports (SPORT_LOGO_MAP) removed with the piracy-stream layer in Phase 1 — see handover.md.
 
 const { width } = Dimensions.get('window');
 const FOOTER_HEIGHT = 45;
@@ -54,6 +55,19 @@ const MediaCard = ({
 }) => {
   const { colors, isDark } = useTheme();
   const [imageError, setImageError] = useState(false);
+  // Press feedback: a subtle scale-down while pressed, spring back on
+  // release. Plain RN Animated (not Reanimated) is intentional here —
+  // MediaCard renders many-per-row in horizontal lists, and this is a
+  // simple transform-only animation with no need for the worklet
+  // machinery Reanimated brings for cross-thread gesture work elsewhere
+  // in the app (e.g. the video player).
+  const pressScale = useRef(new Animated.Value(1)).current;
+  const handlePressIn = () => {
+    Animated.spring(pressScale, { toValue: 0.95, useNativeDriver: true, speed: 50, bounciness: 6 }).start();
+  };
+  const handlePressOut = () => {
+    Animated.spring(pressScale, { toValue: 1, useNativeDriver: true, speed: 50, bounciness: 6 }).start();
+  };
 
   // ─── Get display title ───
   const getDisplayTitle = () => {
@@ -111,9 +125,10 @@ const MediaCard = ({
   let imageSource = null;
 
   if (isLiveStream) {
-    const sportToken = item.sportToken || 'DEFAULT';
-    const logoUrl = SPORT_LOGO_MAP[sportToken] || SPORT_LOGO_MAP['DEFAULT'];
-    imageSource = { uri: logoUrl };
+    // Live sports streaming was removed in Phase 1 (piracy source). Falls through
+    // to the poster path below, which will be null for live-stream items until
+    // this feature is either rebuilt on a licensed source or removed for good.
+    imageSource = null;
   } else {
     imageSource = posterPath && !imageError ? { uri: getImageUrl(posterPath) } : null;
   }
@@ -148,78 +163,176 @@ const MediaCard = ({
   // ─── Live Stream Card ───
   if (isLiveStream) {
     return (
-      <View
+      <Animated.View
         style={[
-          styles.outerContainer,
-          {
-            width: cardWidth,
-            backgroundColor: isDark ? '#1a0000' : 'rgba(255,0,0,0.05)',
-          },
+          styles.cardShadowWrapper,
+          getElevation(colors, 1),
+          { width: cardWidth, transform: [{ scale: pressScale }] },
         ]}
       >
-        <TouchableOpacity
-          style={styles.touchableContainer}
-          onPress={handlePlay}
-          activeOpacity={0.8}
-        >
+        <View style={[styles.outerContainer, { backgroundColor: isDark ? '#1a0000' : 'rgba(255,0,0,0.05)' }]}>
+          <TouchableOpacity
+            style={styles.touchableContainer}
+            onPress={handlePlay}
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
+            activeOpacity={0.8}
+          >
+            <View
+              style={[
+                styles.imageContainer,
+                {
+                  height: imageContainerHeight,
+                  backgroundColor: isDark ? '#222' : 'rgba(0,0,0,0.05)',
+                },
+              ]}
+            >
+              {imageSource ? (
+                <Image
+                  source={imageSource}
+                  style={[styles.image, styles.liveStreamImage]}
+                  resizeMode="contain"
+                  onError={() => setImageError(true)}
+                />
+              ) : (
+                <ImagePlaceholder width={cardWidth} height={imageContainerHeight} />
+              )}
+              <Badge isLive={true} isUpcoming={!item.isLive} />
+            </View>
+          </TouchableOpacity>
           <View
             style={[
-              styles.imageContainer,
+              styles.liveStreamFooterContainer,
               {
-                height: imageContainerHeight,
-                backgroundColor: isDark ? '#222' : 'rgba(0,0,0,0.05)',
+                backgroundColor: isDark ? colors.surface : 'rgba(255,255,255,0.5)',
               },
             ]}
           >
-            {imageSource ? (
-              <Image
-                source={imageSource}
-                style={[styles.image, styles.liveStreamImage]}
-                resizeMode="contain"
-                onError={() => setImageError(true)}
-              />
-            ) : (
-              <ImagePlaceholder width={cardWidth} height={imageContainerHeight} />
-            )}
-            <Badge isLive={true} isUpcoming={!item.isLive} />
-          </View>
-        </TouchableOpacity>
-        <View
-          style={[
-            styles.liveStreamFooterContainer,
-            {
-              backgroundColor: isDark ? colors.surface : 'rgba(255,255,255,0.5)',
-            },
-          ]}
-        >
-          <Text style={[styles.liveStreamTitle, { color: colors.text }]} numberOfLines={2}>
-            {displayTitle}
-          </Text>
-          {!item.isLive && item.matchTime && (
-            <Text style={[styles.startTimeText, { color: colors.textSub }]}>
-              {formatStartTime(item.matchTime)}
+            <Text style={[styles.liveStreamTitle, { color: colors.text }]} numberOfLines={2}>
+              {displayTitle}
             </Text>
-          )}
+            {!item.isLive && item.matchTime && (
+              <Text style={[styles.startTimeText, { color: colors.textSub }]}>
+                {formatStartTime(item.matchTime)}
+              </Text>
+            )}
+          </View>
         </View>
-      </View>
+      </Animated.View>
     );
   }
 
   // ─── Continue Watching Card ───
   if (isContinueWatching) {
     return (
-      <View
+      <Animated.View
         style={[
-          styles.outerContainer,
-          {
-            width: cardWidth,
-            backgroundColor: isDark ? colors.surface : 'rgba(255,255,255,0.5)',
-          },
+          styles.cardShadowWrapper,
+          getElevation(colors, 1),
+          { width: cardWidth, transform: [{ scale: pressScale }] },
         ]}
       >
+        <View style={[styles.outerContainer, { backgroundColor: isDark ? colors.surface : 'rgba(255,255,255,0.5)' }]}>
+          <TouchableOpacity
+            style={styles.touchableContainer}
+            onPress={handlePlay}
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
+            activeOpacity={0.8}
+          >
+            <View
+              style={[
+                styles.imageContainer,
+                {
+                  height: imageContainerHeight,
+                  backgroundColor: isDark ? '#222' : 'rgba(0,0,0,0.05)',
+                },
+              ]}
+            >
+              {imageSource ? (
+                <Image
+                  source={imageSource}
+                  style={styles.image}
+                  resizeMode="cover"
+                  onError={() => setImageError(true)}
+                />
+              ) : (
+                <ImagePlaceholder width={cardWidth} height={imageContainerHeight} />
+              )}
+              <View style={styles.playOverlay}>
+                <View style={[styles.playButtonBackground, { backgroundColor: 'rgba(0,0,0,0.7)' }]} />
+                <Ionicons
+                  name="play-circle-outline"
+                  size={90}
+                  color="#FFFFFF"
+                  style={styles.playIcon}
+                />
+              </View>
+            </View>
+          </TouchableOpacity>
+
+          <View
+            style={[
+              styles.footerContainer,
+              {
+                backgroundColor: isDark ? colors.surface : 'rgba(255,255,255,0.5)',
+              },
+            ]}
+          >
+            {episodeInfo && (
+              <Text style={[styles.episodeText, { color: colors.textSub }]} numberOfLines={1}>
+                {episodeInfo}
+              </Text>
+            )}
+            {!episodeInfo && (
+              <Text style={[styles.episodeText, { color: colors.textSub }]} numberOfLines={1}>
+                {displayTitle}
+              </Text>
+            )}
+            {progress > 0 && progress < 1 && (
+              <View
+                style={[
+                  styles.progressBarContainer,
+                  { backgroundColor: isDark ? colors.surfaceRaised : 'rgba(0,0,0,0.05)' },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.progressBarFill,
+                    { backgroundColor: colors.gold, width: `${progress * 100}%` },
+                  ]}
+                />
+              </View>
+            )}
+            <View style={styles.footerActions}>
+              <TouchableOpacity onPress={handleInfo} style={styles.iconButton}>
+                <Ionicons name="information-circle-outline" size={22} color={colors.text} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleRemove} style={styles.iconButton}>
+                <Ionicons name="close-circle-outline" size={22} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Animated.View>
+    );
+  }
+
+  // ─── Regular Media Card ───
+  return (
+    <Animated.View
+      style={[
+        styles.cardShadowWrapper,
+        getElevation(colors, 1),
+        { width: cardWidth, transform: [{ scale: pressScale }] },
+      ]}
+    >
+      <View style={[styles.outerContainer, { backgroundColor: isDark ? colors.surface : 'rgba(255,255,255,0.5)' }]}>
         <TouchableOpacity
           style={styles.touchableContainer}
           onPress={handlePlay}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
           activeOpacity={0.8}
         >
           <View
@@ -241,18 +354,21 @@ const MediaCard = ({
             ) : (
               <ImagePlaceholder width={cardWidth} height={imageContainerHeight} />
             )}
-            <View style={styles.playOverlay}>
-              <View style={[styles.playButtonBackground, { backgroundColor: 'rgba(0,0,0,0.7)' }]} />
-              <Ionicons
-                name="play-circle-outline"
-                size={90}
-                color="#FFFFFF"
-                style={styles.playIcon}
-              />
-            </View>
+            <Badge
+              mediaType={mediaType}
+              releaseDate={item.release_date}
+              firstAirDate={item.first_air_date}
+              lastAirDate={item.last_air_date}
+              hasWatched={hasWatched}
+            />
+            {rating && rating > 0 && (
+              <View style={[styles.ratingBadge, { backgroundColor: 'rgba(0,0,0,0.7)' }]}>
+                <Ionicons name="star" size={10} color="#FFD700" />
+                <Text style={styles.ratingBadgeText}>{rating.toFixed(1)}</Text>
+              </View>
+            )}
           </View>
         </TouchableOpacity>
-
         <View
           style={[
             styles.footerContainer,
@@ -261,103 +377,12 @@ const MediaCard = ({
             },
           ]}
         >
-          {episodeInfo && (
-            <Text style={[styles.episodeText, { color: colors.textSub }]} numberOfLines={1}>
-              {episodeInfo}
-            </Text>
-          )}
-          {!episodeInfo && (
-            <Text style={[styles.episodeText, { color: colors.textSub }]} numberOfLines={1}>
-              {displayTitle}
-            </Text>
-          )}
-          {progress > 0 && progress < 1 && (
-            <View
-              style={[
-                styles.progressBarContainer,
-                { backgroundColor: isDark ? colors.surfaceRaised : 'rgba(0,0,0,0.05)' },
-              ]}
-            >
-              <View
-                style={[
-                  styles.progressBarFill,
-                  { backgroundColor: colors.gold, width: `${progress * 100}%` },
-                ]}
-              />
-            </View>
-          )}
-          <View style={styles.footerActions}>
-            <TouchableOpacity onPress={handleInfo} style={styles.iconButton}>
-              <Ionicons name="information-circle-outline" size={22} color={colors.text} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleRemove} style={styles.iconButton}>
-              <Ionicons name="close-circle-outline" size={22} color={colors.text} />
-            </TouchableOpacity>
-          </View>
+          <Text style={[styles.episodeText, { color: colors.text }]} numberOfLines={2}>
+            {displayTitle}
+          </Text>
         </View>
       </View>
-    );
-  }
-
-  // ─── Regular Media Card ───
-  return (
-    <View
-      style={[
-        styles.outerContainer,
-        {
-          width: cardWidth,
-          backgroundColor: isDark ? colors.surface : 'rgba(255,255,255,0.5)',
-        },
-      ]}
-    >
-      <TouchableOpacity style={styles.touchableContainer} onPress={handlePlay} activeOpacity={0.8}>
-        <View
-          style={[
-            styles.imageContainer,
-            {
-              height: imageContainerHeight,
-              backgroundColor: isDark ? '#222' : 'rgba(0,0,0,0.05)',
-            },
-          ]}
-        >
-          {imageSource ? (
-            <Image
-              source={imageSource}
-              style={styles.image}
-              resizeMode="cover"
-              onError={() => setImageError(true)}
-            />
-          ) : (
-            <ImagePlaceholder width={cardWidth} height={imageContainerHeight} />
-          )}
-          <Badge
-            mediaType={mediaType}
-            releaseDate={item.release_date}
-            firstAirDate={item.first_air_date}
-            lastAirDate={item.last_air_date}
-            hasWatched={hasWatched}
-          />
-          {rating && rating > 0 && (
-            <View style={[styles.ratingBadge, { backgroundColor: 'rgba(0,0,0,0.7)' }]}>
-              <Ionicons name="star" size={10} color="#FFD700" />
-              <Text style={styles.ratingBadgeText}>{rating.toFixed(1)}</Text>
-            </View>
-          )}
-        </View>
-      </TouchableOpacity>
-      <View
-        style={[
-          styles.footerContainer,
-          {
-            backgroundColor: isDark ? colors.surface : 'rgba(255,255,255,0.5)',
-          },
-        ]}
-      >
-        <Text style={[styles.episodeText, { color: colors.text }]} numberOfLines={2}>
-          {displayTitle}
-        </Text>
-      </View>
-    </View>
+    </Animated.View>
   );
 };
 
@@ -365,10 +390,17 @@ const defaultWidth = width / 3 - 16;
 const defaultHeight = defaultWidth * 1.5;
 
 const styles = StyleSheet.create({
-  outerContainer: {
+  cardShadowWrapper: {
+    // Carries margin + the drop shadow. Deliberately NOT overflow:'hidden'
+    // and NOT the corner radius — shadows get clipped away on iOS if the
+    // same view that casts them also clips its own content, so the radius
+    // + overflow:hidden that round the card's corners live one level
+    // deeper, on `outerContainer`, instead.
     marginHorizontal: 4,
     marginBottom: 5,
-    borderRadius: 4,
+  },
+  outerContainer: {
+    borderRadius: RADIUS.sm,
     overflow: 'hidden',
   },
   touchableContainer: {},
@@ -376,8 +408,8 @@ const styles = StyleSheet.create({
     width: '100%',
     position: 'relative',
     overflow: 'hidden',
-    borderTopLeftRadius: 4,
-    borderTopRightRadius: 4,
+    borderTopLeftRadius: RADIUS.sm,
+    borderTopRightRadius: RADIUS.sm,
   },
   image: {
     width: '100%',
