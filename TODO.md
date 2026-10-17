@@ -422,18 +422,50 @@ HTTP so the app can call them. Additive — it does not replace the TUI.
 - [ ] Cache resolved streams in-process with a TTL. `httpcache.py` already
       exists and can back this.
 
-### Chromium decision (needed before building)
+### Chromium decision - RESOLVED: option (b), env-gated
 
-- [ ] Choose one:
-      **(a)** install Chromium in the image — enables all 18 providers, but adds
-      roughly 400MB and needs a matching browser-driver pin, which is heavy on
-      Render's free tier;
-      **(b)** serve only the 8 browser-free providers now, adding Chromium later
-      if a specific provider proves worth it;
-      **(c)** resolve Chromium-dependent providers on the user's own device.
-      **Recommendation: (b).** It gets real playback soonest and keeps the image
-      small. The browser-free set includes framextv, which is TMDB-id based and
-      needs no search step.
+Decision: serve the 8 browser-free providers now. Keep the full 18 behind an
+environment switch so the paid Render service can turn it on without a code
+change or a rebuild.
+
+- [ ] `NETWEB_PROVIDER_SET=core` (default) - the 8 browser-free providers:
+      `framextv, o2tv, shortdrama, moviebox, dramachi, fourkhdhub, fzmovies,
+      kissasian`. No Chromium needed. Runs on Render's free tier.
+- [ ] `NETWEB_PROVIDER_SET=full` - all 18, including the 9 that need headless
+      Chromium. Requires the Chromium-enabled image and therefore a paid tier.
+- [ ] The switch changes which providers the server offers, nothing else.
+      Flipping the variable on a paid service is the entire migration.
+- [ ] `GET /v1/sources` reports which set is active and which providers were
+      skipped, so the client can show an accurate capability list rather than
+      guessing.
+- [ ] In `core` mode, a request for a Chromium-only provider fails fast with a
+      clear reason instead of hanging on a browser that is not installed.
+
+#### Why this is cheap to switch on later
+
+The two sets differ only in the provider filter and the image. The endpoint
+shapes, the response envelope, the passthrough and the client are identical
+either way, so `full` is a config flip rather than a second implementation.
+
+#### The TUI is untouched
+
+The server is additive. `main.py`, `cli_utils`, `player_manager`, `proxy.py`
+and every handler keep working exactly as they do now, so terminal users lose
+nothing. The server is a second consumer of `netweb.scraping`.
+
+### Verified in the sandbox
+
+These were run, not assumed:
+
+- `from netweb.scraping import framextv` imports with **zero** TUI modules
+  pulled in - checked by diffing `sys.modules` for `cli_utils`, `readchar`,
+  `rich`, `player_manager` and `mpv` after import. None appeared.
+- `framextv.search(tmdb_id=550, media_type='movie')` returned **2 real
+  playable M3U8 streams** (720p and 480p) with no browser and no API key.
+- All 29 modules in `scraping/` contain zero TUI calls.
+- `o2tv` degrades to a clean "OCR unavailable" result rather than raising,
+  because `pytesseract` and `tesseract` are optional extras (`netweb[ocr]`).
+  It can stay in `core`; it simply reports that OCR is unavailable.
 
 ### Deployment steps
 
