@@ -1,0 +1,40 @@
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://chaquo.com/maven' }
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.7.2'
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.20'
+        classpath 'com.facebook.react:react-native-gradle-plugin'
+        classpath 'com.chaquo.python:gradle:17.0.0'
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://chaquo.com/maven' }
+        flatDir { dirs "$rootDir/libs" }
+    }
+}
+
+// Force a single consistent NDK/SDK version across all subprojects.
+// Must run BEFORE expo-root-project / react-native.rootproject are applied,
+// since those plugins eagerly evaluate some subprojects during their own
+// apply() — registering afterEvaluate after that point throws
+// "project is already evaluated".
+subprojects { subproject ->
+    afterEvaluate {
+        if (subproject.hasProperty("android")) {
+            subproject.android.ndkVersion = rootProject.ext.ndkVersion
+            subproject.android.compileSdkVersion rootProject.ext.compileSdkVersion
+            subproject.android.buildToolsVersion rootProject.ext.buildToolsVersion
+        }
+    }
+}
+
+apply plugin: "expo-root-project"
+apply plugin: "com.facebook.react.rootproject"

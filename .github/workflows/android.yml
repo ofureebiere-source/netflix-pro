@@ -1,0 +1,302 @@
+﻿name: Android Dev Client APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      fresh_build:
+        description: 'Force fresh build (clear all caches)'
+        type: boolean
+        default: false
+
+jobs:
+  cleanup:
+    name: Cleanup
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: write
+    steps:
+      - name: Delete old artifacts (>1 hour)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          CUTOFF_EPOCH=$(date -u -d "-1 hour" +%s)
+          page=1
+          while : ; do
+            response=$(gh api "repos/${REPO}/actions/artifacts?per_page=100&page=${page}")
+            count=$(echo "$response" | jq '.artifacts | length')
+            [ "$count" -eq 0 ] && break
+            echo "$response" | jq -c '.artifacts[]' | while read -r artifact; do
+              id=$(echo "$artifact" | jq -r '.id')
+              created_at=$(echo "$artifact" | jq -r '.created_at')
+              created_epoch=$(date -u -d "$created_at" +%s)
+              [ "$created_epoch" -lt "$CUTOFF_EPOCH" ] && gh api -X DELETE "repos/${REPO}/actions/artifacts/${id}" || true
+            done
+            total_count=$(echo "$response" | jq '.total_count')
+            [ $((page * 100)) -ge "$total_count" ] && break
+            page=$((page + 1))
+          done
+
+      - name: Delete this branch's previous release only
+        # Scoped to this branch's own tag (android-apk-<branch>) so a build
+        # on one branch never touches another branch's release (e.g. the
+        # termux branch, which has its own copy of this workflow). Each
+        # branch gets exactly one rolling release, per-branch instead of
+        # repo-wide.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: android-apk-${{ github.ref_name }}
+        run: |
+          release_id=$(gh api "repos/${REPO}/releases/tags/${TAG}" --jq '.id' 2>/dev/null || true)
+          if [ -n "$release_id" ]; then
+            echo "🗑️  Deleting previous release '${TAG}' (id ${release_id})"
+            gh api -X DELETE "repos/${REPO}/releases/${release_id}" || true
+            gh api -X DELETE "repos/${REPO}/git/refs/tags/${TAG}" || true
+          else
+            echo "No existing '${TAG}' release to delete."
+          fi
+
+  build-wheels:
+    uses: ./.github/workflows/build-android-wheels.yml
+    needs: cleanup
+    secrets: inherit
+    permissions:
+      contents: write
+    with:
+      release_tag: android-wheels-latest
+
+  build-apk:
+    name: Build Debug APK
+    runs-on: ubuntu-latest
+    needs: [cleanup, build-wheels]
+    permissions:
+      contents: write
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android/sdk/ndk /opt/ghc \
+            /usr/local/share/boost /usr/share/swift /usr/local/.ghcup \
+            /usr/lib/jvm /usr/share/php* /usr/share/mysql* \
+            /usr/local/share/powershell /usr/share/dotnet \
+            /opt/hostedtoolcache/CodeQL
+          sudo apt-get clean
+          docker system prune -af || true
+          df -h
+
+      - name: Checkout (without LFS)
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+
+      - name: Clear all caches for fresh build
+        if: github.event.inputs.fresh_build == 'true'
+        run: |
+          rm -rf ~/.gradle/caches ~/.gradle/wrapper node_modules .expo \
+            ~/.npm/_cacache .cache .turbo
+          sudo rm -rf ~/.cargo ~/.rustup
+
+      - name: Create LFS file list
+        run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
+
+      - name: Restore LFS cache
+        uses: actions/cache@v4
+        id: lfs-cache
+        with:
+          path: .git/lfs
+          key: lfs-${{ hashFiles('.lfs-assets-id') }}
+
+      - name: Git LFS pull
+        run: git lfs pull
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Check if assets changed
+        id: assets-check
+        run: |
+          echo "ASSET_HASH=$(sha256sum ./assets/splash-icon.png ./assets/icon.png ./assets/adaptive-icon.png 2>/dev/null | sha256sum | cut -d' ' -f1)" >> $GITHUB_ENV
+
+      - name: Set up Python 3.13 for Chaquopy
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('android/**/*.gradle*', 'android/gradle/wrapper/gradle-wrapper.properties', 'modules/**/android/build.gradle') }}-${{ env.ASSET_HASH }}
+          restore-keys: |
+            gradle-${{ runner.os }}-${{ hashFiles('android/**/*.gradle*') }}
+            gradle-${{ runner.os }}-
+
+      - name: Cache node_modules
+        id: node-modules-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.node-modules-cache.outputs.cache-hit != 'true'
+        run: npm ci --legacy-peer-deps
+
+      - name: Decode .env file
+        run: |
+          echo "${{ secrets.ENV_FILE }}" | base64 -d > .env
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Cache Android SDK components
+        id: android-sdk-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.ANDROID_SDK_ROOT }}/platforms
+            ${{ env.ANDROID_SDK_ROOT }}/build-tools
+            ${{ env.ANDROID_SDK_ROOT }}/ndk
+          key: android-sdk-${{ runner.os }}-platform36-buildtools36.0.0-ndk27.1.12297006
+
+      - name: Install SDK components
+        if: steps.android-sdk-cache.outputs.cache-hit != 'true'
+        run: |
+          sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;27.1.12297006"
+
+      - name: Set NDK env vars
+        run: |
+          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.1.12297006" >> $GITHUB_ENV
+          echo "ANDROID_NDK=$ANDROID_SDK_ROOT/ndk/27.1.12297006" >> $GITHUB_ENV
+
+      - name: Create local.properties
+        run: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
+          echo "ndk.dir=$ANDROID_SDK_ROOT/ndk/27.1.12297006" >> android/local.properties
+
+      - name: Download prebuilt Android wheels
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          WHEELS_DIR="modules/boxoffice/android/src/main/python/wheels"
+          mkdir -p "$WHEELS_DIR"
+          gh release download "android-wheels-latest" \
+            --repo "${{ github.repository }}" \
+            --pattern "*.whl" \
+            --dir "$WHEELS_DIR" \
+            --clobber
+
+      - name: Verify wheel compatibility
+        run: |
+          WHEELS_DIR="modules/boxoffice/android/src/main/python/wheels"
+          for whl in "$WHEELS_DIR"/*.whl; do
+            [ -f "$whl" ] || continue
+            name=$(basename "$whl")
+            # Only check native wheels for Python version; pure Python wheels are platform-independent
+            if [[ "$name" == *-android_* ]]; then
+              [[ "$name" == *cp313* ]] || { echo "❌ Wrong Python version: $name"; exit 1; }
+            fi
+          done
+          ls "$WHEELS_DIR"/pydantic_core*.whl 1>/dev/null 2>&1 || { echo "❌ Missing pydantic-core wheel!"; exit 1; }
+          ls "$WHEELS_DIR"/jiter*.whl 1>/dev/null 2>&1 || { echo "❌ Missing jiter wheel!"; exit 1; }
+          ls "$WHEELS_DIR"/movie_box_dl*.whl 1>/dev/null 2>&1 || { echo "❌ Missing movie-box-dl wheel!"; exit 1; }
+
+      - name: Cache Chaquopy Python packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            modules/boxoffice/android/build/python
+            modules/boxoffice/android/build/chaquopy
+          key: chaquopy-${{ runner.os }}-${{ hashFiles('modules/boxoffice/android/src/main/python/requirements.txt', 'modules/boxoffice/android/src/main/python/wheels/*.whl') }}
+
+      - name: Generate debug keystore
+        run: |
+          keytool -genkeypair -v \
+            -keystore android/app/debug.keystore \
+            -storepass android -alias androiddebugkey -keypass android \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
+      - name: Cache ffmpeg-kit AAR
+        id: ffmpeg-cache
+        uses: actions/cache@v4
+        with:
+          path: android/libs/ffmpeg-kit-full-gpl.aar
+          key: ffmpeg-kit-aar-v1.0.0
+
+      - name: Download ffmpeg-kit AAR
+        if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p android/libs
+          curl -L "https://github.com/NooruddinLakhani/ffmpeg-kit-full-gpl/releases/download/v1.0.0/ffmpeg-kit-full-gpl.aar" \
+            -o android/libs/ffmpeg-kit-full-gpl.aar
+
+      - name: Set Chaquopy env vars
+        run: |
+          echo "CHAQUOPY_PYTHON_VERSION=3.13" >> $GITHUB_ENV
+          echo "CHAQUOPY_NO_LICENSE=DIALOG" >> $GITHUB_ENV
+
+      - name: Mirror pawns-sdk local AARs into android/libs
+        run: |
+          mkdir -p android/libs
+          cp modules/pawns/android/libs/internet-sharing-1.8.1.aar android/libs/
+          cp modules/pawns/android/libs/pawns-ndk-1.8.1.aar android/libs/
+
+      - name: Verify boxoffice module
+        run: |
+          test -f modules/boxoffice/android/build.gradle || exit 1
+          test -f modules/boxoffice/android/src/main/python/requirements.txt || exit 1
+          test -f modules/boxoffice/expo-module.config.json || exit 1
+          test -n "$(ls -A modules/boxoffice/android/src/main/python/wheels/*.whl 2>/dev/null)" || exit 1
+
+      - name: Build Debug APK
+        run: |
+          cd android
+          chmod +x gradlew
+          [ "${{ github.event.inputs.fresh_build }}" = 'true' ] && ./gradlew clean
+          ./gradlew assembleDebug \
+            --no-daemon --build-cache --stacktrace \
+            -PreactNativeArchitectures=arm64-v8a,x86_64
+        env:
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx6g -Dorg.gradle.daemon=false"
+          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
+          CHAQUOPY_PYTHON_VERSION: ${{ env.CHAQUOPY_PYTHON_VERSION }}
+          CHAQUOPY_NO_LICENSE: ${{ env.CHAQUOPY_NO_LICENSE }}
+
+      - name: Get app version
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Upload APK to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-apk-${{ github.ref_name }}
+          name: Android Debug APK (${{ github.ref_name }})
+          files: android/app/build/outputs/apk/debug/*.apk
+          body: |
+            Latest debug APK build for the `${{ github.ref_name }}` branch.
+            **Version:** ${{ steps.version.outputs.version }}
+            **Branch:** ${{ github.ref_name }} | **Commit:** ${{ github.sha }}
+          # Only main's release gets the repo-wide "Latest" badge on GitHub;
+          # termux (and any future branch) still gets its own separate,
+          # always-up-to-date release, just without the badge.
+          make_latest: ${{ github.ref_name == 'main' && 'true' || 'false' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
