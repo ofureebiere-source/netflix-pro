@@ -1,13 +1,23 @@
 // src/hooks/useLicensedPlaybackSource.ts
 //
+// Resolves a playable source for a title from the Net-web backend.
+//
 // Replaces the old useStreamExtraction hook (multi-provider scrape/bypass
-// pipeline, deleted in the piracy-removal pass). A licensed backend
-// returns one direct, playable URL per title — there's no source
-// cascade, no embed/iframe fallback, and no torrent fallback to manage,
-// so this hook is intentionally much smaller than what it replaces.
+// pipeline, deleted in the piracy-removal pass). The backend resolves every
+// provider concurrently and hands back what answered, so there is no source
+// cascade or embed fallback to manage here.
+//
+// The backend returns per-source request headers, and most providers only
+// serve segments to a request carrying the right User-Agent/Referer. Those
+// headers are surfaced here so the player can use them instead of inventing
+// its own — a mismatch is the usual cause of a stream that resolves but
+// then 403s on the first segment.
 
-import { useEffect, useState, useCallback } from 'react';
-import { getPlaybackSource, LicensedPlaybackSource } from '../services/licensedPlayback/LicensedPlaybackService';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import {
+  getPlaybackSources,
+  LicensedPlaybackSource,
+} from '../services/licensedPlayback/LicensedPlaybackService';
 
 export interface UseLicensedPlaybackSourceParams {
   mediaId: string;
@@ -21,49 +31,76 @@ export interface UseLicensedPlaybackSourceParams {
 
 export interface UseLicensedPlaybackSourceResult {
   videoUrl: string | null;
+  /** Request headers the provider expects. Pass these to the player. */
+  streamHeaders?: Record<string, string>;
+  /** Every source the backend resolved, best-effort ordered. For quality/audio choice. */
+  sources: LicensedPlaybackSource[];
+  /** The source currently selected from `sources`. */
+  activeSource: LicensedPlaybackSource | null;
+  /** Select a different source by index, for a quality or audio-track picker. */
+  selectSource: (index: number) => void;
   isResolved: boolean;
   isLoading: boolean;
   error: string | null;
 }
 
-export function useLicensedPlaybackSource(params: UseLicensedPlaybackSourceParams): UseLicensedPlaybackSourceResult {
-  const { mediaId, mediaType, season, episode, isOffline, offlineFilePath, directStreamUrl } = params;
+export function useLicensedPlaybackSource(
+  params: UseLicensedPlaybackSourceParams
+): UseLicensedPlaybackSourceResult {
+  const {
+    mediaId, mediaType, season, episode,
+    isOffline, offlineFilePath, directStreamUrl,
+  } = params;
 
-  const [videoUrl, setVideoUrl] = useState<string | null>(directStreamUrl || null);
+  const [sources, setSources] = useState<LicensedPlaybackSource[]>([]);
+  const [activeIndex, setActiveIndex] = useState(0);
   const [isResolved, setIsResolved] = useState<boolean>(!!directStreamUrl || !!isOffline);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Guards against a stale resolve landing after params changed or unmount.
+  const requestIdRef = useRef(0);
+
   const resolve = useCallback(async () => {
     if (isOffline && offlineFilePath) {
-      setVideoUrl(offlineFilePath);
       setIsResolved(true);
       return;
     }
     if (directStreamUrl) {
-      setVideoUrl(directStreamUrl);
       setIsResolved(true);
       return;
     }
     if (!mediaId) return;
 
+    const requestId = ++requestIdRef.current;
     setIsLoading(true);
     setError(null);
     try {
-      const source: LicensedPlaybackSource = await getPlaybackSource({
+      const found = await getPlaybackSources({
         tmdbId: mediaId,
         mediaType: mediaType === 'tv' ? 'tv' : 'movie',
         season,
         episode,
       });
-      setVideoUrl(source.url);
+      if (requestId !== requestIdRef.current) return;
+
+      setSources(found);
+      setActiveIndex(0);
+      if (found.length === 0) {
+        setError('Playback is not available for this title yet.');
+      }
       setIsResolved(true);
     } catch (err) {
+      if (requestId !== requestIdRef.current) return;
       console.warn('[useLicensedPlaybackSource] Failed to resolve playback source:', err);
-      setError(err instanceof Error ? err.message : 'Playback is not available for this title yet.');
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Playback is not available for this title yet.'
+      );
       setIsResolved(true);
     } finally {
-      setIsLoading(false);
+      if (requestId === requestIdRef.current) setIsLoading(false);
     }
   }, [mediaId, mediaType, season, episode, isOffline, offlineFilePath, directStreamUrl]);
 
@@ -71,7 +108,31 @@ export function useLicensedPlaybackSource(params: UseLicensedPlaybackSourceParam
     resolve();
   }, [resolve]);
 
-  return { videoUrl, isResolved, isLoading, error };
+  const selectSource = useCallback((index: number) => {
+    setActiveIndex((current) => {
+      if (index < 0 || index >= sources.length) return current;
+      return index;
+    });
+  }, [sources.length]);
+
+  const activeSource = sources[activeIndex] ?? null;
+
+  const videoUrl = useMemo(() => {
+    if (isOffline && offlineFilePath) return offlineFilePath;
+    if (directStreamUrl) return directStreamUrl;
+    return activeSource?.url ?? null;
+  }, [isOffline, offlineFilePath, directStreamUrl, activeSource]);
+
+  return {
+    videoUrl,
+    streamHeaders: activeSource?.headers,
+    sources,
+    activeSource,
+    selectSource,
+    isResolved,
+    isLoading,
+    error,
+  };
 }
 
 export default useLicensedPlaybackSource;

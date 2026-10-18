@@ -139,27 +139,45 @@ const HEADER_STRATEGIES: HeaderStrategy[] = [
     return headers;
   },
 
-  // 3: Last resort — original app-domain Referer. Kept because some
-  //    sources are configured to expect traffic proxied via the API host.
+  // 3: Last resort — browser UA with no Referer at all.
   () => ({
     'Accept': '*/*',
     'Accept-Language': 'en-US,en;q=0.9',
     'User-Agent': BROWSER_UA,
-    'Referer': 'https://netflix-tf79.onrender.com/',
   }),
 ];
 
-const getStreamHeaders = (url: string, strategyIndex: number = 0): Record<string, string> => {
-  const strategy = HEADER_STRATEGIES[strategyIndex] || HEADER_STRATEGIES[0];
-  const headers = strategy(url);
+/**
+ * Build the request headers for a stream.
+ *
+ * `backendHeaders` come from the resolve response and are authoritative:
+ * the provider told the server exactly what it expects, so they are tried
+ * first. The strategies below are only fallbacks for when the backend
+ * supplied nothing or its headers were rejected.
+ */
+const getStreamHeaders = (
+  url: string,
+  strategyIndex: number = 0,
+  backendHeaders?: Record<string, string>,
+): Record<string, string> => {
+  const usingBackend = strategyIndex === 0 && backendHeaders
+    && Object.keys(backendHeaders).length > 0;
+
+  const headers = usingBackend
+    ? { 'Accept': '*/*', 'Accept-Language': 'en-US,en;q=0.9', ...backendHeaders }
+    : (HEADER_STRATEGIES[strategyIndex] || HEADER_STRATEGIES[0])(url);
+
   // Only delete things a strategy might accidentally include. Origin is
   // intentionally set by strategy 2 to mimic a real browser — do NOT
   // delete it here, or strategy 2 collapses into strategy 1 + Referer.
   delete (headers as any)['Accept-Encoding'];
   delete (headers as any)['Content-Type'];
-  logDebug(`📡 Stream headers built (strategy ${strategyIndex}/${HEADER_STRATEGIES.length - 1})`, {
-    keys: Object.keys(headers).join(', ') || '(none)',
-  });
+  logDebug(
+    usingBackend
+      ? '📡 Stream headers from backend resolve'
+      : `📡 Stream headers built (strategy ${strategyIndex}/${HEADER_STRATEGIES.length - 1})`,
+    { keys: Object.keys(headers).join(', ') || '(none)' },
+  );
   return headers;
 };
 
@@ -580,7 +598,7 @@ const VideoPlayerScreen = () => {
           setPlayerReady(false);
           playerReadyRef.current = false;
 
-          const headers = getStreamHeaders(activeStreamUrl, attempt);
+          const headers = getStreamHeaders(activeStreamUrl, attempt, playback.streamHeaders);
           await activePlayer.replaceAsync({
             uri: activeStreamUrl,
             headers: Object.keys(headers).length > 0 ? headers : undefined,
@@ -640,7 +658,7 @@ const VideoPlayerScreen = () => {
     };
 
     loadStream();
-  }, [isNativeMode, directStreamUrl, videoUrl, activePlayer]);
+  }, [isNativeMode, directStreamUrl, videoUrl, activePlayer, playback.streamHeaders]);
 
   useEffect(() => {
     if (!isNativeMode || !playerReadyRef.current) return;
