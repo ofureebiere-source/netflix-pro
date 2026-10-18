@@ -739,7 +739,7 @@ export class TMDBMetadataAdapter {
    * Fetch from TMDB API with rate limiting.
    */
   private async fetchFromTMDB(url: string, params: any): Promise<any> {
-    const TMDB_API_KEY = '''';
+    const TMDB_API_KEY = process.env.EXPO_PUBLIC_TMDB_API_KEY || '';
     
     const fullUrl = new URL(url);
     fullUrl.searchParams.append('api_key', TMDB_API_KEY);
