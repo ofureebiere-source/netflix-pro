@@ -30,7 +30,7 @@ import {
 } from '../../services/unified/metadata/TMDBMetadata';
 import { getDownloadSettings } from '../../utils/downloadStorage';
 import { buildFFmpegHeaders } from '../../utils/streamHeaders';
-import { getPlaybackSource, LicensedPlaybackSource } from '../../services/licensedPlayback/LicensedPlaybackService';
+import { getPlaybackSources, groupSourcesByQuality, NoSourceAvailableError } from '../../services/licensedPlayback/LicensedPlaybackService';
 import { GlassButton } from '../../components/glass';
 import { SPACING, RADIUS } from '../../theme/tokens';
 
@@ -399,28 +399,65 @@ const DetailsScreenNew: React.FC = () => {
     try {
       const seasonToUse = seasonNum || selectedSeason || 1;
       const episodeToUse = episodeNum || 1;
-      console.log(`[Details] 🔍 Fetching licensed playback source for TMDB ID: ${tmdbId}, S${seasonToUse}E${episodeToUse}`);
+      console.log(`[Details] 🔍 Fetching licensed playback sources for TMDB ID: ${tmdbId}, S${seasonToUse}E${episodeToUse}`);
 
-      const source: LicensedPlaybackSource = await getPlaybackSource({
+      // Pass the title/year so the title-based providers can resolve without
+      // the server holding a TMDB key. Without these the server can only use
+      // frameXTV, which is the single TMDB-id-based provider.
+      const releaseYearHint = displayReleaseDate
+        ? Number(displayReleaseDate.slice(0, 4)) || undefined
+        : Number(displayYear) || undefined;
+
+      const sources = await getPlaybackSources({
         tmdbId,
         mediaType: isTVShow ? 'tv' : 'movie',
         season: isTVShow ? seasonToUse : undefined,
         episode: isTVShow ? episodeToUse : undefined,
+        title: displayTitle || undefined,
+        year: releaseYearHint,
       });
 
-      console.log(`[Details] ✅ Playback source: ${source.url} (${source.type})`);
+      if (sources.length === 0) {
+        throw new NoSourceAvailableError('No provider returned a source for this title.');
+      }
 
-      const result = { url: source.url, quality: 'HD', isTorrent: false, allSources: [source], provider: 'licensed' };
+      // Best first: the server normalises quality, so sorting by height here
+      // gives the highest available rendition regardless of provider order.
+      const byQuality = groupSourcesByQuality(sources);
+      const bestSource = byQuality[0].sources[0];
+
+      console.log(`[Details] ✅ ${sources.length} source(s), best: ${bestSource.qualityLabel} (${bestSource.type})`);
+
+      // Offer every quality the backend resolved, best first, instead of a
+      // single hardcoded entry. The list comes from the server's own
+      // normalisation, so a 4K release shows 4K and a 480p-only title shows
+      // 480p — the client holds no fixed set of resolutions.
+      const qualities: DownloadQuality[] = byQuality.map((opt, i) => ({
+        label: opt.label,
+        resolution: opt.label,
+        size: 'Unknown',
+        sizeBytes: 0,
+        url: opt.sources[0].url,
+        provider: opt.sources[0].providerLabel || opt.sources[0].provider || 'licensed',
+        format: opt.sources[0].type.toUpperCase(),
+        isRecommended: i === 0,
+      }));
+
+      const best = qualities[0];
+      const result = {
+        url: best.url,
+        quality: best.label,
+        isTorrent: false,
+        allSources: sources,
+        provider: best.provider,
+      };
       setStreamData(result);
       setSelectedStreamUrl(result.url);
       setSelectedProvider('licensed');
       setIsTorrentStream(false);
 
-      const qualities: DownloadQuality[] = [
-        { label: 'HD', resolution: 'HD', size: 'Unknown', sizeBytes: 0, url: result.url, provider: 'licensed', isRecommended: true },
-      ];
       setDownloadQualities(qualities);
-      if (!isTVShow) setPendingQuality(qualities[0]);
+      if (!isTVShow) setPendingQuality(best);
       setIsExtractingStream(false);
       return result;
     } catch (error) {
@@ -428,7 +465,7 @@ const DetailsScreenNew: React.FC = () => {
       setIsExtractingStream(false);
       return null;
     }
-  }, [tmdbId, isTVShow, selectedSeason]);
+  }, [tmdbId, isTVShow, selectedSeason, displayTitle, displayYear, displayReleaseDate]);
 
   useEffect(() => { extractStreamFromAPI(); }, [extractStreamFromAPI]);
 

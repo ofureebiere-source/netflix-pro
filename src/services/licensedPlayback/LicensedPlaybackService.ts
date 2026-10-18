@@ -19,10 +19,24 @@
 //     -> { status, provider_set, active: [...], skipped: [...] }
 //   GET {base}/v1/stream?tmdbId=&mediaType=movie|tv&season=&episode=
 //                       &title=&year=&providers=
-//     -> { status, info: {tmdbId, mediaType, season, episode, title, year,
-//                         provider_set},
+//     -> { status,
+//          info: { tmdbId, mediaType, season, episode, title, year,
+//                  provider_set,
+//                  qualities: [{height, label, count}] },   // best first
 //          sources: [{ name, data: { stream, type: 'hls'|'dash'|'mp4',
-//                                    quality, headers, size, subtitles[] } }] }
+//                                    quality,        // extractor's string
+//                                    qualityHeight,  // 2160 | 1080 | … | null
+//                                    qualityLabel,   // "4K" | "1080p" | "Auto"
+//                                    language,       // audio track, may be ""
+//                                    provider, providerLabel,
+//                                    headers, size, subtitles[] } }] }
+//
+// Quality is decided by the server, not here. The extractors each report
+// quality in their own form ("2160p", "720p HD", "720p | English"), so the
+// server normalises it once into a height (to sort and group by) and a label
+// (to display). The client only groups sources by height and renders the
+// labels it is given — it never holds a fixed quality list, so a title that
+// resolves 4K offers 4K and one that resolves only 480p offers 480p.
 //   GET {base}/v1/subtitles?tmdbId=&mediaType=&season=&episode=&languages=
 //     -> { status, info, tracks: [{url, label, lang}], notes: [] }
 //   GET {base}/proxy?url=&referer=&origin=
@@ -67,8 +81,16 @@ export interface LicensedPlaybackSource {
   name?: string;
   /** Provider id, e.g. "framextv". Stable, unlike `name`. */
   provider?: string;
-  /** Raw quality string, e.g. "720p | English". */
+  /** Provider display name, e.g. "frameXTV". */
+  providerLabel?: string;
+  /** Raw quality string as the extractor reported it, e.g. "720p | English". */
   quality?: string;
+  /** Resolution height in pixels, server-normalised. Sort and group on this. */
+  qualityHeight?: number;
+  /** Display label for the quality, server-normalised, e.g. "4K" or "1080p". */
+  qualityLabel?: string;
+  /** Audio language the extractor encoded into the quality, e.g. "Tamil". */
+  language?: string;
   size?: number;
   subtitles?: LicensedSubtitleTrack[];
 }
@@ -203,13 +225,21 @@ async function getJson<T>(path: string, query: string): Promise<T> {
 
 interface RawStreamResponse {
   status?: string;
-  info?: { provider_set?: string };
+  info?: {
+    provider_set?: string;
+    qualities?: { height: number; label: string; count: number }[];
+  };
   sources?: {
     name?: string;
     data?: {
       stream?: string;
       type?: string;
       quality?: string;
+      qualityHeight?: number | null;
+      qualityLabel?: string;
+      language?: string;
+      provider?: string;
+      providerLabel?: string;
       headers?: Record<string, string>;
       size?: number;
       subtitles?: { url?: string; label?: string; lang?: string }[];
@@ -249,7 +279,12 @@ function flattenSource(
       ? data.headers
       : undefined,
     name: entry.name,
+    provider: data?.provider,
+    providerLabel: data?.providerLabel,
     quality: data?.quality,
+    qualityHeight: typeof data?.qualityHeight === 'number' ? data.qualityHeight : undefined,
+    qualityLabel: data?.qualityLabel,
+    language: data?.language,
     size: data?.size,
     subtitles: subtitles.length > 0 ? subtitles : undefined,
   };
@@ -373,6 +408,55 @@ export async function checkBackendHealth(): Promise<LicensedHealth | null> {
   }
 }
 
+/** A quality choice derived from what the backend actually resolved. */
+export interface QualityOption {
+  /** Resolution height in pixels; 0 for sources with no stated quality. */
+  height: number;
+  /** Display label, e.g. "4K", "1080p", "Auto". */
+  label: string;
+  /** Every source available at this height, best first as the server sent them. */
+  sources: LicensedPlaybackSource[];
+}
+
+/**
+ * Group resolved sources into quality options, best resolution first.
+ *
+ * The list is built from what was resolved, never from a fixed set: a title
+ * with only a 480p source offers only 480p, and one with a 4K release offers
+ * 4K. Sources with no stated quality collect under a single "Auto" entry
+ * rather than being dropped, so nothing becomes unplayable.
+ *
+ * The height and label come from the server's own normalisation; this only
+ * groups. Two sources at the same height stay separate entries inside the
+ * option so an audio-track choice remains possible.
+ */
+export function groupSourcesByQuality(
+  sources: LicensedPlaybackSource[]
+): QualityOption[] {
+  const buckets = new Map<number, QualityOption>();
+  for (const source of sources) {
+    const height = source.qualityHeight ?? 0;
+    let option = buckets.get(height);
+    if (!option) {
+      option = {
+        height,
+        label: source.qualityLabel || (height ? `${height}p` : 'Auto'),
+        sources: [],
+      };
+      buckets.set(height, option);
+    }
+    option.sources.push(source);
+  }
+  return [...buckets.values()].sort((a, b) => b.height - a.height);
+}
+
+/** The highest-quality option, or null when there is nothing to play. */
+export function bestQualityOption(
+  sources: LicensedPlaybackSource[]
+): QualityOption | null {
+  return groupSourcesByQuality(sources)[0] ?? null;
+}
+
 export default {
   getBackendBaseUrl,
   isLicensedBackendConfigured,
@@ -383,4 +467,6 @@ export default {
   getDownloadSource,
   getSubtitles,
   checkBackendHealth,
+  groupSourcesByQuality,
+  bestQualityOption,
 };
