@@ -452,7 +452,7 @@ const LibraryScreen = () => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: 'transparent' }]} edges={['top']}>
       {/* ─── Main Tabs ─── */}
       <View style={[styles.tabContainer, { borderBottomColor: colors.border }]}>
         <TouchableOpacity

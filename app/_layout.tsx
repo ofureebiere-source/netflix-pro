@@ -17,6 +17,7 @@ import { useAppStore } from '../src/store/zustand/store';
 // Theme & Alerts
 import { ThemeProvider, useTheme, useIsDark } from '../src/contexts/ThemeContext';
 import { AlertProvider } from '../src/contexts/AlertContext';
+import ScreenBackdrop from '../src/components/glass/ScreenBackdrop';
 
 // ─── SERVICES ───
 // All services are imported and initialized at module level
@@ -442,19 +443,25 @@ function AppContent() {
   return (
     <SafeAreaProvider>
       <StatusBar hidden />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: {
-            backgroundColor: 'transparent',
-          },
-        }}
-      >
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="movie/[id]" options={{ headerShown: false }} />
-        <Stack.Screen name="player/[id]" options={{ headerShown: false }} />
-        {/* search route is handled by app/search/index.tsx - no need to define here */}
-      </Stack>
+      {/* Page backdrop behind every route. Screens keep their own roots
+          transparent so this single layer provides the light gradient / dark
+          black — the player sets its own black, which covers it. */}
+      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+        <ScreenBackdrop />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: {
+              backgroundColor: 'transparent',
+            },
+          }}
+        >
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="movie/[id]" options={{ headerShown: false }} />
+          <Stack.Screen name="player/[id]" options={{ headerShown: false }} />
+          {/* search route is handled by app/search/index.tsx - no need to define here */}
+        </Stack>
+      </View>
     </SafeAreaProvider>
   );
 }

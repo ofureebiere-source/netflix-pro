@@ -4,8 +4,8 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface AppState {
-  // Settings
-  theme: 'light' | 'dark' | 'system';
+  // Settings. The colour scheme is deliberately absent: it follows the device
+  // (see ThemeContext) and is never a persisted user choice.
   wifiOnlyDownload: boolean;
   maxConcurrentDownloads: number;
   autoDeleteWatchedDays: number;
@@ -37,8 +37,6 @@ export interface AppState {
   networkStatus: 'online' | 'offline' | 'connecting';
   
   // Actions
-  setTheme: (theme: 'light' | 'dark' | 'system') => void;
-  toggleTheme: () => void;
   setWifiOnlyDownload: (enabled: boolean) => void;
   setMaxConcurrentDownloads: (count: number) => void;
   setAutoDeleteWatchedDays: (days: number) => void;
@@ -73,7 +71,6 @@ export interface AppState {
 }
 
 const defaultSettings = {
-  theme: 'system' as const,
   wifiOnlyDownload: true,
   maxConcurrentDownloads: 3,
   autoDeleteWatchedDays: 7,
@@ -109,19 +106,12 @@ const defaultUIState = {
 
 export const useAppStore = create<AppState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       ...defaultSettings,
       ...defaultPlayerState,
       ...defaultUIState,
 
       // Settings actions
-      setTheme: (theme) => set({ theme }),
-      toggleTheme: () => {
-        const { theme } = get();
-        if (theme === 'dark') set({ theme: 'light' });
-        else if (theme === 'light') set({ theme: 'system' });
-        else set({ theme: 'dark' });
-      },
       setWifiOnlyDownload: (enabled) => set({ wifiOnlyDownload: enabled }),
       setMaxConcurrentDownloads: (count) => set({ maxConcurrentDownloads: count }),
       setAutoDeleteWatchedDays: (days) => set({ autoDeleteWatchedDays: days }),
@@ -157,15 +147,10 @@ export const useAppStore = create<AppState>()(
     {
       name: 'app-storage',
       storage: createJSONStorage(() => AsyncStorage),
-      version: 2,
-      migrate: (persistedState: any, fromVersion) => {
-        if (fromVersion < 2 && persistedState?.theme === 'dark') {
-          return { ...persistedState, theme: 'system' };
-        }
-        return persistedState;
-      },
+      // v3 dropped the persisted theme (it is device-driven now). No migrate
+      // step is needed: zustand simply ignores the stale key.
+      version: 3,
       partialize: (state) => ({
-        theme: state.theme,
         wifiOnlyDownload: state.wifiOnlyDownload,
         maxConcurrentDownloads: state.maxConcurrentDownloads,
         autoDeleteWatchedDays: state.autoDeleteWatchedDays,
@@ -196,7 +181,6 @@ export const useAppStore = create<AppState>()(
 export const useSettings = () => {
   const state = useAppStore();
   return {
-    theme: state.theme,
     wifiOnlyDownload: state.wifiOnlyDownload,
     maxConcurrentDownloads: state.maxConcurrentDownloads,
     autoDeleteWatchedDays: state.autoDeleteWatchedDays,

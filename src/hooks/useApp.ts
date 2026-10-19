@@ -9,7 +9,6 @@ export const useApp = () => {
 export const useSettings = () => {
   const state = useAppStore();
   return {
-    theme: state.theme,
     wifiOnlyDownload: state.wifiOnlyDownload,
     maxConcurrentDownloads: state.maxConcurrentDownloads,
     autoDeleteWatchedDays: state.autoDeleteWatchedDays,

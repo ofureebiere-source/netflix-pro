@@ -16,18 +16,20 @@ export default function TabsLayout() {
     return insets.bottom > 0 ? insets.bottom + 12 : 14;
   };
 
+  // Light keeps the tab bar translucent so the page gradient shows through it
+  // (dark stays near-opaque, matching the reference's solid black bar).
   const getTabBarBackground = () => {
     if (isDark) {
       return 'rgba(0, 0, 0, 0.95)';
     }
-    return 'rgba(255, 255, 255, 0.95)';
+    return colors.tabBarBackground;
   };
 
   const getBorderColor = () => {
     if (isDark) {
       return '#27272a';
     }
-    return '#E4E4E7';
+    return colors.surfaceGlassBorder;
   };
 
   const getShadowColor = () => {

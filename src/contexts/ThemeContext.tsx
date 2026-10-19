@@ -1,13 +1,12 @@
 // src/contexts/ThemeContext.tsx
-import React, { createContext, useContext, useMemo, useEffect } from 'react';
+import React, { createContext, useContext } from 'react';
 import { useColorScheme } from 'react-native';
-import { useAppStore } from '../store/zustand/store';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 
 export interface ThemeColors {
   background: string;
-  backgroundGradient: string[];
+  backgroundGradient: readonly [string, string, ...string[]];
   surface: string;
   surfaceRaised: string;
   surfaceHigh: string;
@@ -84,90 +83,89 @@ const DARK_THEME: ThemeColors = {
   glassBlur: 20,
 };
 
-// The reference ships a single fixed dark scheme — no light mode, no toggle.
-// Rather than delete the light palette outright (it is still reachable through
-// the Settings toggle), it is flattened onto the same neutral ramp so the app
-// reads as one product in either mode: white surfaces, zinc borders, the same
-// brand red. The previous blue glassmorphism is gone.
+// Light follows the device. It is an accent-blue gradient over white with
+// glassmorphism surfaces: translucent panels the gradient shows through, and
+// blue as the one strong colour. The brand red stays on the wordmark only.
 const LIGHT_THEME: ThemeColors = {
   background: '#FFFFFF',
-  backgroundGradient: ['#FFFFFF', '#FAFAFA', '#FFFFFF'],
-  surface: '#FAFAFA',
-  surfaceRaised: '#F4F4F5',
-  surfaceHigh: '#E4E4E7',
-  surfaceGlass: 'rgba(0,0,0,0.03)',
-  surfaceGlassBorder: 'rgba(0,0,0,0.08)',
-  text: '#09090b',
-  textSub: '#52525b',
-  textMuted: '#a1a1aa',
+  // Soft accent-blue wash, brightest at the top of the screen.
+  backgroundGradient: ['#EEF4FF', '#FFFFFF', '#E8F0FF'],
+  surface: 'rgba(255,255,255,0.62)',
+  surfaceRaised: 'rgba(255,255,255,0.72)',
+  surfaceHigh: 'rgba(255,255,255,0.86)',
+  // Frosted panels: translucent white plus the blue-tinted hairline that
+  // reads as glass over the gradient rather than a flat card.
+  surfaceGlass: 'rgba(255,255,255,0.62)',
+  surfaceGlassBorder: 'rgba(37,99,235,0.16)',
+  text: '#0b1220',
+  textSub: '#475569',
+  textMuted: '#94a3b8',
   textInverse: '#FFFFFF',
-  accent: '#E50914',
-  accentDim: 'rgba(229, 9, 20, 0.4)',
-  accentFill: 'rgba(229, 9, 20, 0.08)',
-  accentFillStrong: 'rgba(229, 9, 20, 0.14)',
-  border: '#E4E4E7',
-  borderAccent: 'rgba(229, 9, 20, 0.25)',
+  accent: '#2563EB',
+  accentDim: 'rgba(37, 99, 235, 0.4)',
+  accentFill: 'rgba(37, 99, 235, 0.10)',
+  accentFillStrong: 'rgba(37, 99, 235, 0.16)',
+  border: 'rgba(37,99,235,0.16)',
+  borderAccent: 'rgba(37, 99, 235, 0.28)',
   success: '#059669',
   error: '#DC2626',
   warning: '#D97706',
-  info: '#3B82F6',
+  info: '#2563EB',
   playerBackground: '#000000',
   playerGradientStart: '#1A1A1A',
   playerGradientMiddle: '#0D0D0D',
   playerGradientEnd: '#000000',
   sliderTrack: 'rgba(0, 0, 0, 0.12)',
-  sliderThumb: '#E50914',
-  tabBarBackground: '#FFFFFF',
-  tabBarActive: '#E50914',
-  tabBarInactive: '#71717a',
+  sliderThumb: '#2563EB',
+  tabBarBackground: 'rgba(255,255,255,0.72)',
+  tabBarActive: '#2563EB',
+  tabBarInactive: '#64748b',
   watermarkOpacity: 0.04,
-  shadowColor: 'rgba(0, 0, 0, 0.15)',
+  shadowColor: 'rgba(37, 99, 235, 0.15)',
   glassBlur: 30,
 };
 
 interface ThemeContextValue {
+  /** Always `system` — the theme follows the device and has no override. */
   mode: ThemeMode;
   colors: ThemeColors;
   isDark: boolean;
-  setMode: (mode: ThemeMode) => void;
-  toggleTheme: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
+/**
+ * Map a `useColorScheme()` result to a theme.
+ *
+ * Kept as a pure function so the rule is testable without a renderer, and
+ * centralised so the provider and the hook can never disagree. Anything other
+ * than an explicit `'light'` is dark — an unknown/absent scheme on a device
+ * that has not reported yet should keep the app in its default dark look
+ * rather than flash a light UI.
+ */
+export function themeForScheme(deviceTheme: 'light' | 'dark' | null | undefined): {
+  isDark: boolean;
+  colors: ThemeColors;
+} {
+  const isDark = deviceTheme !== 'light';
+  return { isDark, colors: isDark ? DARK_THEME : LIGHT_THEME };
+}
+
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const deviceTheme = useColorScheme();
-  const { theme: mode, setTheme, toggleTheme } = useAppStore();
-
-  const colors = useMemo(() => {
-    if (mode === 'system') {
-      return deviceTheme === 'dark' ? DARK_THEME : LIGHT_THEME;
-    }
-    return mode === 'dark' ? DARK_THEME : LIGHT_THEME;
-  }, [mode, deviceTheme]);
-
-  const isDark = useMemo(() => {
-    if (mode === 'system') return deviceTheme === 'dark';
-    return mode === 'dark';
-  }, [mode, deviceTheme]);
+  // The device is the only source of truth. Nothing is read from or written to
+  // the persisted store, so a stale saved choice can never override the phone:
+  // `useColorScheme` re-renders on an OS flip and the whole tree follows.
+  const { isDark, colors } = themeForScheme(useColorScheme());
 
   return (
-    <ThemeContext.Provider value={{ mode, colors, isDark, setMode: setTheme, toggleTheme }}>
-      {children}
-    </ThemeContext.Provider>
+    <ThemeContext.Provider value={{ mode: 'system', colors, isDark }}>{children}</ThemeContext.Provider>
   );
 };
 
 export const useTheme = (): ThemeContextValue => {
   const ctx = useContext(ThemeContext);
   if (!ctx) {
-    return {
-      mode: 'dark',
-      colors: DARK_THEME,
-      isDark: true,
-      setMode: () => {},
-      toggleTheme: () => {},
-    };
+    return { mode: 'system', colors: DARK_THEME, isDark: true };
   }
   return ctx;
 };

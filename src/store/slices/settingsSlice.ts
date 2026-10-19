@@ -3,7 +3,6 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface SettingsState {
-  theme: 'light' | 'dark' | 'system';
   wifiOnlyDownload: boolean;
   maxConcurrentDownloads: number;
   autoDeleteWatchedDays: number;
@@ -19,7 +18,6 @@ export interface SettingsState {
 }
 
 const defaultSettings: SettingsState = {
-  theme: 'dark',
   wifiOnlyDownload: true,
   maxConcurrentDownloads: 3,
   autoDeleteWatchedDays: 7,
@@ -38,9 +36,6 @@ export const settingsSlice = createSlice({
   name: 'settings',
   initialState: defaultSettings,
   reducers: {
-    setTheme: (state, action: PayloadAction<SettingsState['theme']>) => {
-      state.theme = action.payload;
-    },
     setWifiOnlyDownload: (state, action: PayloadAction<boolean>) => {
       state.wifiOnlyDownload = action.payload;
     },
@@ -84,7 +79,6 @@ export const settingsSlice = createSlice({
 });
 
 export const {
-  setTheme,
   setWifiOnlyDownload,
   setMaxConcurrentDownloads,
   setAutoDeleteWatchedDays,

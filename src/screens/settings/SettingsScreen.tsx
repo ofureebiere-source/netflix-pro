@@ -19,14 +19,13 @@ import Constants from 'expo-constants';
 import { useAppStore, useSettings } from '../../store/zustand';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAlert } from '../../contexts/AlertContext';
-import { SPACING, RADIUS, TYPOGRAPHY } from '../../theme/tokens';
 
 // Services
 import { getDownloadStorageUsage, formatFileSize, getAllDownloads, clearAllDownloads } from '../../utils/downloadStorage';
 import downloadManager from '../../services/downloadManager';
 
 const SettingsScreen = () => {
-  const { colors, isDark, mode, setMode } = useTheme();
+  const { colors, isDark } = useTheme();
   const { showToast, showDestructiveAlert } = useAlert();
 
   // Zustand state
@@ -175,13 +174,14 @@ const SettingsScreen = () => {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: 'transparent' }]} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={[styles.headerTitle, { color: colors.text }]}>⚙️ Settings</Text>
         </View>
 
-        {/* Theme Section */}
+        {/* Theme Section — device-driven, no control. The theme follows the
+            phone's light/dark setting, so there is nothing to pick here. */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.accent }]}>Appearance</Text>
           <View style={[styles.appearanceItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -192,31 +192,10 @@ const SettingsScreen = () => {
               <View style={styles.settingContent}>
                 <Text style={[styles.settingTitle, { color: colors.text }]}>Theme</Text>
                 <Text style={[styles.settingDescription, { color: colors.textSub }]}>
-                  {mode === 'system' ? `Following device (currently ${isDark ? 'dark' : 'light'})` : mode === 'dark' ? 'Dark' : 'Light'}
+                  Following your device — currently {isDark ? 'dark' : 'light'}. Change it in your phone's display
+                  settings.
                 </Text>
               </View>
-            </View>
-            <View style={[styles.themeSegmented, { backgroundColor: colors.surfaceRaised, borderColor: colors.border }]}>
-              {([
-                { key: 'system' as const, icon: 'phone-portrait-outline' as const, label: 'System' },
-                { key: 'light' as const, icon: 'sunny-outline' as const, label: 'Light' },
-                { key: 'dark' as const, icon: 'moon-outline' as const, label: 'Dark' },
-              ]).map((option) => {
-                const isSelected = mode === option.key;
-                return (
-                  <TouchableOpacity
-                    key={option.key}
-                    onPress={() => setMode(option.key)}
-                    activeOpacity={0.75}
-                    style={[styles.themeSegment, isSelected && { backgroundColor: colors.accent }]}
-                  >
-                    <Ionicons name={option.icon} size={15} color={isSelected ? '#000' : colors.textSub} />
-                    <Text style={[TYPOGRAPHY.caption, { color: isSelected ? '#000' : colors.textSub, marginTop: 2 }]}>
-                      {option.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
             </View>
           </View>
         </View>
@@ -437,20 +416,6 @@ const styles = StyleSheet.create({
   settingContent: { flex: 1 },
   settingTitle: { fontSize: 15, fontWeight: '500' },
   settingDescription: { fontSize: 12, marginTop: 2 },
-  themeSegmented: {
-    flexDirection: 'row',
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    padding: 4,
-    gap: 4,
-  },
-  themeSegment: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: SPACING.sm,
-    borderRadius: RADIUS.sm,
-  },
   qualityButtons: {
     flexDirection: 'row',
     gap: 6,

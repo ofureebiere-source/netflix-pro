@@ -29,7 +29,6 @@ import {
   GestureDetector,
   GestureHandlerRootView,
 } from 'react-native-gesture-handler';
-import { LinearGradient } from 'expo-linear-gradient';
 
 // Zustand Stores
 import {
@@ -791,22 +790,9 @@ const HomeScreen = () => {
   // ─── Main Render ───
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      {/* ─── Background ─── */}
-      {!isDark && (
-        <LinearGradient
-          colors={colors.backgroundGradient}
-          style={StyleSheet.absoluteFillObject}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        />
-      )}
-      
-      {/* ─── Dark Mode Background ─── */}
-      {isDark && (
-        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.background }]} />
-      )}
-
-      {/* ─── Main Content ─── */}
+      {/* Background is provided by the root ScreenBackdrop (gradient in
+          light, black in dark); this screen stays transparent so that one
+          layer shows through. */}
       <SafeAreaView
         style={[styles.container, { backgroundColor: 'transparent' }]}
         edges={['top']}
