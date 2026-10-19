@@ -34,8 +34,8 @@ const LATEST_MAX_DAYS = 90; // ~3 months
 
 export const BADGE_COLORS: Record<BadgeTier, string> = {
   hot: '#1E90FF', // blue
-  new: '#E50914', // current red (unchanged)
-  latest: '#D4AF37', // gold
+  new: '#E50914', // brand red
+  latest: '#a1a1aa', // muted zinc, matching the reference's neutral chrome
 };
 
 const LABELS: Record<BadgeTier, string> = {

@@ -103,21 +103,21 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               styles.alertBox,
               {
                 backgroundColor: isDark ? colors.surface : '#FFFFFF',
-                borderColor: isDestructive ? `${colors.error}50` : `${colors.gold}35`,
+                borderColor: isDestructive ? `${colors.error}50` : `${colors.accent}35`,
                 borderWidth: 0.5,
                 transform: [{ scale }],
               },
             ]}
           >
-            <View style={[styles.topAccent, { backgroundColor: isDestructive ? colors.error : colors.gold }]} />
+            <View style={[styles.topAccent, { backgroundColor: isDestructive ? colors.error : colors.accent }]} />
             <View style={[styles.iconRing, { 
-              borderColor: isDestructive ? `${colors.error}60` : `${colors.gold}40`,
-              backgroundColor: isDestructive ? `${colors.error}15` : `${colors.gold}12`
+              borderColor: isDestructive ? `${colors.error}60` : `${colors.accent}40`,
+              backgroundColor: isDestructive ? `${colors.error}15` : `${colors.accent}12`
             }]}>
               <Ionicons 
                 name={isDestructive ? 'alert-circle' : 'alert-circle-outline'} 
                 size={28} 
-                color={isDestructive ? colors.error : colors.gold} 
+                color={isDestructive ? colors.error : colors.accent} 
               />
             </View>
             <Text style={[styles.title, { color: colors.text }]}>{alertConfig.title}</Text>
@@ -126,7 +126,7 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 {alertConfig.message}
               </Text>
             ) : null}
-            <View style={[styles.divider, { backgroundColor: isDestructive ? `${colors.error}25` : `${colors.gold}22` }]} />
+            <View style={[styles.divider, { backgroundColor: isDestructive ? `${colors.error}25` : `${colors.accent}22` }]} />
             <View style={styles.buttonRow}>
               {alertConfig.buttons.map((btn, idx) => {
                 const isDestructiveBtn = btn.style === 'destructive';
@@ -149,7 +149,7 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                       styles.buttonText,
                       isDestructiveBtn && { color: colors.error, fontWeight: '700' },
                       isCancelBtn && { color: isDark ? colors.textMuted : '#888888', fontWeight: '500' },
-                      !isDestructiveBtn && !isCancelBtn && { color: colors.gold, fontWeight: '700' },
+                      !isDestructiveBtn && !isCancelBtn && { color: colors.accent, fontWeight: '700' },
                     ]}>
                       {btn.text}
                     </Text>

@@ -27,7 +27,7 @@ export const TopNavigation: React.FC<TopNavigationProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text style={[styles.title, { color: colors.gold }]}>{title}</Text>
+      <Text style={[styles.title, { color: colors.accent }]}>{title}</Text>
       <View style={styles.actions}>
         {showSearch && (
           <TouchableOpacity onPress={onSearchPress} style={styles.actionButton}>

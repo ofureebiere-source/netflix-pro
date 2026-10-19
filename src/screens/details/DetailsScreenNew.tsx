@@ -744,9 +744,9 @@ const DetailsScreenNew: React.FC = () => {
   const renderViewToggle = (mode: EpisodeViewMode, onChange: (m: EpisodeViewMode) => void) => (
     <View style={styles.viewToggleRow}>
       {(['grid', 'list'] as EpisodeViewMode[]).map((m) => (
-        <TouchableOpacity key={m} style={[styles.viewToggleButton, { borderColor: mode === m ? colors.gold : (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'), borderWidth: 1.5 }]}
+        <TouchableOpacity key={m} style={[styles.viewToggleButton, { borderColor: mode === m ? colors.accent : (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'), borderWidth: 1.5 }]}
           onPress={() => onChange(m)} activeOpacity={0.7}>
-          <Ionicons name={m === 'grid' ? 'grid-outline' : 'list-outline'} size={14} color={mode === m ? colors.gold : colors.textMuted} />
+          <Ionicons name={m === 'grid' ? 'grid-outline' : 'list-outline'} size={14} color={mode === m ? colors.accent : colors.textMuted} />
         </TouchableOpacity>
       ))}
     </View>
@@ -780,15 +780,15 @@ const DetailsScreenNew: React.FC = () => {
           {downloadQualities.map((quality) => {
             const isSelected = pendingQuality?.label === quality.label && pendingQuality?.provider === quality.provider;
             return (
-              <TouchableOpacity key={`${quality.provider}-${quality.label}`} style={[styles.qualityPill, { borderColor: isSelected ? colors.gold : (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'), borderWidth: 1.5 }]}
+              <TouchableOpacity key={`${quality.provider}-${quality.label}`} style={[styles.qualityPill, { borderColor: isSelected ? colors.accent : (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'), borderWidth: 1.5 }]}
                 onPress={() => setPendingQuality(quality)} disabled={isDownloading} activeOpacity={0.7}>
-                <Text style={[styles.qualityPillLabel, { color: isSelected ? colors.gold : colors.text }]}>{quality.label}</Text>
+                <Text style={[styles.qualityPillLabel, { color: isSelected ? colors.accent : colors.text }]}>{quality.label}</Text>
                 {quality.isRecommended && <Text style={[styles.qualityPillRecommended, { color: colors.textMuted }]}>Rec</Text>}
               </TouchableOpacity>
             );
           })}
         </View>
-        {isDownloading && <View style={styles.qualityProgress}><View style={[styles.qualityProgressFill, { backgroundColor: colors.gold, width: `${downloadProgress}%` }]} /></View>}
+        {isDownloading && <View style={styles.qualityProgress}><View style={[styles.qualityProgressFill, { backgroundColor: colors.accent, width: `${downloadProgress}%` }]} /></View>}
       </>
     );
   };
@@ -800,7 +800,7 @@ const DetailsScreenNew: React.FC = () => {
           {episodeSelections.map((ep) => (
             <TouchableOpacity key={ep.episodeNumber} style={[styles.episodeItem, { borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]} onPress={() => handleEpisodeToggle(ep.episodeNumber)}>
               <View style={styles.checkboxRow}>
-                <View style={[styles.checkbox, { borderColor: colors.gold, backgroundColor: ep.selected ? colors.gold : 'transparent', width: 14, height: 14 }]}>
+                <View style={[styles.checkbox, { borderColor: colors.accent, backgroundColor: ep.selected ? colors.accent : 'transparent', width: 14, height: 14 }]}>
                   {ep.selected && <Ionicons name="checkmark" size={10} color="#000" />}
                 </View>
                 <Text style={[styles.episodeItemText, { color: colors.text }]} numberOfLines={1}>E{ep.episodeNumber}. {ep.title}</Text>
@@ -826,13 +826,13 @@ const DetailsScreenNew: React.FC = () => {
                     return (
                       <TouchableOpacity key={`ep-${episode.id || episode.episode_number}`} style={[styles.episodeGridCard, { width: EPISODE_CARD_WIDTH, marginBottom: EPISODE_GRID_GAP }]}
                         onPress={() => handleEpisodeToggle(episode.episode_number)} activeOpacity={0.7}>
-                        <View style={[styles.episodeGridImageContainer, { width: EPISODE_CARD_WIDTH, height: EPISODE_CARD_HEIGHT, borderWidth: isSelected ? 1.5 : 0, borderColor: isSelected ? colors.gold : 'transparent', borderRadius: 4 }]}>
+                        <View style={[styles.episodeGridImageContainer, { width: EPISODE_CARD_WIDTH, height: EPISODE_CARD_HEIGHT, borderWidth: isSelected ? 1.5 : 0, borderColor: isSelected ? colors.accent : 'transparent', borderRadius: 4 }]}>
                           {episodeImageUri ? <Image source={{ uri: episodeImageUri }} style={styles.episodeGridImage} resizeMode="cover" /> : (
                             <View style={[styles.episodeGridPlaceholder, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}>
                               <Ionicons name="tv-outline" size={14} color={colors.textMuted} />
                             </View>
                           )}
-                          <View style={[styles.checkbox, styles.episodeGridCheckbox, { borderColor: '#fff', backgroundColor: isSelected ? colors.gold : 'rgba(0,0,0,0.5)', width: 12, height: 12, borderRadius: 2, borderWidth: 1 }]}>
+                          <View style={[styles.checkbox, styles.episodeGridCheckbox, { borderColor: '#fff', backgroundColor: isSelected ? colors.accent : 'rgba(0,0,0,0.5)', width: 12, height: 12, borderRadius: 2, borderWidth: 1 }]}>
                             {isSelected && <Ionicons name="checkmark" size={8} color="#000" />}
                           </View>
                           <View style={styles.episodeGridNumber}><Text style={styles.episodeGridNumberText}>E{episode.episode_number}</Text></View>
@@ -876,8 +876,8 @@ const DetailsScreenNew: React.FC = () => {
               </View>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.seasonScroll}>
                 {allSeasonNumbers.map((num) => (
-                  <TouchableOpacity key={num} style={[styles.seasonChip, { borderColor: selectedSeason === num ? colors.gold : (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'), borderWidth: 1.5 }]} onPress={() => handleSeasonChange(num)}>
-                    <Text style={[styles.seasonChipText, { color: selectedSeason === num ? colors.gold : colors.text }]}>S{num}</Text>
+                  <TouchableOpacity key={num} style={[styles.seasonChip, { borderColor: selectedSeason === num ? colors.accent : (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'), borderWidth: 1.5 }]} onPress={() => handleSeasonChange(num)}>
+                    <Text style={[styles.seasonChipText, { color: selectedSeason === num ? colors.accent : colors.text }]}>S{num}</Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
@@ -893,7 +893,7 @@ const DetailsScreenNew: React.FC = () => {
                 <View style={styles.selectAllContainer}>
                   <TouchableOpacity onPress={handleSelectAllEpisodes}>
                     <View style={styles.checkboxRow}>
-                      <View style={[styles.checkbox, { borderColor: colors.gold, backgroundColor: selectedAllEpisodes ? colors.gold : 'transparent', width: 14, height: 14 }]}>
+                      <View style={[styles.checkbox, { borderColor: colors.accent, backgroundColor: selectedAllEpisodes ? colors.accent : 'transparent', width: 14, height: 14 }]}>
                         {selectedAllEpisodes && <Ionicons name="checkmark" size={10} color="#000" />}
                       </View>
                       <Text style={[styles.selectAllText, { color: colors.text }]}>All</Text>
@@ -905,10 +905,10 @@ const DetailsScreenNew: React.FC = () => {
                   </View>
                 </View>
                 {renderEpisodePicker()}
-                <TouchableOpacity style={[styles.downloadProcessButton, { borderColor: canDownload ? colors.gold : (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'), borderWidth: 1.5, opacity: canDownload ? 1 : 0.5, marginTop: 4 }]}
+                <TouchableOpacity style={[styles.downloadProcessButton, { borderColor: canDownload ? colors.accent : (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'), borderWidth: 1.5, opacity: canDownload ? 1 : 0.5, marginTop: 4 }]}
                   onPress={() => { if (canDownload && pendingQuality) { const selected = episodeSelections.filter(ep => ep.selected); setSelectedEpisodesForDownload(selected); handleDownload(pendingQuality); } }} disabled={!canDownload}>
-                  <Ionicons name="download-outline" size={14} color={canDownload ? colors.gold : colors.textMuted} />
-                  <Text style={[styles.downloadProcessButtonText, { color: canDownload ? colors.gold : colors.textMuted }]}>Download</Text>
+                  <Ionicons name="download-outline" size={14} color={canDownload ? colors.accent : colors.textMuted} />
+                  <Text style={[styles.downloadProcessButtonText, { color: canDownload ? colors.accent : colors.textMuted }]}>Download</Text>
                 </TouchableOpacity>
               </>
             ) : (
@@ -923,10 +923,10 @@ const DetailsScreenNew: React.FC = () => {
               <TouchableOpacity onPress={() => { setIsDownloadDropdownOpen(false); setPendingQuality(null); }}><Ionicons name="close" size={18} color={colors.textMuted} /></TouchableOpacity>
             </View>
             {renderQualityPicker()}
-            <TouchableOpacity style={[styles.downloadProcessButton, { borderColor: pendingQuality ? colors.gold : (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'), borderWidth: 1.5, opacity: pendingQuality ? 1 : 0.5, marginTop: 8 }]}
+            <TouchableOpacity style={[styles.downloadProcessButton, { borderColor: pendingQuality ? colors.accent : (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'), borderWidth: 1.5, opacity: pendingQuality ? 1 : 0.5, marginTop: 8 }]}
               onPress={() => { if (pendingQuality && !isDownloading) handleDownload(pendingQuality); }} disabled={!pendingQuality || isDownloading}>
-              <Ionicons name="download-outline" size={14} color={pendingQuality ? colors.gold : colors.textMuted} />
-              <Text style={[styles.downloadProcessButtonText, { color: pendingQuality ? colors.gold : colors.textMuted }]}>Download</Text>
+              <Ionicons name="download-outline" size={14} color={pendingQuality ? colors.accent : colors.textMuted} />
+              <Text style={[styles.downloadProcessButtonText, { color: pendingQuality ? colors.accent : colors.textMuted }]}>Download</Text>
             </TouchableOpacity>
           </>
         )}
@@ -943,8 +943,8 @@ const DetailsScreenNew: React.FC = () => {
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Episodes</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.seasonChipsRow}>
             {allSeasonNumbers.map((num) => (
-              <TouchableOpacity key={num} style={[styles.seasonChipLarge, { borderColor: selectedSeason === num ? colors.gold : (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'), borderWidth: 1.5 }]} onPress={() => handleSeasonChange(num)}>
-                <Text style={[styles.seasonChipText, { color: selectedSeason === num ? colors.gold : colors.text }]}>Season {num}</Text>
+              <TouchableOpacity key={num} style={[styles.seasonChipLarge, { borderColor: selectedSeason === num ? colors.accent : (isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'), borderWidth: 1.5 }]} onPress={() => handleSeasonChange(num)}>
+                <Text style={[styles.seasonChipText, { color: selectedSeason === num ? colors.accent : colors.text }]}>Season {num}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -988,7 +988,7 @@ const DetailsScreenNew: React.FC = () => {
     <View key={key} style={[styles.commentCard, { backgroundColor: isDark ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.55)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }]}>
       <View style={styles.commentHeader}>
         <View style={styles.commentUserRow}>
-          <View style={[styles.avatarDot, { backgroundColor: colors.gold }]} />
+          <View style={[styles.avatarDot, { backgroundColor: colors.accent }]} />
           <Text style={[styles.commentUsername, { color: colors.text }]}>@{comment.username}</Text>
         </View>
         <Text style={[styles.commentTimestamp, { color: colors.textMuted }]}>{comment.timestamp}</Text>
@@ -1044,7 +1044,7 @@ const DetailsScreenNew: React.FC = () => {
                   {!!rating && <View style={styles.ratingBadge}><Ionicons name="star" size={9} color="#000" /><Text style={styles.ratingBadgeText}>{rating.toFixed(1)}</Text></View>}
                   <View style={styles.hdBadge}><Text style={styles.hdBadgeText}>HD</Text></View>
                   <TouchableOpacity style={styles.bookmarkButton} onPress={(e) => { e.stopPropagation?.(); showToast(`${isBookmarked ? 'Removed from' : 'Added to'} watchlist`); }} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-                    <Ionicons name={isBookmarked ? 'bookmark' : 'bookmark-outline'} size={15} color={isBookmarked ? colors.gold : '#fff'} />
+                    <Ionicons name={isBookmarked ? 'bookmark' : 'bookmark-outline'} size={15} color={isBookmarked ? colors.accent : '#fff'} />
                   </TouchableOpacity>
                 </View>
                 <Text style={[styles.trendingTitle, { color: colors.text }]} numberOfLines={1}>{displayRecTitle}</Text>
@@ -1062,7 +1062,7 @@ const DetailsScreenNew: React.FC = () => {
     return (
       <View style={styles.metadataSection}>
         <View style={styles.metadataRow}>
-          <View style={styles.ratingContainer}><Ionicons name="star" size={16} color={colors.gold} /><Text style={[styles.ratingText, { color: colors.text }]}>{displayRating.toFixed(1)}</Text></View>
+          <View style={styles.ratingContainer}><Ionicons name="star" size={16} color={colors.accent} /><Text style={[styles.ratingText, { color: colors.text }]}>{displayRating.toFixed(1)}</Text></View>
           <View style={styles.metadataDot} />
           <Text style={[styles.metadataText, { color: colors.textSub }]}>{releaseYear}</Text>
           {displayRuntime && (<><View style={styles.metadataDot} /><Text style={[styles.metadataText, { color: colors.textSub }]}>{displayRuntime}</Text></>)}
@@ -1071,7 +1071,7 @@ const DetailsScreenNew: React.FC = () => {
         <View style={styles.liveStatsRow}>
           <View style={styles.statItem}><Ionicons name="eye-outline" size={13} color={colors.textMuted} /><Text style={[styles.liveStatText, { color: colors.textMuted }]}>{formatCompactCount(watcherCount)} watching</Text></View>
           <View style={styles.statDivider} />
-          <View style={styles.statItem}><Ionicons name="heart" size={13} color={colors.gold} /><Text style={[styles.liveStatText, { color: colors.textMuted }]}>{formatCompactCount(likeCount)} likes</Text></View>
+          <View style={styles.statItem}><Ionicons name="heart" size={13} color={colors.accent} /><Text style={[styles.liveStatText, { color: colors.textMuted }]}>{formatCompactCount(likeCount)} likes</Text></View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}><Ionicons name="bookmark-outline" size={13} color={colors.textMuted} /><Text style={[styles.liveStatText, { color: colors.textMuted }]}>{formatCompactCount(watchlistAdds)} in watchlists</Text></View>
         </View>
@@ -1085,7 +1085,7 @@ const DetailsScreenNew: React.FC = () => {
         )}
         {hasSynopsis && (
           <TouchableOpacity style={styles.readMoreButton} onPress={() => setShowFullSynopsis(!showFullSynopsis)} activeOpacity={0.7}>
-            <Text style={[styles.readMoreText, { color: colors.gold }]}>{showFullSynopsis ? 'Read Less' : 'Read More'}</Text>
+            <Text style={[styles.readMoreText, { color: colors.accent }]}>{showFullSynopsis ? 'Read Less' : 'Read More'}</Text>
           </TouchableOpacity>
         )}
         {showFullSynopsis && displayOverview && <Text style={[styles.synopsisText, { color: colors.textSub }]}>{displayOverview}</Text>}
@@ -1110,7 +1110,7 @@ const DetailsScreenNew: React.FC = () => {
       )}
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={false} onRefresh={onRefresh} tintColor={colors.gold} />}>
+        refreshControl={<RefreshControl refreshing={false} onRefresh={onRefresh} tintColor={colors.accent} />}>
         <View style={styles.headerContainer}>
           {displayBackdrop ? (
             <AnimatedImage
@@ -1153,7 +1153,7 @@ const DetailsScreenNew: React.FC = () => {
             />
             {!isTorrentStream && (
               <GlassButton
-                icon={<Ionicons name={isDownloading ? 'download' : 'download-outline'} size={18} color={isDownloading ? colors.gold : colors.text} />}
+                icon={<Ionicons name={isDownloading ? 'download' : 'download-outline'} size={18} color={isDownloading ? colors.accent : colors.text} />}
                 label={isDownloading ? downloadStatusText : 'Download'}
                 onPress={() => {
                   if (isOffline) { showToast("You're offline — downloads need an internet connection"); return; }
@@ -1168,13 +1168,13 @@ const DetailsScreenNew: React.FC = () => {
               />
             )}
             <GlassButton
-              icon={<Ionicons name={isInWatchlist ? 'bookmark' : 'bookmark-outline'} size={18} color={isInWatchlist ? colors.gold : colors.text} />}
+              icon={<Ionicons name={isInWatchlist ? 'bookmark' : 'bookmark-outline'} size={18} color={isInWatchlist ? colors.accent : colors.text} />}
               onPress={handleToggleWatchlist}
             />
           </View>
           {isDownloading && (
             <View style={[styles.actionBarProgressTrack, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }]}>
-              <View style={[styles.actionBarProgressFill, { backgroundColor: colors.gold, width: `${downloadProgress}%` }]} />
+              <View style={[styles.actionBarProgressFill, { backgroundColor: colors.accent, width: `${downloadProgress}%` }]} />
             </View>
           )}
           {!isTorrentStream && renderDownloadDropdown()}

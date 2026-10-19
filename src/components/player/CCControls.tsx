@@ -143,13 +143,13 @@ export const CCControls: React.FC<CCControlsProps> = ({
           <Ionicons
             name={subtitlesEnabled ? 'closed-captioning' : 'closed-captioning-outline'}
             size={22}
-            color={subtitlesEnabled ? colors.gold : colors.textMuted}
+            color={subtitlesEnabled ? colors.accent : colors.textMuted}
           />
           <Text
             style={[
               styles.ccLabel,
               {
-                color: subtitlesEnabled ? colors.gold : colors.textMuted,
+                color: subtitlesEnabled ? colors.accent : colors.textMuted,
               },
             ]}
           >
@@ -211,7 +211,7 @@ export const CCControls: React.FC<CCControlsProps> = ({
               {/* Toggle */}
               <View style={[styles.settingRow, { borderBottomColor: colors.border }]}>
                 <View style={styles.settingInfo}>
-                  <Ionicons name="closed-captioning" size={20} color={colors.gold} />
+                  <Ionicons name="closed-captioning" size={20} color={colors.accent} />
                   <Text style={[styles.settingLabel, { color: colors.text }]}>
                     Subtitles
                   </Text>
@@ -219,7 +219,7 @@ export const CCControls: React.FC<CCControlsProps> = ({
                 <Switch
                   value={subtitlesEnabled}
                   onValueChange={onToggleSubtitles}
-                  trackColor={{ false: colors.surfaceRaised, true: colors.gold }}
+                  trackColor={{ false: colors.surfaceRaised, true: colors.accent }}
                   thumbColor="#fff"
                 />
               </View>
@@ -227,7 +227,7 @@ export const CCControls: React.FC<CCControlsProps> = ({
               {/* Language */}
               <View style={[styles.settingRow, { borderBottomColor: colors.border }]}>
                 <View style={styles.settingInfo}>
-                  <Ionicons name="language" size={20} color={colors.gold} />
+                  <Ionicons name="language" size={20} color={colors.accent} />
                   <Text style={[styles.settingLabel, { color: colors.text }]}>
                     Language
                   </Text>
@@ -242,7 +242,7 @@ export const CCControls: React.FC<CCControlsProps> = ({
                       key={lang}
                       style={[
                         styles.languageChip,
-                        selectedLanguage === lang && { backgroundColor: colors.gold },
+                        selectedLanguage === lang && { backgroundColor: colors.accent },
                         { borderColor: colors.border },
                       ]}
                       onPress={() => {
@@ -266,7 +266,7 @@ export const CCControls: React.FC<CCControlsProps> = ({
               {/* Size */}
               <View style={[styles.settingRow, { borderBottomColor: colors.border }]}>
                 <View style={styles.settingInfo}>
-                  <Ionicons name="text" size={20} color={colors.gold} />
+                  <Ionicons name="text" size={20} color={colors.accent} />
                   <Text style={[styles.settingLabel, { color: colors.text }]}>
                     Font Size
                   </Text>
@@ -294,7 +294,7 @@ export const CCControls: React.FC<CCControlsProps> = ({
               {onSubtitleColorChange && (
                 <View style={[styles.settingRow, { borderBottomColor: colors.border }]}>
                   <View style={styles.settingInfo}>
-                    <Ionicons name="color-palette" size={20} color={colors.gold} />
+                    <Ionicons name="color-palette" size={20} color={colors.accent} />
                     <Text style={[styles.settingLabel, { color: colors.text }]}>
                       Font Color
                     </Text>
@@ -322,7 +322,7 @@ export const CCControls: React.FC<CCControlsProps> = ({
               {onSubtitleBackgroundChange && (
                 <View style={[styles.settingRow, { borderBottomColor: colors.border }]}>
                   <View style={styles.settingInfo}>
-                    <Ionicons name="square-outline" size={20} color={colors.gold} />
+                    <Ionicons name="square-outline" size={20} color={colors.accent} />
                     <Text style={[styles.settingLabel, { color: colors.text }]}>
                       Background
                     </Text>

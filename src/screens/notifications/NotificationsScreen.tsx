@@ -147,7 +147,7 @@ const NotificationItem = React.memo(({
       >
         {/* Unread dot */}
         {!notification.read && (
-          <View style={[styles.unreadDot, { backgroundColor: colors.gold }]} />
+          <View style={[styles.unreadDot, { backgroundColor: colors.accent }]} />
         )}
 
         {/* Icon */}
@@ -375,7 +375,7 @@ const NotificationsScreen = () => {
         <Text style={[styles.headerTitle, { color: colors.text }]}>
           Notifications
           {hasUnread && (
-            <Text style={[styles.unreadBadge, { color: colors.gold }]}>
+            <Text style={[styles.unreadBadge, { color: colors.accent }]}>
               {' '}• {notifications.filter(n => !n.read).length} new
             </Text>
           )}
@@ -387,7 +387,7 @@ const NotificationsScreen = () => {
               onPress={markAllAsRead}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Ionicons name="checkmark-done-outline" size={22} color={colors.gold} />
+              <Ionicons name="checkmark-done-outline" size={22} color={colors.accent} />
             </TouchableOpacity>
           )}
           {notifications.length > 0 && (
@@ -407,7 +407,7 @@ const NotificationsScreen = () => {
         <TouchableOpacity
           style={[
             styles.filterTab,
-            filter === 'all' && { borderBottomColor: colors.gold, borderBottomWidth: 2 },
+            filter === 'all' && { borderBottomColor: colors.accent, borderBottomWidth: 2 },
           ]}
           onPress={() => setFilter('all')}
         >
@@ -421,7 +421,7 @@ const NotificationsScreen = () => {
         <TouchableOpacity
           style={[
             styles.filterTab,
-            filter === 'unread' && { borderBottomColor: colors.gold, borderBottomWidth: 2 },
+            filter === 'unread' && { borderBottomColor: colors.accent, borderBottomWidth: 2 },
           ]}
           onPress={() => setFilter('unread')}
         >
@@ -465,7 +465,7 @@ const NotificationsScreen = () => {
       {/* ─── Main Content ─── */}
       {loading ? (
         <View style={styles.centerContent}>
-          <ActivityIndicator size="large" color={colors.gold} />
+          <ActivityIndicator size="large" color={colors.accent} />
           <Text style={[styles.loadingText, { color: colors.textMuted }]}>
             Loading notifications...
           </Text>
@@ -489,8 +489,8 @@ const NotificationsScreen = () => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor={colors.gold}
-              colors={[colors.gold]}
+              tintColor={colors.accent}
+              colors={[colors.accent]}
               progressBackgroundColor={isDark ? colors.surface : 'rgba(255,255,255,0.8)'}
             />
           }

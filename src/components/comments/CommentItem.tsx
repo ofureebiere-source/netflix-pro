@@ -125,7 +125,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.replySubmit, { backgroundColor: colors.gold }]}
+              style={[styles.replySubmit, { backgroundColor: colors.accent }]}
               onPress={handleReply}
             >
               <Text style={[styles.replySubmitText, { color: '#000' }]}>Reply</Text>

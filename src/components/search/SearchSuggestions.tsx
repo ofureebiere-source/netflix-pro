@@ -101,7 +101,7 @@ export function SearchSuggestions({
         {/* Loading State */}
         {loading && (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color={colors.gold} />
+            <ActivityIndicator size="small" color={colors.accent} />
             <Text style={[styles.loadingText, { color: colors.textMuted }]}>
               Loading suggestions...
             </Text>

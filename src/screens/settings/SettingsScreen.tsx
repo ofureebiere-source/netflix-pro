@@ -155,7 +155,7 @@ const SettingsScreen = () => {
     <View style={[styles.settingItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <View style={styles.settingLeft}>
         <View style={[styles.iconContainer, { backgroundColor: colors.surfaceRaised }]}>
-          <Ionicons name={icon as any} size={20} color={colors.gold} />
+          <Ionicons name={icon as any} size={20} color={colors.accent} />
         </View>
         <View style={styles.settingContent}>
           <Text style={[styles.settingTitle, { color: colors.text }]}>{title}</Text>
@@ -169,7 +169,7 @@ const SettingsScreen = () => {
   if (loading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.gold} />
+        <ActivityIndicator size="large" color={colors.accent} />
       </View>
     );
   }
@@ -183,11 +183,11 @@ const SettingsScreen = () => {
 
         {/* Theme Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.gold }]}>Appearance</Text>
+          <Text style={[styles.sectionTitle, { color: colors.accent }]}>Appearance</Text>
           <View style={[styles.appearanceItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <View style={styles.settingLeft}>
               <View style={[styles.iconContainer, { backgroundColor: colors.surfaceRaised }]}>
-                <Ionicons name={isDark ? 'moon' : 'sunny'} size={20} color={colors.gold} />
+                <Ionicons name={isDark ? 'moon' : 'sunny'} size={20} color={colors.accent} />
               </View>
               <View style={styles.settingContent}>
                 <Text style={[styles.settingTitle, { color: colors.text }]}>Theme</Text>
@@ -208,7 +208,7 @@ const SettingsScreen = () => {
                     key={option.key}
                     onPress={() => setMode(option.key)}
                     activeOpacity={0.75}
-                    style={[styles.themeSegment, isSelected && { backgroundColor: colors.gold }]}
+                    style={[styles.themeSegment, isSelected && { backgroundColor: colors.accent }]}
                   >
                     <Ionicons name={option.icon} size={15} color={isSelected ? '#000' : colors.textSub} />
                     <Text style={[TYPOGRAPHY.caption, { color: isSelected ? '#000' : colors.textSub, marginTop: 2 }]}>
@@ -223,14 +223,14 @@ const SettingsScreen = () => {
 
         {/* Playback Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.gold }]}>Playback</Text>
+          <Text style={[styles.sectionTitle, { color: colors.accent }]}>Playback</Text>
           {renderSetting(
             'play-skip-forward',
             'Auto-play Next Episode',
             <Switch
               value={autoPlayNext}
               onValueChange={setAutoPlayNext}
-              trackColor={{ false: '#444', true: colors.gold }}
+              trackColor={{ false: '#444', true: colors.accent }}
               thumbColor="#fff"
             />
           )}
@@ -261,7 +261,7 @@ const SettingsScreen = () => {
                   key={size}
                   style={[
                     styles.qualityButton,
-                    subtitleSize === size && { backgroundColor: colors.gold },
+                    subtitleSize === size && { backgroundColor: colors.accent },
                     { borderColor: colors.border }
                   ]}
                   onPress={() => setSubtitleSize(size)}
@@ -279,7 +279,7 @@ const SettingsScreen = () => {
             <Switch
               value={skipIntro}
               onValueChange={setSkipIntro}
-              trackColor={{ false: '#444', true: colors.gold }}
+              trackColor={{ false: '#444', true: colors.accent }}
               thumbColor="#fff"
             />
           )}
@@ -289,7 +289,7 @@ const SettingsScreen = () => {
             <Switch
               value={skipCredits}
               onValueChange={setSkipCredits}
-              trackColor={{ false: '#444', true: colors.gold }}
+              trackColor={{ false: '#444', true: colors.accent }}
               thumbColor="#fff"
             />
           )}
@@ -297,14 +297,14 @@ const SettingsScreen = () => {
 
         {/* Downloads Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.gold }]}>Downloads</Text>
+          <Text style={[styles.sectionTitle, { color: colors.accent }]}>Downloads</Text>
           {renderSetting(
             'wifi',
             'WiFi-Only Downloads',
             <Switch
               value={wifiOnlyDownload}
               onValueChange={setWifiOnlyDownload}
-              trackColor={{ false: '#444', true: colors.gold }}
+              trackColor={{ false: '#444', true: colors.accent }}
               thumbColor="#fff"
             />
           )}
@@ -317,7 +317,7 @@ const SettingsScreen = () => {
                   key={count}
                   style={[
                     styles.qualityButton,
-                    maxConcurrentDownloads === count && { backgroundColor: colors.gold },
+                    maxConcurrentDownloads === count && { backgroundColor: colors.accent },
                     { borderColor: colors.border }
                   ]}
                   onPress={() => setMaxConcurrentDownloads(count)}
@@ -335,7 +335,7 @@ const SettingsScreen = () => {
             <Switch
               value={autoDeleteWatchedDays > 0}
               onValueChange={(val) => setAutoDeleteWatchedDays(val ? 1 : 0)}
-              trackColor={{ false: '#444', true: colors.gold }}
+              trackColor={{ false: '#444', true: colors.accent }}
               thumbColor="#fff"
             />
           )}
@@ -348,7 +348,7 @@ const SettingsScreen = () => {
                   key={days}
                   style={[
                     styles.qualityButton,
-                    autoDeleteUnwatchedDays === days && { backgroundColor: colors.gold },
+                    autoDeleteUnwatchedDays === days && { backgroundColor: colors.accent },
                     { borderColor: colors.border }
                   ]}
                   onPress={() => setAutoDeleteUnwatchedDays(days)}
@@ -375,7 +375,7 @@ const SettingsScreen = () => {
 
         {/* About Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.gold }]}>About</Text>
+          <Text style={[styles.sectionTitle, { color: colors.accent }]}>About</Text>
           <View style={[styles.aboutItem, { borderBottomColor: colors.border }]}>
             <Text style={[styles.aboutLabel, { color: colors.textSub }]}>Version</Text>
             <Text style={[styles.aboutValue, { color: colors.text }]}>{Constants.expoConfig?.version || '1.0.0'}</Text>

@@ -157,7 +157,7 @@ const SeasonalShow: React.FC<{
             const seasonEpisodes = episodes.filter((e) => (e.season || 1) === seasonNum);
             return (
               <View key={`season-${seasonNum}`} style={styles.seasonGroup}>
-                <Text style={[styles.seasonTitle, { color: colors.gold }]}>
+                <Text style={[styles.seasonTitle, { color: colors.accent }]}>
                   Season {seasonNum}
                 </Text>
                 {seasonEpisodes.map((episode) => (
@@ -177,7 +177,7 @@ const SeasonalShow: React.FC<{
                       <Text style={[styles.episodeSize, { color: colors.textMuted }]}>
                         {formatFileSize(episode.fileSize || 0)}
                       </Text>
-                      <Ionicons name="play-circle" size={20} color={colors.gold} />
+                      <Ionicons name="play-circle" size={20} color={colors.accent} />
                     </View>
                   </TouchableOpacity>
                 ))}
@@ -431,7 +431,7 @@ const LibraryScreen = () => {
           >
             <View style={styles.continueProgress}>
               <View style={[styles.progressBar, { backgroundColor: colors.surfaceRaised }]}>
-                <View style={[styles.progressFill, { backgroundColor: colors.gold, width: `${item.progress || 0}%` }]} />
+                <View style={[styles.progressFill, { backgroundColor: colors.accent, width: `${item.progress || 0}%` }]} />
               </View>
               <Text style={[styles.progressText, { color: colors.textMuted }]}>
                 {Math.round(item.progress || 0)}%
@@ -460,8 +460,8 @@ const LibraryScreen = () => {
           onPress={() => setActiveTab('continue')}
           activeOpacity={0.7}
         >
-          <Ionicons name="play-circle" size={20} color={activeTab === 'continue' ? colors.gold : colors.textMuted} />
-          <Text style={[styles.tabText, activeTab === 'continue' && { color: colors.gold }, { color: colors.textMuted }]}>
+          <Ionicons name="play-circle" size={20} color={activeTab === 'continue' ? colors.accent : colors.textMuted} />
+          <Text style={[styles.tabText, activeTab === 'continue' && { color: colors.accent }, { color: colors.textMuted }]}>
             Continue
           </Text>
         </TouchableOpacity>
@@ -470,8 +470,8 @@ const LibraryScreen = () => {
           onPress={() => setActiveTab('downloads')}
           activeOpacity={0.7}
         >
-          <Ionicons name="download" size={20} color={activeTab === 'downloads' ? colors.gold : colors.textMuted} />
-          <Text style={[styles.tabText, activeTab === 'downloads' && { color: colors.gold }, { color: colors.textMuted }]}>
+          <Ionicons name="download" size={20} color={activeTab === 'downloads' ? colors.accent : colors.textMuted} />
+          <Text style={[styles.tabText, activeTab === 'downloads' && { color: colors.accent }, { color: colors.textMuted }]}>
             Downloads
           </Text>
         </TouchableOpacity>
@@ -481,7 +481,7 @@ const LibraryScreen = () => {
       {activeTab === 'continue' ? (
         <ScrollView
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
           }
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
@@ -498,8 +498,8 @@ const LibraryScreen = () => {
               onPress={() => setDownloadsSubTab('movies')}
               activeOpacity={0.7}
             >
-              <Ionicons name="film" size={16} color={downloadsSubTab === 'movies' ? colors.gold : colors.textMuted} />
-              <Text style={[styles.subTabText, downloadsSubTab === 'movies' && { color: colors.gold }, { color: colors.textMuted }]}>
+              <Ionicons name="film" size={16} color={downloadsSubTab === 'movies' ? colors.accent : colors.textMuted} />
+              <Text style={[styles.subTabText, downloadsSubTab === 'movies' && { color: colors.accent }, { color: colors.textMuted }]}>
                 Movies
               </Text>
             </TouchableOpacity>
@@ -508,8 +508,8 @@ const LibraryScreen = () => {
               onPress={() => setDownloadsSubTab('seasonal')}
               activeOpacity={0.7}
             >
-              <Ionicons name="tv" size={16} color={downloadsSubTab === 'seasonal' ? colors.gold : colors.textMuted} />
-              <Text style={[styles.subTabText, downloadsSubTab === 'seasonal' && { color: colors.gold }, { color: colors.textMuted }]}>
+              <Ionicons name="tv" size={16} color={downloadsSubTab === 'seasonal' ? colors.accent : colors.textMuted} />
+              <Text style={[styles.subTabText, downloadsSubTab === 'seasonal' && { color: colors.accent }, { color: colors.textMuted }]}>
                 Seasonal
               </Text>
             </TouchableOpacity>
@@ -524,7 +524,7 @@ const LibraryScreen = () => {
           {/* ─── Downloads Content ─── */}
           <ScrollView
             refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.gold} />
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
             }
             style={styles.downloadsScrollView}
             contentContainerStyle={styles.downloadsContentContainer}

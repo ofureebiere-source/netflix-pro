@@ -214,7 +214,7 @@ const DownloadsScreen = ({ navigation }) => {
   if (loading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.gold} />
+        <ActivityIndicator size="large" color={colors.accent} />
       </View>
     );
   }
@@ -245,7 +245,7 @@ const DownloadsScreen = ({ navigation }) => {
         {hasDownloads && (
           <View style={styles.storageSection}>
             <View style={[styles.storageBar, { backgroundColor: colors.surface }]}>
-              <View style={[styles.storageBarFill, { width: `${Math.min(100, storagePercentage)}%`, backgroundColor: colors.gold }]} />
+              <View style={[styles.storageBarFill, { width: `${Math.min(100, storagePercentage)}%`, backgroundColor: colors.accent }]} />
             </View>
             <Text style={[styles.storageText, { color: colors.textSub }]}>
               {formatFileSize(storageUsed)} used • {formatFileSize(availableStorage)} available
@@ -256,7 +256,7 @@ const DownloadsScreen = ({ navigation }) => {
         {/* Active Downloads */}
         {activeDownloads.length > 0 && (
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.gold }]}>Downloading</Text>
+            <Text style={[styles.sectionTitle, { color: colors.accent }]}>Downloading</Text>
             {activeDownloads.map(item => (
               <DownloadProgressCard
                 key={item.id}
@@ -273,19 +273,19 @@ const DownloadsScreen = ({ navigation }) => {
           <>
             <View style={[styles.tabContainer, { borderBottomColor: colors.border }]}>
               <TouchableOpacity
-                style={[styles.tab, selectedFilter === 'all' && { borderBottomColor: colors.gold }]}
+                style={[styles.tab, selectedFilter === 'all' && { borderBottomColor: colors.accent }]}
                 onPress={() => setSelectedFilter('all')}
               >
                 <Text style={[styles.tabText, selectedFilter === 'all' && { color: colors.text }]}>All</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.tab, selectedFilter === 'movie' && { borderBottomColor: colors.gold }]}
+                style={[styles.tab, selectedFilter === 'movie' && { borderBottomColor: colors.accent }]}
                 onPress={() => setSelectedFilter('movie')}
               >
                 <Text style={[styles.tabText, selectedFilter === 'movie' && { color: colors.text }]}>Movies</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.tab, selectedFilter === 'tv' && { borderBottomColor: colors.gold }]}
+                style={[styles.tab, selectedFilter === 'tv' && { borderBottomColor: colors.accent }]}
                 onPress={() => setSelectedFilter('tv')}
               >
                 <Text style={[styles.tabText, selectedFilter === 'tv' && { color: colors.text }]}>TV Shows</Text>

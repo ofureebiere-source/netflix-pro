@@ -103,7 +103,7 @@ const FeaturedContent: React.FC<FeaturedContentProps> = ({
           borderWidth: 0.5,
           borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.3)',
           // Shadow for depth
-          shadowColor: isDark ? 'rgba(0,0,0,0.5)' : 'rgba(66,133,244,0.15)',
+          shadowColor: isDark ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.15)',
         }
       ]}
     >
@@ -209,10 +209,10 @@ const FeaturedContent: React.FC<FeaturedContentProps> = ({
               { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.15)' }
             ]} />
             
-            <View style={[styles.playButtonNotch, { backgroundColor: colors.gold }]} />
-            <Ionicons name="play" size={11} color={colors.gold} style={styles.playIcon} />
-            <Text style={[styles.playButtonText, { color: colors.gold }]}>PLAY</Text>
-            <View style={[styles.playButtonNotch, { backgroundColor: colors.gold }]} />
+            <View style={[styles.playButtonNotch, { backgroundColor: colors.accent }]} />
+            <Ionicons name="play" size={11} color={colors.accent} style={styles.playIcon} />
+            <Text style={[styles.playButtonText, { color: colors.accent }]}>PLAY</Text>
+            <View style={[styles.playButtonNotch, { backgroundColor: colors.accent }]} />
           </TouchableOpacity>
 
           {onInfoPress && (

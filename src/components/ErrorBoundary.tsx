@@ -48,7 +48,7 @@ const ErrorFallback: React.FC<{ error: Error | null }> = ({ error }) => {
         {error?.message || 'An unexpected error occurred'}
       </Text>
       <TouchableOpacity
-        style={[styles.button, { backgroundColor: colors.gold }]}
+        style={[styles.button, { backgroundColor: colors.accent }]}
         onPress={() => {
           // Reload the app
           window.location?.reload?.();

@@ -1398,7 +1398,7 @@ const SearchScreen = () => {
         >
           {isLoadingSuggestions ? (
             <View style={styles.suggestionsLoading}>
-              <ActivityIndicator size="small" color={colors.gold} />
+              <ActivityIndicator size="small" color={colors.accent} />
               <Text style={[styles.suggestionsLoadingText, { color: colors.textMuted }]}>Loading...</Text>
             </View>
           ) : (
@@ -1476,8 +1476,8 @@ const SearchScreen = () => {
 
   const renderFilters = () => {
     const pillBg = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
-    const pillBorder = (active: boolean) => active ? colors.gold : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)');
-    const pillText = (active: boolean) => active ? colors.gold : colors.textMuted;
+    const pillBorder = (active: boolean) => active ? colors.accent : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)');
+    const pillText = (active: boolean) => active ? colors.accent : colors.textMuted;
 
     const renderRow = (
       label: string,
@@ -1566,12 +1566,12 @@ const SearchScreen = () => {
               key={tab.key}
               style={[
                 styles.tabItem,
-                active && { borderBottomColor: colors.gold, borderBottomWidth: 2 },
+                active && { borderBottomColor: colors.accent, borderBottomWidth: 2 },
               ]}
               onPress={() => setActiveTab(tab.key)}
               activeOpacity={0.7}
             >
-              <Text style={[styles.tabItemText, { color: active ? colors.gold : colors.textMuted }]}>
+              <Text style={[styles.tabItemText, { color: active ? colors.accent : colors.textMuted }]}>
                 {tab.label}
               </Text>
             </TouchableOpacity>
@@ -1626,11 +1626,11 @@ const SearchScreen = () => {
             onPress={() => { setSortBy(opt.key); setShowSortMenu(false); }}
             activeOpacity={0.7}
           >
-            <Ionicons name={opt.icon as any} size={15} color={sortBy === opt.key ? colors.gold : colors.textMuted} />
-            <Text style={[styles.sortMenuItemText, { color: sortBy === opt.key ? colors.gold : colors.text }]}>
+            <Ionicons name={opt.icon as any} size={15} color={sortBy === opt.key ? colors.accent : colors.textMuted} />
+            <Text style={[styles.sortMenuItemText, { color: sortBy === opt.key ? colors.accent : colors.text }]}>
               {opt.label}
             </Text>
-            {sortBy === opt.key && <Ionicons name="checkmark" size={14} color={colors.gold} style={{ marginLeft: 6 }} />}
+            {sortBy === opt.key && <Ionicons name="checkmark" size={14} color={colors.accent} style={{ marginLeft: 6 }} />}
           </TouchableOpacity>
         ))}
       </LinearGradient>
@@ -1644,7 +1644,7 @@ const SearchScreen = () => {
         <View style={styles.recentChipsHeader}>
           <Text style={[styles.recentChipsTitle, { color: colors.textMuted }]}>Recent</Text>
           <TouchableOpacity onPress={handleClearAllHistory}>
-            <Text style={[styles.recentChipsClear, { color: colors.gold }]}>Clear all</Text>
+            <Text style={[styles.recentChipsClear, { color: colors.accent }]}>Clear all</Text>
           </TouchableOpacity>
         </View>
         <ScrollView
@@ -1697,7 +1697,7 @@ const SearchScreen = () => {
           onPress={() => { setQuery(label); performTextSearch(label, 'Searched Results', true); }}
           activeOpacity={0.7}
         >
-          <Ionicons name="trending-up-outline" size={12} color={colors.gold} />
+          <Ionicons name="trending-up-outline" size={12} color={colors.accent} />
           <Text style={[styles.trendingChipText, { color: colors.text }]}>{label}</Text>
         </TouchableOpacity>
       ))}
@@ -1718,7 +1718,7 @@ const SearchScreen = () => {
       <View
         style={[
           styles.loadingBarTrack,
-          { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(97,0,238,0.12)' },
+          { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)' },
         ]}
       >
         <Animated.View
@@ -1728,7 +1728,7 @@ const SearchScreen = () => {
           ]}
         >
           <LinearGradient
-            colors={['transparent', colors.gold, 'transparent']}
+            colors={['transparent', colors.accent, 'transparent']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={StyleSheet.absoluteFillObject}
@@ -1741,7 +1741,7 @@ const SearchScreen = () => {
           ]}
         >
           <LinearGradient
-            colors={['transparent', colors.gold, 'transparent']}
+            colors={['transparent', colors.accent, 'transparent']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={StyleSheet.absoluteFillObject}
@@ -1768,7 +1768,7 @@ const SearchScreen = () => {
               {
                 backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.5)',
                 borderColor: isActive
-                  ? colors.gold
+                  ? colors.accent
                   : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'),
                 borderWidth: isActive ? 1.5 : 1,
               }
@@ -1776,7 +1776,7 @@ const SearchScreen = () => {
             onPress={() => handleCategoryPress(cat)}
             activeOpacity={0.7}
           >
-            <Ionicons name={cat.icon as any} size={12} color={colors.gold} />
+            <Ionicons name={cat.icon as any} size={12} color={colors.accent} />
             <Text
               style={[
                 styles.categoryCardText,
@@ -1838,7 +1838,7 @@ const SearchScreen = () => {
             <Ionicons
               name={isBookmarked ? 'bookmark' : 'bookmark-outline'}
               size={15}
-              color={isBookmarked ? colors.gold : '#fff'}
+              color={isBookmarked ? colors.accent : '#fff'}
             />
           </TouchableOpacity>
         </View>
@@ -1949,7 +1949,7 @@ const SearchScreen = () => {
         Try adjusting your search or filters
       </Text>
       <TouchableOpacity 
-        style={[styles.clearFiltersButton, { borderColor: colors.gold }]}
+        style={[styles.clearFiltersButton, { borderColor: colors.accent }]}
         onPress={() => {
           setFilters({
             type: 'all',
@@ -1965,7 +1965,7 @@ const SearchScreen = () => {
           resetToDiscover();
         }}
       >
-        <Text style={[styles.clearFiltersText, { color: colors.gold }]}>
+        <Text style={[styles.clearFiltersText, { color: colors.accent }]}>
           Clear all filters
         </Text>
       </TouchableOpacity>
@@ -2036,7 +2036,7 @@ const SearchScreen = () => {
           }}
         />
         {isLoadingSuggestions && (
-          <ActivityIndicator size="small" color={colors.gold} style={styles.suggestionLoader} />
+          <ActivityIndicator size="small" color={colors.accent} style={styles.suggestionLoader} />
         )}
         {query.length > 0 && (
           <TouchableOpacity onPress={handleClearQuery} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>

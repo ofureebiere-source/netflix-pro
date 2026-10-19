@@ -94,9 +94,9 @@ export function AdvancedFilters({
 
   const pillBg = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
   const pillBorder = (active: boolean) => 
-    active ? colors.gold : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)');
+    active ? colors.accent : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)');
   const pillText = (active: boolean) => 
-    active ? colors.gold : colors.textMuted;
+    active ? colors.accent : colors.textMuted;
 
   const renderPillRow = (
     label: string,
@@ -225,28 +225,28 @@ export function AdvancedFilters({
                 </Text>
                 <View style={styles.activeFiltersRow}>
                   {localFilters.language && (
-                    <View style={[styles.activeFilterTag, { borderColor: colors.gold }]}>
+                    <View style={[styles.activeFilterTag, { borderColor: colors.accent }]}>
                       <Text style={[styles.activeFilterText, { color: colors.text }]}>
                         {LANGUAGE_OPTIONS.find(o => o.code === localFilters.language)?.label}
                       </Text>
                     </View>
                   )}
                   {localFilters.certification && (
-                    <View style={[styles.activeFilterTag, { borderColor: colors.gold }]}>
+                    <View style={[styles.activeFilterTag, { borderColor: colors.accent }]}>
                       <Text style={[styles.activeFilterText, { color: colors.text }]}>
                         {CERTIFICATION_OPTIONS.find(o => o.code === localFilters.certification)?.label}
                       </Text>
                     </View>
                   )}
                   {localFilters.yearRange && (
-                    <View style={[styles.activeFilterTag, { borderColor: colors.gold }]}>
+                    <View style={[styles.activeFilterTag, { borderColor: colors.accent }]}>
                       <Text style={[styles.activeFilterText, { color: colors.text }]}>
                         {YEAR_RANGE_OPTIONS.find(o => o.value === localFilters.yearRange)?.label}
                       </Text>
                     </View>
                   )}
                   {localFilters.minRating > 0 && (
-                    <View style={[styles.activeFilterTag, { borderColor: colors.gold }]}>
+                    <View style={[styles.activeFilterTag, { borderColor: colors.accent }]}>
                       <Text style={[styles.activeFilterText, { color: colors.text }]}>
                         {localFilters.minRating}+
                       </Text>
@@ -268,7 +268,7 @@ export function AdvancedFilters({
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.actionButton, styles.applyButton, { backgroundColor: colors.gold }]}
+              style={[styles.actionButton, styles.applyButton, { backgroundColor: colors.accent }]}
               onPress={handleApply}
             >
               <Text style={[styles.actionButtonText, { color: '#fff' }]}>

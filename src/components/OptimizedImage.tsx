@@ -42,7 +42,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
     <View style={[styles.container, { backgroundColor }, style]}>
       {isLoading && (
         <View style={[styles.loadingContainer, { backgroundColor }]}>
-          <ActivityIndicator size="small" color={colors.gold} />
+          <ActivityIndicator size="small" color={colors.accent} />
         </View>
       )}
       <Image

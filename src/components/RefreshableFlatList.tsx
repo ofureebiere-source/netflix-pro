@@ -26,7 +26,7 @@ export function RefreshableFlatList<T>({
     if (loading) {
       return (
         <View style={{ padding: 40, alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={colors.gold} />
+          <ActivityIndicator size="large" color={colors.accent} />
           <Text style={{ color: colors.textMuted, marginTop: 12, fontSize: 14 }}>
             {loadingText}
           </Text>
@@ -49,8 +49,8 @@ export function RefreshableFlatList<T>({
         <RefreshControl
           refreshing={refreshing}
           onRefresh={onRefresh}
-          tintColor={colors.gold}
-          colors={[colors.gold]}
+          tintColor={colors.accent}
+          colors={[colors.accent]}
           progressBackgroundColor={colors.surface}
         />
       }

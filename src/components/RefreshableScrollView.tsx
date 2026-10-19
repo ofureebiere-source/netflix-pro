@@ -30,8 +30,8 @@ export const RefreshableScrollView: React.FC<RefreshableScrollViewProps> = ({
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={colors.gold}
-            colors={[colors.gold]}
+            tintColor={colors.accent}
+            colors={[colors.accent]}
             progressBackgroundColor={colors.surface}
           />
         }
@@ -52,8 +52,8 @@ export const RefreshableScrollView: React.FC<RefreshableScrollViewProps> = ({
         <RefreshControl
           refreshing={refreshing}
           onRefresh={onRefresh}
-          tintColor={colors.gold}
-          colors={[colors.gold]}
+          tintColor={colors.accent}
+          colors={[colors.accent]}
           progressBackgroundColor={colors.surface}
         />
       }

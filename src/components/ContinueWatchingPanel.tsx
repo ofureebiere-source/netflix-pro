@@ -168,7 +168,7 @@ export const ContinueWatchingPanel: React.FC<ContinueWatchingPanelProps> = ({
                   style={[
                     styles.progressFill,
                     {
-                      backgroundColor: colors.gold || '#E50914',
+                      backgroundColor: colors.accent || '#E50914',
                       width: `${progressPercent}%`,
                     },
                   ]}
@@ -224,7 +224,7 @@ export const ContinueWatchingPanel: React.FC<ContinueWatchingPanelProps> = ({
             style={[
               styles.paginationDot,
               {
-                backgroundColor: index === currentIndex ? colors.gold || '#E50914' : 'rgba(255,255,255,0.3)',
+                backgroundColor: index === currentIndex ? colors.accent || '#E50914' : 'rgba(255,255,255,0.3)',
                 width: index === currentIndex ? 24 : 8,
               },
             ]}

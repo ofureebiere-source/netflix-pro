@@ -299,7 +299,7 @@ const MediaCard = ({
                 <View
                   style={[
                     styles.progressBarFill,
-                    { backgroundColor: colors.gold, width: `${progress * 100}%` },
+                    { backgroundColor: colors.accent, width: `${progress * 100}%` },
                   ]}
                 />
               </View>

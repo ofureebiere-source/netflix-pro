@@ -831,7 +831,7 @@ const HomeScreen = () => {
                   backgroundColor: isDark ? colors.surfaceRaised : 'rgba(255,255,255,0.7)',
                   borderWidth: 0.5,
                   borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.3)',
-                  shadowColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(66,133,244,0.1)',
+                  shadowColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.15)',
                 }
               ]}
               onPress={() => router.push('/downloads')}
@@ -870,8 +870,8 @@ const HomeScreen = () => {
               <RefreshControl
                 refreshing={refreshing}
                 onRefresh={onRefresh}
-                tintColor={colors.gold}
-                colors={[colors.gold]}
+                tintColor={colors.accent}
+                colors={[colors.accent]}
                 progressBackgroundColor={isDark ? colors.surface : 'rgba(255,255,255,0.8)'}
               />
             }

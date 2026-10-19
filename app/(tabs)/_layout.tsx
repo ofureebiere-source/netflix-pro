@@ -18,16 +18,16 @@ export default function TabsLayout() {
 
   const getTabBarBackground = () => {
     if (isDark) {
-      return 'rgba(8, 8, 8, 0.8)';
+      return 'rgba(0, 0, 0, 0.95)';
     }
-    return 'rgba(255, 255, 255, 0.8)';
+    return 'rgba(255, 255, 255, 0.95)';
   };
 
   const getBorderColor = () => {
     if (isDark) {
-      return 'rgba(255, 255, 255, 0.08)';
+      return '#27272a';
     }
-    return 'rgba(0, 0, 0, 0.08)';
+    return '#E4E4E7';
   };
 
   const getShadowColor = () => {
@@ -43,28 +43,27 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarStyle: {
           position: 'absolute',
-          bottom: Platform.OS === 'ios' ? 36 : 32,
-          left: 48,
-          right: 48,
+          bottom: 0,
+          left: 0,
+          right: 0,
           backgroundColor: getTabBarBackground(),
-          borderRadius: 28,
-          height: Platform.OS === 'ios' ? 60 : 54,
+          borderRadius: 0,
+          height: Platform.OS === 'ios' ? 56 : 52,
           paddingBottom: getBottomPadding(),
           paddingTop: 8,
           paddingHorizontal: 14,
-          borderTopWidth: 0,
+          borderTopWidth: 0.5,
+          borderTopColor: getBorderColor(),
           ...(Platform.OS === 'ios' && {
             backdropFilter: 'blur(24px)',
           }),
           shadowColor: getShadowColor(),
-          shadowOffset: { width: 0, height: 6 },
+          shadowOffset: { width: 0, height: -2 },
           shadowOpacity: isDark ? 0.35 : 0.12,
-          shadowRadius: 16,
+          shadowRadius: 12,
           elevation: 10,
-          borderWidth: 0.5,
-          borderColor: getBorderColor(),
         },
-        tabBarActiveTintColor: colors.gold || '#D4AF37',
+        tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textMuted || (isDark ? '#888888' : '#AAAAAA'),
         tabBarLabelStyle: {
           fontSize: 10,

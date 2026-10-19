@@ -202,8 +202,8 @@ function LoadingScreen() {
         />
       )}
       <View style={styles.loadingContent}>
-        <View style={[styles.loadingLogo, { borderColor: colors.gold }]}>
-          <Text style={[styles.loadingLogoText, { color: colors.gold }]}>N</Text>
+        <View style={[styles.loadingLogo, { borderColor: colors.accent }]}>
+          <Text style={[styles.loadingLogoText, { color: colors.accent }]}>N</Text>
         </View>
         <View style={styles.loadingDots}>
           {[0, 1, 2].map((i) => (
@@ -212,7 +212,7 @@ function LoadingScreen() {
               style={[
                 styles.loadingDot,
                 {
-                  backgroundColor: colors.gold,
+                  backgroundColor: colors.accent,
                   opacity: 0.3 + (i * 0.25),
                 },
               ]}
@@ -246,15 +246,15 @@ function ErrorScreen({ error, onRetry }: { error: string; onRetry: () => void })
           backgroundColor: isDark ? colors.surfaceRaised : 'rgba(255,255,255,0.7)',
           borderWidth: isDark ? 0 : 0.5,
           borderColor: isDark ? 'transparent' : 'rgba(255,255,255,0.3)',
-          shadowColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(66,133,244,0.1)',
+          shadowColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.15)',
         }
       ]}>
-        <Text style={[styles.errorIcon, { color: colors.gold }]}>🎬</Text>
+        <Text style={[styles.errorIcon, { color: colors.accent }]}>🎬</Text>
         <Text style={[styles.errorTitle, { color: colors.text }]}>Something went wrong</Text>
         <Text style={[styles.errorText, { color: colors.textSub }]}>{error}</Text>
-        <View style={[styles.errorRetryContainer, { backgroundColor: colors.goldFill }]}>
+        <View style={[styles.errorRetryContainer, { backgroundColor: colors.accentFill }]}>
           <Text
-            style={[styles.errorRetry, { color: colors.gold }]}
+            style={[styles.errorRetry, { color: colors.accent }]}
             onPress={onRetry}
           >
             Try Again
