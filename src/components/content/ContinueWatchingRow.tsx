@@ -77,6 +77,7 @@ export function ContinueWatchingRow({
 
       return () => clearInterval(interval);
     }
+    return undefined;
   }, [displayItems.length]);
 
   // ─── Scroll to current index (smooth slide, not a full-page jump) ───
@@ -204,7 +205,7 @@ export function ContinueWatchingRow({
           scrollEnabled={true}
           onScrollBeginDrag={handleScrollBeginDrag}
           onMomentumScrollEnd={handleMomentumScrollEnd}
-          getItemLayout={(data, index) => ({
+          getItemLayout={(_data, index) => ({
             length: ITEM_WIDTH,
             offset: ITEM_WIDTH * index,
             index,

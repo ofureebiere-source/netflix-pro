@@ -1,7 +1,7 @@
 // app/_layout.tsx
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { View, StyleSheet, Text, Platform } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, StyleSheet, Text } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -15,7 +15,7 @@ import { store } from '../src/store/store';
 import { useAppStore } from '../src/store/zustand/store';
 
 // Theme & Alerts
-import { ThemeProvider, useTheme, useIsDark } from '../src/contexts/ThemeContext';
+import { ThemeProvider, useTheme } from '../src/contexts/ThemeContext';
 import { AlertProvider } from '../src/contexts/AlertContext';
 import ScreenBackdrop from '../src/components/glass/ScreenBackdrop';
 
@@ -86,7 +86,7 @@ function initializeVideoPlayer(): void {
     playerInitialized = true;
     console.log('[App] ✅ Video player created and configured');
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('[App] ❌ Failed to initialize Video Player:', error);
     // Non-fatal: player will be created lazily when needed
   }
@@ -147,7 +147,7 @@ async function initializeAllServices(): Promise<void> {
       // ─── STEP 0: Initialize Single Video Player FIRST ───
       try {
         initializeVideoPlayer();
-      } catch (err) {
+      } catch (err: any) {
         console.error('[App] Video player init failed:', err);
         // Non-fatal: player will be created lazily
       }
@@ -156,7 +156,7 @@ async function initializeAllServices(): Promise<void> {
       try {
         await networkService.initialize();
         console.log('[App] Network service initialized');
-      } catch (err) {
+      } catch (err: any) {
         console.error('[App] Network service failed:', err);
       }
 
@@ -164,13 +164,13 @@ async function initializeAllServices(): Promise<void> {
       try {
         await downloadManager.initialize();
         console.log('[App] Download manager initialized');
-      } catch (err) {
+      } catch (err: any) {
         console.error('[App] Download manager failed:', err);
       }
 
       moduleInitComplete = true;
       console.log('[App] All services initialized successfully');
-    } catch (err) {
+    } catch (err: any) {
       console.error('[App] Module initialization failed:', err);
       moduleInitComplete = false;
       throw err;
@@ -191,7 +191,7 @@ initializeAllServices().catch((err) => {
 // ============================================
 function LoadingScreen() {
   const { colors, isDark } = useTheme();
-  
+
   return (
     <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
       {!isDark && (
@@ -270,7 +270,6 @@ function ErrorScreen({ error, onRetry }: { error: string; onRetry: () => void })
 // MAIN APP CONTENT
 // ============================================
 function AppContent() {
-  const { colors, isDark } = useTheme();
   const {
     isInitialized,
     hasCachedData,
@@ -323,7 +322,7 @@ function AppContent() {
             await thrillerPreloader.eagerPreload(thrillerMovies);
             console.log('[App] Thriller trailers preloaded (fallback)');
           }
-        } catch (thrillerErr) {
+        } catch (thrillerErr: any) {
           console.warn('[App] Thriller preload fallback failed:', thrillerErr);
         }
       }
@@ -331,7 +330,7 @@ function AppContent() {
       // ─── STEP 4: Mark as ready ───
       setInitialized(true);
       console.log('[App] App ready');
-    } catch (err) {
+    } catch (err: any) {
       console.error('[App] Content preload failed:', err);
       setError(err instanceof Error ? err.message : 'Failed to load content');
       setInitialized(true);
@@ -356,7 +355,7 @@ function AppContent() {
         await thrillerPreloader.eagerPreload(thrillerMovies);
         console.log('[App] Background thriller refresh complete');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn('[App] Background refresh failed:', err);
     }
   }, []);
@@ -413,7 +412,7 @@ function AppContent() {
 
         console.log('[App] Checking for updates...');
         await checkForUpdates(false);
-      } catch (err) {
+      } catch (err: any) {
         console.warn('[App] Update check failed:', err);
       }
     })();

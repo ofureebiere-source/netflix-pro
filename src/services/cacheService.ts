@@ -15,7 +15,7 @@ export class CacheService {
     try {
       const entry = { data, timestamp: Date.now(), ttl };
       await AsyncStorage.setItem(`app_cache_${key}`, JSON.stringify(entry));
-    } catch (error) {
+    } catch (error: any) {
       console.warn('[Cache] Failed to set:', key, error);
     }
   }
@@ -30,7 +30,7 @@ export class CacheService {
         return null;
       }
       return entry.data;
-    } catch (error) {
+    } catch (error: any) {
       console.warn('[Cache] Failed to get:', key, error);
       return null;
     }
@@ -39,7 +39,7 @@ export class CacheService {
   async remove(key: string): Promise<void> {
     try {
       await AsyncStorage.removeItem(`app_cache_${key}`);
-    } catch (error) {
+    } catch (error: any) {
       console.warn('[Cache] Failed to remove:', key, error);
     }
   }
@@ -49,7 +49,7 @@ export class CacheService {
       const keys = await AsyncStorage.getAllKeys();
       const cacheKeys = keys.filter(key => key.startsWith('app_cache_'));
       await AsyncStorage.multiRemove(cacheKeys);
-    } catch (error) {
+    } catch (error: any) {
       console.warn('[Cache] Failed to clear all:', error);
     }
   }

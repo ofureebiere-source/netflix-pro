@@ -19,18 +19,17 @@ const defineCleanupTask = () => {
         try {
           await cleanupService.runCleanup();
           return BackgroundTask.BackgroundTaskResult.Success;
-        } catch (error) {
+        } catch (error: any) {
           return BackgroundTask.BackgroundTaskResult.Failed;
         }
       });
     }
-  } catch (error) {
+  } catch (error: any) {
     // Task definition failed - continue without background task support
   }
 };
 
 class CleanupService {
-  private isRegistered: boolean = false;
 
   constructor() {
     // Define task on instance creation
@@ -40,8 +39,7 @@ class CleanupService {
   async initialize() {
     try {
       await this.registerBackgroundTask();
-      this.isRegistered = true;
-    } catch (error) {
+    } catch (error: any) {
       // Initialization failed silently
     }
   }
@@ -49,8 +47,7 @@ class CleanupService {
   async registerBackgroundTask() {
     try {
       const status = await BackgroundTask.getStatusAsync();
-      if (status === BackgroundTask.BackgroundTaskStatus.Restricted ||
-          status === BackgroundTask.BackgroundTaskStatus.Denied) {
+      if (status === BackgroundTask.BackgroundTaskStatus.Restricted) {
         return;
       }
 
@@ -60,7 +57,7 @@ class CleanupService {
           minimumInterval: 60 * 24,
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       // Registration failed silently
     }
   }
@@ -72,7 +69,7 @@ class CleanupService {
       const now = new Date();
       const deletedItems = [];
 
-      for (const download of downloads) {
+      for (const download of downloads as any[]) {
         if (download.status !== DOWNLOAD_STATUS.COMPLETED) {
           continue;
         }
@@ -104,14 +101,14 @@ class CleanupService {
           try {
             await deleteDownload(download.id);
             deletedItems.push({ id: download.id, title: download.title, reason });
-          } catch (deleteError) {
+          } catch (deleteError: any) {
             // Skip failed deletions
           }
         }
       }
 
       return deletedItems;
-    } catch (error) {
+    } catch (error: any) {
       return [];
     }
   }
@@ -122,8 +119,7 @@ class CleanupService {
       if (isRegistered) {
         await BackgroundTask.unregisterTaskAsync(CLEANUP_TASK_NAME);
       }
-      this.isRegistered = false;
-    } catch (error) {
+    } catch (error: any) {
       // Unregister failed silently
     }
   }

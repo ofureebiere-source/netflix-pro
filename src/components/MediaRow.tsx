@@ -32,7 +32,7 @@ const MediaRow: React.FC<MediaRowProps> = ({
   cardWidth: customCardWidth,
   cardHeight: customCardHeight,
 }) => {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
 
   if (!data || data.length === 0) {
     return null;

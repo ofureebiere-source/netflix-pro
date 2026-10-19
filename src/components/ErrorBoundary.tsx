@@ -15,6 +15,7 @@ interface State {
 }
 
 class ErrorBoundaryClass extends Component<Props, State> {
+  state: any;
   constructor(props: Props) {
     super(props);
     this.state = { hasError: false, error: null };

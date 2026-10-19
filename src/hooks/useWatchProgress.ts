@@ -13,7 +13,7 @@ export const useWatchProgress = ({
   poster_path,
   isLiveStream,
   isUnmounting,
-}) => {
+}: any) => {
   const [resumeTime, setResumeTime] = useState(0);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -43,12 +43,12 @@ export const useWatchProgress = ({
           }
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error("Failed to load progress:", e);
     }
   }, [mediaId, mediaType, season, episode, isLiveStream]);
 
-  const saveProgress = useCallback((currentTime) => {
+  const saveProgress = useCallback((currentTime: any) => {
     if (isLiveStream || isUnmounting || !currentTime || !duration || duration <= 0) return;
 
     if ((duration - currentTime) < VIDEO_END_THRESHOLD_SECONDS) {
@@ -68,12 +68,12 @@ export const useWatchProgress = ({
         lastWatched: new Date().toISOString(),
       };
       saveWatchProgress(mediaId, data);
-    } catch (e) {
+    } catch (e: any) {
       console.error("Error saving progress:", e);
     }
   }, [isLiveStream, isUnmounting, duration, title, episodeTitle, mediaType, mediaId, poster_path, season, episode]);
 
-  const handlePositionChange = useCallback((currentEventTime, {
+  const handlePositionChange = useCallback((currentEventTime: any, {
     isSeeking,
     showNextEpisodeButton,
     autoPlayEnabled,
@@ -83,7 +83,7 @@ export const useWatchProgress = ({
     nextEpisodeDetailsRef,
     updateCurrentSubtitle,
     setIsAtLiveEdge,
-  }) => {
+  }: any) => {
     if (typeof currentEventTime !== 'number' || isNaN(currentEventTime) || isSeeking) {
       return;
     }
@@ -137,7 +137,7 @@ export const useWatchProgress = ({
     }
   }, [isLiveStream, duration, mediaType, saveProgress]);
 
-  const handleDurationChange = useCallback((dur) => {
+  const handleDurationChange = useCallback((dur: any) => {
     if (typeof dur === 'number' && !isNaN(dur) && dur > 0) {
       if (duration !== dur) {
         setDuration(dur);

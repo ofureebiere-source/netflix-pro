@@ -5,7 +5,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  FlatList,
   Image,
   ScrollView,
   RefreshControl,
@@ -201,7 +200,7 @@ const LibraryScreen = () => {
   const [storageUsed, setStorageUsed] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [expandedShows, setExpandedShows] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
     try {
@@ -209,7 +208,7 @@ const LibraryScreen = () => {
       const usage = await getDownloadStorageUsage();
       setCompletedDownloads(completed);
       setStorageUsed(usage);
-    } catch (error) {
+    } catch (error: any) {
       console.error('[Library] Load error:', error);
     } finally {
       setLoading(false);
@@ -257,11 +256,11 @@ const LibraryScreen = () => {
           episode: item.episode,
           episodeTitle: item.episodeTitle,
           poster_path: item.posterPath,
-          isOffline: true,
+          isOffline: 'true',
           offlineFilePath: offlinePath,
         },
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('[Library] Play error:', error);
       showToast('Failed to play downloaded content');
     }
@@ -272,7 +271,7 @@ const LibraryScreen = () => {
       await downloadManager.cancelDownload(id);
       await loadData();
       showToast('Download deleted');
-    } catch (error) {
+    } catch (error: any) {
       console.error('[Library] Delete error:', error);
       showToast('Failed to delete download');
     }
@@ -290,6 +289,9 @@ const LibraryScreen = () => {
         episodeTitle: item.episodeTitle,
         poster_path: item.posterPath,
         progress: item.progress,
+        // Carried so the resumed title still resolves against providers.
+        ...(item.year ? { year: String(item.year) } : {}),
+        ...(item.releaseDate ? { release_date: String(item.releaseDate) } : {}),
       },
     });
   }, []);

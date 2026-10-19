@@ -66,7 +66,7 @@ export class CommentService {
       if (!raw) return [];
       const parsed = JSON.parse(raw);
       return Array.isArray(parsed) ? parsed : [];
-    } catch (error) {
+    } catch (error: any) {
       console.error('[CommentService] Failed to read comments:', error);
       return [];
     }
@@ -75,7 +75,7 @@ export class CommentService {
   private async writeAll(contentId: string, comments: Comment[]): Promise<void> {
     try {
       await AsyncStorage.setItem(storageKeyForContent(contentId), JSON.stringify(comments));
-    } catch (error) {
+    } catch (error: any) {
       console.error('[CommentService] Failed to write comments:', error);
     }
   }
@@ -86,7 +86,7 @@ export class CommentService {
     set.forEach((listener) => {
       try {
         listener(comment);
-      } catch (error) {
+      } catch (error: any) {
         console.error('[CommentService] Listener error:', error);
       }
     });
@@ -130,7 +130,7 @@ export class CommentService {
 
       this.emit(input.contentId, comment);
       return comment;
-    } catch (error) {
+    } catch (error: any) {
       console.error('[CommentService] Error:', error);
       return null;
     }
@@ -156,7 +156,7 @@ export class CommentService {
       });
 
       return sorted.slice(0, limit);
-    } catch (error) {
+    } catch (error: any) {
       console.error('[CommentService] Error:', error);
       return [];
     }
@@ -184,7 +184,7 @@ export class CommentService {
         }
       }
       return [];
-    } catch (error) {
+    } catch (error: any) {
       console.error('[CommentService] Replies error:', error);
       return [];
     }
@@ -231,7 +231,7 @@ export class CommentService {
         }
       }
       return null;
-    } catch (error) {
+    } catch (error: any) {
       console.error('[CommentService] Error:', error);
       return null;
     }
@@ -268,7 +268,7 @@ export class CommentService {
         return true;
       }
       return false;
-    } catch (error) {
+    } catch (error: any) {
       console.error('[CommentService] Error:', error);
       return false;
     }

@@ -24,6 +24,15 @@ export interface UseLicensedPlaybackSourceParams {
   mediaType: string; // 'movie' | 'tv'
   season?: number;
   episode?: number;
+  /**
+   * Title and year of the title being played.
+   *
+   * These are not cosmetic. Most providers are title-based, and the backend
+   * can only use the TMDB-id-based one without them, so omitting them makes
+   * the request resolve zero sources. Pass whatever the caller knows.
+   */
+  title?: string;
+  year?: number;
   isOffline?: boolean;
   offlineFilePath?: string;
   directStreamUrl?: string | null; // pre-resolved URL passed in via navigation params, if any
@@ -48,7 +57,7 @@ export function useLicensedPlaybackSource(
   params: UseLicensedPlaybackSourceParams
 ): UseLicensedPlaybackSourceResult {
   const {
-    mediaId, mediaType, season, episode,
+    mediaId, mediaType, season, episode, title, year,
     isOffline, offlineFilePath, directStreamUrl,
   } = params;
 
@@ -81,6 +90,8 @@ export function useLicensedPlaybackSource(
         mediaType: mediaType === 'tv' ? 'tv' : 'movie',
         season,
         episode,
+        title: title || undefined,
+        year,
       });
       if (requestId !== requestIdRef.current) return;
 
@@ -90,7 +101,7 @@ export function useLicensedPlaybackSource(
         setError('Playback is not available for this title yet.');
       }
       setIsResolved(true);
-    } catch (err) {
+    } catch (err: any) {
       if (requestId !== requestIdRef.current) return;
       console.warn('[useLicensedPlaybackSource] Failed to resolve playback source:', err);
       setError(
@@ -102,7 +113,7 @@ export function useLicensedPlaybackSource(
     } finally {
       if (requestId === requestIdRef.current) setIsLoading(false);
     }
-  }, [mediaId, mediaType, season, episode, isOffline, offlineFilePath, directStreamUrl]);
+  }, [mediaId, mediaType, season, episode, title, year, isOffline, offlineFilePath, directStreamUrl]);
 
   useEffect(() => {
     resolve();

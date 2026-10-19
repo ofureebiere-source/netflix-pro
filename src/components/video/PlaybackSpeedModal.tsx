@@ -3,7 +3,7 @@ import React from 'react';
 import { Modal, View, Text, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
-import { SPACING, RADIUS, TYPOGRAPHY, getGlassTokens } from '../../theme/tokens';
+import { SPACING, TYPOGRAPHY, getGlassTokens } from '../../theme/tokens';
 import { GlassPanel, GlassButton } from '../glass';
 import { PLAYBACK_SPEEDS } from '../../hooks/usePlaybackSpeed';
 

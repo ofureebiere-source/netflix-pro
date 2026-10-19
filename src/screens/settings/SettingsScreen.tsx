@@ -7,16 +7,15 @@ import {
   TouchableOpacity,
   Switch,
   ScrollView,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useFocusEffect } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import Constants from 'expo-constants';
 
 // Zustand Stores
-import { useAppStore, useSettings } from '../../store/zustand';
+import { useAppStore } from '../../store/zustand';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAlert } from '../../contexts/AlertContext';
 
@@ -34,25 +33,19 @@ const SettingsScreen = () => {
     maxConcurrentDownloads,
     autoDeleteWatchedDays,
     autoDeleteUnwatchedDays,
-    checkForUpdates,
     defaultPlayerQuality,
     subtitleLanguage,
     subtitleSize,
     skipIntro,
     skipCredits,
-    dataSaver,
     autoPlayNext,
     setWifiOnlyDownload,
     setMaxConcurrentDownloads,
     setAutoDeleteWatchedDays,
     setAutoDeleteUnwatchedDays,
-    setCheckForUpdates,
-    setDefaultPlayerQuality,
-    setSubtitleLanguage,
     setSubtitleSize,
     setSkipIntro,
     setSkipCredits,
-    setDataSaver,
     setAutoPlayNext,
     resetSettings,
   } = useAppStore();
@@ -78,7 +71,7 @@ const SettingsScreen = () => {
       let totalSize = 0;
       if (keys.length > 0) {
         const data = await multiGet(keys);
-        data.forEach(([key, value]) => {
+        data.forEach(([key, value]: any) => {
           if (value) {
             totalSize += key.length * 2 + value.length * 2;
           }
@@ -92,7 +85,7 @@ const SettingsScreen = () => {
         setStorageUsageValue((totalSize / (1024 * 1024)).toFixed(2));
         setStorageUsageUnit('MB');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('[Settings] Load error:', error);
     } finally {
       setLoading(false);

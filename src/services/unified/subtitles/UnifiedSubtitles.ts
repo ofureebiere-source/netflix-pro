@@ -49,7 +49,7 @@ export class UnifiedSubtitlesService {
           });
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.warn('[UnifiedSubtitles] OpenSubtitles error:', error);
     }
 
@@ -71,7 +71,7 @@ export class UnifiedSubtitlesService {
             });
           }
         }
-      } catch (error) {
+      } catch (error: any) {
         console.warn('[UnifiedSubtitles] SubDL error:', error);
       }
     }
@@ -103,7 +103,7 @@ export class UnifiedSubtitlesService {
       } else {
         return await subdlApiService.getSubtitleFile(id);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('[UnifiedSubtitles] Download error:', error);
       return null;
     }
@@ -112,7 +112,7 @@ export class UnifiedSubtitlesService {
   async getAvailableLanguages(): Promise<{ code: string; name: string }[]> {
     try {
       return await subdlApiService.getLanguages();
-    } catch (error) {
+    } catch (error: any) {
       console.error('[UnifiedSubtitles] Languages error:', error);
       return [];
     }

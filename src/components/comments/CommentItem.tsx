@@ -6,8 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  Image,
-} from 'react-native';
+  } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Comment } from '../../services/comments/commentService';

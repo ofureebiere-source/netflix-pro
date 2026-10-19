@@ -29,7 +29,7 @@ export class SubdlApiService {
       // Fix: Use backticks and ${} for template literal
       const response = await axios.get(`${SUBDL_BASE_URL}/subtitles`, { params });
       return response.data.subtitles || [];
-    } catch (error) {
+    } catch (error: any) {
       console.error('[SubDL] Search error:', error);
       return [];
     }
@@ -42,7 +42,7 @@ export class SubdlApiService {
         params: { apikey: this.apiKey }
       });
       return response.data.url || null;
-    } catch (error) {
+    } catch (error: any) {
       console.error('[SubDL] File error:', error);
       return null;
     }
@@ -55,7 +55,7 @@ export class SubdlApiService {
         params: { apikey: this.apiKey }
       });
       return response.data.languages || [];
-    } catch (error) {
+    } catch (error: any) {
       console.error('[SubDL] Languages error:', error);
       return [];
     }

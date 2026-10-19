@@ -11,7 +11,7 @@ export const useDevice = () => {
       try {
         const p = await deviceManager.initialize();
         setProfile(p);
-      } catch (error) {
+      } catch (error: any) {
         console.error('[useDevice] Initialization error:', error);
       } finally {
         setLoading(false);
@@ -25,7 +25,7 @@ export const useDevice = () => {
     try {
       const p = await deviceManager.refresh();
       setProfile(p);
-    } catch (error) {
+    } catch (error: any) {
       console.error('[useDevice] Refresh error:', error);
     } finally {
       setLoading(false);

@@ -1,6 +1,6 @@
 // src/services/preloader/ThrillerPreloader.ts
 import { cacheManager } from '../cache/CacheManager';
-import { getImageUrl, fetchMovieVideos, fetchTVVideos } from '../unified/metadata/TMDBMetadata';
+import { fetchMovieVideos, fetchTVVideos } from '../unified/metadata/TMDBMetadata';
 
 export interface ThrillerItem {
   id: string;
@@ -57,7 +57,7 @@ export class ThrillerPreloader {
         index.push(tmdbId);
         await cacheManager.set(INDEX_KEY, index, INDEX_TTL);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.warn('[ThrillerPreloader] Failed to update cache index:', e);
     }
   }
@@ -69,7 +69,7 @@ export class ThrillerPreloader {
       if (next.length !== index.length) {
         await cacheManager.set(INDEX_KEY, next, INDEX_TTL);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.warn('[ThrillerPreloader] Failed to update cache index:', e);
     }
   }
@@ -87,7 +87,7 @@ export class ThrillerPreloader {
   private async setBatchTimestamp(): Promise<void> {
     try {
       await cacheManager.set(BATCH_TIMESTAMP_KEY, Date.now(), ONE_WEEK_MS);
-    } catch (e) {
+    } catch (e: any) {
       console.warn('[ThrillerPreloader] Failed to set batch timestamp:', e);
     }
   }
@@ -134,7 +134,7 @@ export class ThrillerPreloader {
     try {
       const result = await eagerPreloadPromise;
       return result;
-    } catch (error) {
+    } catch (error: any) {
       eagerPreloadPromise = null;
       eagerPreloadMovies = null;
       throw error;
@@ -186,7 +186,7 @@ export class ThrillerPreloader {
         batch.map(async (movie) => {
           try {
             return await this.processMovie(movie);
-          } catch (error) {
+          } catch (error: any) {
             console.error(`[ThrillerPreloader] Error processing movie ${movie.id}:`, error);
             return this.createFallbackItem(movie);
           }
@@ -249,7 +249,7 @@ export class ThrillerPreloader {
         videos.find((v: any) => v.site === 'YouTube');
 
       return trailer?.key;
-    } catch (error) {
+    } catch (error: any) {
       console.error(`[ThrillerPreloader] Error fetching trailer for ${movie.id}:`, error);
       return undefined;
     }
@@ -294,18 +294,18 @@ export class ThrillerPreloader {
     for (const tmdbId of index) {
       try {
         await cacheManager.delete(`thriller_${tmdbId}`);
-      } catch (e) {
+      } catch (e: any) {
         console.warn(`[ThrillerPreloader] Failed to delete cache for ${tmdbId}:`, e);
       }
     }
     try {
       await cacheManager.delete(INDEX_KEY);
-    } catch (e) {
+    } catch (e: any) {
       console.warn('[ThrillerPreloader] Failed to delete cache index:', e);
     }
     try {
       await cacheManager.delete(BATCH_TIMESTAMP_KEY);
-    } catch (e) {
+    } catch (e: any) {
       console.warn('[ThrillerPreloader] Failed to delete batch timestamp:', e);
     }
 

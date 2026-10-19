@@ -20,7 +20,7 @@ const getTodayDateString = () => {
 };
 
 // Helper function to create standard image URLs
-export const getImageUrl = (path: string | null, size?: string) => {
+export const getImageUrl = (path: string | null, _size?: string) => {
   if (!path) return null;
   return `${IMAGE_BASE_URL}${path}`;
 };
@@ -44,7 +44,7 @@ export const fetchTrending = async (
       params: { api_key: TMDB_API_KEY }
     });
     return response.data.results || [];
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching trending:', error);
     return [];
   }
@@ -67,7 +67,7 @@ export const fetchPopularMovies = async (): Promise<any[]> => {
       },
     });
     return response.data.results?.filter((item: any) => item.poster_path) || [];
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching popular movies:', error);
     return [];
   }
@@ -86,7 +86,7 @@ export const fetchPopularTVShows = async (): Promise<any[]> => {
       },
     });
     return response.data.results?.filter((item: any) => item.poster_path) || [];
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching popular TV shows:', error);
     return [];
   }
@@ -102,7 +102,7 @@ export const fetchTopRatedMovies = async ({ page = 1 }: { page?: number } = {}):
       params: { api_key: TMDB_API_KEY, page }
     });
     return response.data.results?.filter((item: any) => item.poster_path) || [];
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching top rated movies:', error);
     return [];
   }
@@ -114,7 +114,7 @@ export const fetchTopRatedTVShows = async ({ page = 1 }: { page?: number } = {})
       params: { api_key: TMDB_API_KEY, page }
     });
     return response.data.results?.filter((item: any) => item.poster_path) || [];
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching top rated TV shows:', error);
     return [];
   }
@@ -145,7 +145,7 @@ export const fetchNewReleaseMovies = async (): Promise<any[]> => {
       },
     });
     return response.data.results?.filter((item: any) => item.poster_path) || [];
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching new release movies:', error);
     return [];
   }
@@ -172,7 +172,7 @@ export const fetchNewReleaseTVShows = async (): Promise<any[]> => {
       },
     });
     return response.data.results?.filter((item: any) => item.poster_path) || [];
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching new release TV shows:', error);
     return [];
   }
@@ -188,7 +188,7 @@ export const fetchUpcomingMovies = async ({ page = 1 }: { page?: number } = {}):
       params: { api_key: TMDB_API_KEY, page }
     });
     return response.data.results?.filter((item: any) => item.poster_path) || [];
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching upcoming movies:', error);
     return [];
   }
@@ -200,7 +200,7 @@ export const fetchAiringTodayTV = async ({ page = 1 }: { page?: number } = {}): 
       params: { api_key: TMDB_API_KEY, page }
     });
     return response.data.results?.filter((item: any) => item.poster_path) || [];
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching airing today TV shows:', error);
     return [];
   }
@@ -212,7 +212,7 @@ export const fetchOnTheAirTV = async ({ page = 1 }: { page?: number } = {}): Pro
       params: { api_key: TMDB_API_KEY, page }
     });
     return response.data.results?.filter((item: any) => item.poster_path) || [];
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching on the air TV shows:', error);
     return [];
   }
@@ -236,7 +236,7 @@ export const fetchRecommendedMovies = async (params: any = {}): Promise<any[]> =
       },
     });
     return response.data.results?.filter((item: any) => item.poster_path) || [];
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching recommended movies:', error);
     return [];
   }
@@ -256,7 +256,7 @@ export const fetchRecommendedTVShows = async (params: any = {}): Promise<any[]> 
       },
     });
     return response.data.results?.filter((item: any) => item.poster_path) || [];
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching recommended TV shows:', error);
     return [];
   }
@@ -272,7 +272,7 @@ export const fetchMovieDetails = async (movieId: number): Promise<any> => {
       params: { api_key: TMDB_API_KEY, append_to_response: 'credits,videos' },
     });
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching movie details:', error);
     throw error;
   }
@@ -315,7 +315,7 @@ export const fetchTVShowDetails = async (tvId: number): Promise<any> => {
     }
     
     return data;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching TV show details:', error);
     throw error;
   }
@@ -348,7 +348,7 @@ export const fetchSeasonDetails = async (tvId: number, seasonNumber: number): Pr
     }
     
     return data;
-  } catch (error) {
+  } catch (error: any) {
     console.error(`Error fetching season ${seasonNumber} details:`, error);
     throw error;
   }
@@ -370,7 +370,7 @@ export const fetchMultipleSeasonDetails = async (
       try {
         const data = await fetchSeasonDetails(tvId, seasonNum);
         results[seasonNum] = data;
-      } catch (error) {
+      } catch (error: any) {
         console.error(`[TMDBMetadata] ❌ Failed to fetch season ${seasonNum}:`, error);
         results[seasonNum] = null;
       }
@@ -379,7 +379,7 @@ export const fetchMultipleSeasonDetails = async (
     await Promise.all(promises);
     console.log(`[TMDBMetadata] ✅ Batch fetched ${Object.keys(results).length} seasons`);
     return results;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error batch fetching season details:', error);
     return {};
   }
@@ -391,7 +391,7 @@ export const fetchMovieRecommendations = async (movieId: number): Promise<any[]>
       params: { api_key: TMDB_API_KEY },
     });
     return response.data.results?.filter((item: any) => item.poster_path) || [];
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching movie recommendations:', error);
     return [];
   }
@@ -403,7 +403,7 @@ export const fetchTVShowRecommendations = async (tvId: number): Promise<any[]> =
       params: { api_key: TMDB_API_KEY },
     });
     return response.data.results?.filter((item: any) => item.poster_path) || [];
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching TV show recommendations:', error);
     return [];
   }
@@ -419,7 +419,7 @@ export const fetchMovieVideos = async (movieId: number): Promise<any[]> => {
       params: { api_key: TMDB_API_KEY }
     });
     return response.data.results || [];
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching movie videos:', error);
     return [];
   }
@@ -431,7 +431,7 @@ export const fetchTVVideos = async (tvId: number): Promise<any[]> => {
       params: { api_key: TMDB_API_KEY }
     });
     return response.data.results || [];
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching TV videos:', error);
     return [];
   }
@@ -453,7 +453,7 @@ export const fetchMovieReviews = async (movieId: number): Promise<any[]> => {
       params: { api_key: TMDB_API_KEY },
     });
     return response.data.results || [];
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching movie reviews:', error);
     return [];
   }
@@ -471,7 +471,7 @@ export const fetchTVShowReviews = async (tvId: number): Promise<any[]> => {
       params: { api_key: TMDB_API_KEY },
     });
     return response.data.results || [];
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching TV show reviews:', error);
     return [];
   }
@@ -497,7 +497,7 @@ export const fetchMediaByGenre = async (mediaType: 'movie' | 'tv', genreId: numb
       },
     });
     return response.data.results?.filter((item: any) => item.poster_path) || [];
-  } catch (error) {
+  } catch (error: any) {
     console.error(`Error fetching ${mediaType} by genre ${genreId}:`, error);
     return [];
   }
@@ -513,7 +513,7 @@ export const searchMedia = async (query: string): Promise<any[]> => {
       params: { api_key: TMDB_API_KEY, query, include_adult: false },
     });
     return response.data.results?.filter((item: any) => item.poster_path) || [];
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error searching media:', error);
     return [];
   }

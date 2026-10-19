@@ -1,7 +1,7 @@
 const PREFERRED_MIN_HEIGHT = 1080;
 const FALLBACK_MIN_HEIGHT = 720;
 
-export const resolveUrl = (relativeUrl, baseUrl) => {
+export const resolveUrl = (relativeUrl: any, baseUrl: any) => {
   if (relativeUrl.startsWith('http://') || relativeUrl.startsWith('https://')) {
     return relativeUrl;
   }
@@ -17,7 +17,7 @@ export const resolveUrl = (relativeUrl, baseUrl) => {
   }
 };
 
-export const selectBestVariantByHeight = (variants) => {
+export const selectBestVariantByHeight = (variants: any) => {
   if (!variants || variants.length === 0) return null;
 
   const sorted = [...variants].sort((a, b) => b.bandwidth - a.bandwidth);
@@ -30,8 +30,8 @@ export const selectBestVariantByHeight = (variants) => {
   );
 };
 
-const parseVariants = (content) => {
-  const lines = content.split('\n').map(l => l.trim()).filter(Boolean);
+const parseVariants = (content: any) => {
+  const lines = content.split('\n').map((l: any) => l.trim()).filter(Boolean);
   const variants = [];
 
   for (let i = 0; i < lines.length; i++) {
@@ -56,7 +56,7 @@ const parseVariants = (content) => {
   return variants;
 };
 
-export const resolveHighestQualityStream = async (masterUrl, headers = {}) => {
+export const resolveHighestQualityStream = async (masterUrl: any, headers = {}) => {
   try {
     const response = await fetch(masterUrl, { headers });
     if (!response.ok) return masterUrl;

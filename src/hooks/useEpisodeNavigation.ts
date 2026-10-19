@@ -11,17 +11,17 @@ export const useEpisodeNavigation = ({
   player,
   isPlaying,
   setShowControls,
-}) => {
+}: any) => {
   const [showEpisodesModal, setShowEpisodesModal] = useState(false);
-  const [allSeasonsData, setAllSeasonsData] = useState([]);
-  const [selectedSeasonForModal, setSelectedSeasonForModal] = useState(null);
-  const [episodesForModal, setEpisodesForModal] = useState([]);
+  const [allSeasonsData, setAllSeasonsData] = useState<any[]>([]);
+  const [selectedSeasonForModal, setSelectedSeasonForModal] = useState<any>(null);
+  const [episodesForModal, setEpisodesForModal] = useState<any[]>([]);
   const [isLoadingModalEpisodes, setIsLoadingModalEpisodes] = useState(false);
   const [initialModalScrollDone, setInitialModalScrollDone] = useState(false);
 
-  const seasonListModalRef = useRef(null);
-  const episodeListModalRef = useRef(null);
-  const episodesModalOrientationListenerRef = useRef(null);
+  const seasonListModalRef = useRef<any>(null);
+  const episodeListModalRef = useRef<any>(null);
+  const episodesModalOrientationListenerRef = useRef<any>(null);
 
   const fetchAllSeasonsAndEpisodes = useCallback(async () => {
     if (mediaType !== 'tv' || !mediaId) return;
@@ -29,13 +29,13 @@ export const useEpisodeNavigation = ({
     try {
       const showData = await fetchTVShowDetails(mediaId);
       if (showData && showData.seasons) {
-        const validSeasons = showData.seasons.filter(s => s.season_number > 0 || showData.seasons.length === 1);
+        const validSeasons = showData.seasons.filter((s: any) => s.season_number > 0 || showData.seasons.length === 1);
 
         const seasonsWithDetails = await Promise.all(
-          validSeasons.map(async (s) => {
+          validSeasons.map(async (s: any) => {
             const seasonDetail = await fetchSeasonDetails(mediaId, s.season_number);
             const episodesWithProgress = await Promise.all(
-              (seasonDetail?.episodes || []).map(async (ep) => {
+              (seasonDetail?.episodes || []).map(async (ep: any) => {
                 const progress = await getEpisodeWatchProgress(mediaId, s.season_number, ep.episode_number);
                 return { ...ep, watchProgress: progress };
               })
@@ -53,21 +53,21 @@ export const useEpisodeNavigation = ({
           setEpisodesForModal(seasonsWithDetails[0].episodes);
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error fetching all seasons for modal:", err);
     } finally {
       setIsLoadingModalEpisodes(false);
     }
   }, [mediaType, mediaId, season]);
 
-  const handleSelectSeasonForModal = useCallback(async (selectedSeasonNumber) => {
+  const handleSelectSeasonForModal = useCallback(async (selectedSeasonNumber: any) => {
     setSelectedSeasonForModal(selectedSeasonNumber);
     setInitialModalScrollDone(false);
     const seasonData = allSeasonsData.find(s => s.season_number === selectedSeasonNumber);
     if (seasonData) {
       setIsLoadingModalEpisodes(true);
       const episodesWithProgress = await Promise.all(
-        (seasonData.episodes || []).map(async (ep) => {
+        (seasonData.episodes || []).map(async (ep: any) => {
           const progress = await getEpisodeWatchProgress(mediaId, selectedSeasonNumber, ep.episode_number);
           return { ...ep, watchProgress: progress };
         })
@@ -84,14 +84,14 @@ export const useEpisodeNavigation = ({
       if (player && isPlaying) {
         try {
           player.pause();
-        } catch (e) {
+        } catch (e: any) {
           console.error("Error pausing video on modal open:", e);
         }
       }
       try {
         await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
         await new Promise(resolve => setTimeout(resolve, 100));
-      } catch (e) {
+      } catch (e: any) {
         console.error("Failed to lock orientation or during delay before opening episodes modal:", e);
       }
       if (mediaType === 'tv') {
@@ -102,7 +102,7 @@ export const useEpisodeNavigation = ({
       setShowEpisodesModal(false);
       try {
         await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
-      } catch (e) {
+      } catch (e: any) {
         console.error("Failed to re-lock to LANDSCAPE on modal toggle-close (button):", e);
       }
     }
@@ -110,7 +110,7 @@ export const useEpisodeNavigation = ({
   }, [showEpisodesModal, player, isPlaying, mediaType, fetchAllSeasonsAndEpisodes, setShowControls]);
 
   useEffect(() => {
-    const handleOrientationChange = async (event) => {
+    const handleOrientationChange = async (event: any) => {
       const currentOrientation = event.orientationInfo.orientation;
       if (
         currentOrientation !== ScreenOrientation.Orientation.LANDSCAPE_LEFT &&
@@ -118,7 +118,7 @@ export const useEpisodeNavigation = ({
       ) {
         try {
           await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
-        } catch (e) {
+        } catch (e: any) {
           console.error("Episodes Modal: Failed to re-lock to LANDSCAPE on orientation change:", e);
         }
       }

@@ -1,5 +1,4 @@
 // src/services/cache/CacheManager.ts
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LegacyFileSystem from 'expo-file-system/legacy';
 
 export interface CacheEntry<T = any> {
@@ -28,7 +27,7 @@ export class CacheManager {
       if (!info.exists) {
         await LegacyFileSystem.makeDirectoryAsync(this.CACHE_DIR, { intermediates: true });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.warn('[CacheManager] Failed to create cache dir:', error);
     }
   }
@@ -50,7 +49,7 @@ export class CacheManager {
     try {
       const filePath = `${this.CACHE_DIR}${key}.json`;
       await LegacyFileSystem.writeAsStringAsync(filePath, JSON.stringify(entry));
-    } catch (error) {
+    } catch (error: any) {
       console.warn('[CacheManager] Set error:', error);
     }
   }
@@ -130,7 +129,7 @@ export class CacheManager {
           }
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.warn('[CacheManager] Preload error:', error);
     }
     return result;
@@ -163,7 +162,7 @@ export class CacheManager {
           }
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.warn('[CacheManager] Clear expired error:', error);
     }
   }

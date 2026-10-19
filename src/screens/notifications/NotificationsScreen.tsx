@@ -1,5 +1,5 @@
 // src/screens/notifications/NotificationsScreen.tsx
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -102,9 +102,8 @@ const NotificationItem = React.memo(({
   onSwipeDelete?: (id: string) => void;
 }) => {
   const { colors, isDark } = useTheme();
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [_isDeleting, setIsDeleting] = useState(false);
   const translateX = useRef(new Animated.Value(0)).current;
-  const swipeThreshold = -80;
 
   const iconConfig = NOTIFICATION_ICONS[notification.type] || NOTIFICATION_ICONS.system;
 
@@ -208,7 +207,7 @@ const NotificationsScreen = () => {
       const sorted = allNotifications.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
       setNotifications(sorted);
       setHasUnread(sorted.some(n => !n.read));
-    } catch (error) {
+    } catch (error: any) {
       console.error('[Notifications] Failed to load:', error);
       showToast('Failed to load notifications');
     } finally {
@@ -227,11 +226,11 @@ const NotificationsScreen = () => {
           n.id === notification.id ? { ...n, read: true } : n
         )
       );
-      setHasUnread(prev => {
+      setHasUnread(_prev => {
         const remaining = notifications.some(n => n.id !== notification.id && !n.read);
         return remaining;
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('[Notifications] Failed to mark as read:', error);
     }
   }, [notifications]);
@@ -241,11 +240,11 @@ const NotificationsScreen = () => {
     try {
       await notificationService.deleteNotification(id);
       setNotifications(prev => prev.filter(n => n.id !== id));
-      setHasUnread(prev => {
+      setHasUnread(_prev => {
         const remaining = notifications.some(n => n.id !== id && !n.read);
         return remaining;
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('[Notifications] Failed to delete:', error);
       showToast('Failed to delete notification');
     }
@@ -263,7 +262,7 @@ const NotificationsScreen = () => {
       );
       setHasUnread(false);
       showToast('All notifications marked as read');
-    } catch (error) {
+    } catch (error: any) {
       console.error('[Notifications] Failed to mark all as read:', error);
       showToast('Failed to mark all as read');
     }
@@ -278,7 +277,7 @@ const NotificationsScreen = () => {
       setNotifications([]);
       setHasUnread(false);
       showToast('All notifications cleared');
-    } catch (error) {
+    } catch (error: any) {
       console.error('[Notifications] Failed to clear all:', error);
       showToast('Failed to clear all notifications');
     }

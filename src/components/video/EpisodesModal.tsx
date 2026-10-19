@@ -12,7 +12,7 @@ import {
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import { formatRuntime, isFutureDate } from '../../utils/timeUtils';
+import { isFutureDate } from '../../utils/timeUtils';
 import { useTheme } from '../../contexts/ThemeContext';
 import { SPACING, RADIUS, TYPOGRAPHY, getGlassTokens } from '../../theme/tokens';
 import { GlassPanel, GlassButton } from '../glass';
@@ -33,11 +33,11 @@ const EpisodesModal = ({
   episodeListRef,
   mediaId,
   poster_path,
-}) => {
+}: any) => {
   const { colors, isDark } = useTheme();
   const glass = getGlassTokens(colors, isDark);
 
-  const renderEpisodeItem = ({ item: episodeData }) => {
+  const renderEpisodeItem = ({ item: episodeData }: any) => {
     const progress = episodeData.watchProgress;
     let progressPercent = 0;
     if (progress && progress.duration > 0 && progress.position > 0) {
@@ -126,7 +126,7 @@ const EpisodesModal = ({
       onShow={async () => {
         try {
           await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
-        } catch (e) {
+        } catch (e: any) {
           console.error("Episodes Modal onShow: Failed to lock orientation:", e);
         }
       }}
@@ -156,7 +156,7 @@ const EpisodesModal = ({
                   <FlatList
                     ref={seasonListRef}
                     horizontal
-                    data={allSeasonsData.sort((a, b) => a.season_number - b.season_number)}
+                    data={allSeasonsData.sort((a: any, b: any) => a.season_number - b.season_number)}
                     renderItem={({ item: seasonItem }) => {
                       const isSelected = selectedSeasonForModal === seasonItem.season_number;
                       return (
@@ -178,7 +178,7 @@ const EpisodesModal = ({
                     keyExtractor={(item) => `season-tab-${item.id || item.season_number}`}
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.seasonTabContentContainer}
-                    getItemLayout={(data, index) => ({
+                    getItemLayout={(_data, index) => ({
                       length: 130,
                       offset: 130 * index,
                       index,
@@ -203,7 +203,7 @@ const EpisodesModal = ({
                 <FlatList
                   ref={episodeListRef}
                   horizontal
-                  data={episodesForModal.sort((a, b) => a.episode_number - b.episode_number)}
+                  data={episodesForModal.sort((a: any, b: any) => a.episode_number - b.episode_number)}
                   renderItem={renderEpisodeItem}
                   keyExtractor={(item) => `ep-${item.id || (item.season_number + '_' + item.episode_number)}`}
                   showsHorizontalScrollIndicator={false}
@@ -211,7 +211,7 @@ const EpisodesModal = ({
                   initialNumToRender={3}
                   maxToRenderPerBatch={5}
                   windowSize={7}
-                  getItemLayout={(data, index) => ({
+                  getItemLayout={(_data, index) => ({
                     length: 195,
                     offset: 195 * index,
                     index,

@@ -1,6 +1,6 @@
 // src/services/downloadManager/FFmpegConverter.ts
 import { FFmpegKit, FFmpegKitConfig, ReturnCode, Level } from 'palash-ffmpeg-kit-react-native-sf';
-import { AppState, Platform } from 'react-native';
+import { AppState } from 'react-native';
 import * as LegacyFileSystem from 'expo-file-system/legacy';
 import { buildProviderRequestHeaders } from '../../utils/streamHeaders';
 
@@ -26,7 +26,7 @@ async function initializeFFmpeg(): Promise<boolean> {
       await FFmpegKitConfig.init();
       console.log('[FFmpegConverter] FFmpegKitConfig.init() completed');
       ffmpegFullyFunctional = true;
-    } catch (initError) {
+    } catch (initError: any) {
       console.warn('[FFmpegConverter] FFmpegKitConfig.init() failed:', initError);
     }
 
@@ -37,14 +37,14 @@ async function initializeFFmpeg(): Promise<boolean> {
           FFmpegKitConfig.setLogLevel(logLevel);
         }
       }
-    } catch (logError) {
+    } catch (logError: any) {
       console.log('[FFmpegConverter] Log level setting skipped');
     }
     
     isFFmpegInitialized = true;
     console.log('[FFmpegConverter] Module-level initialization complete');
     return ffmpegFullyFunctional;
-  } catch (error) {
+  } catch (error: any) {
     console.warn('[FFmpegConverter] Module-level initialization failed:', error);
     ffmpegInitError = error instanceof Error ? error : new Error(String(error));
     isFFmpegInitialized = true;
@@ -59,7 +59,7 @@ setTimeout(() => {
 // ─── FFMPEG CONVERTER CLASS ───
 class FFmpegConverter {
   private isConverting: boolean = false;
-  private currentSessionId: string | null = null;
+  private currentSessionId: number | null = null;
   private appState: string = 'active';
   private appStateSubscription: any = null;
   private onProgressCallback: ((data: any) => void) | null = null;
@@ -94,7 +94,7 @@ class FFmpegConverter {
       
       this.isInitialized = true;
       console.log('[FFmpegConverter] Class initialized');
-    } catch (error) {
+    } catch (error: any) {
       console.warn('[FFmpegConverter] Class initialization failed:', error);
       this.isInitialized = true;
     }
@@ -104,7 +104,7 @@ class FFmpegConverter {
     if (this.appStateSubscription) {
       try {
         this.appStateSubscription.remove();
-      } catch (error) {}
+      } catch (error: any) {}
       this.appStateSubscription = null;
     }
     this.cancelConversion();
@@ -162,7 +162,7 @@ class FFmpegConverter {
           referer: job.referer,
         });
         job.resolve(result);
-      } catch (error) {
+      } catch (error: any) {
         job.reject(error instanceof Error ? error : new Error(String(error)));
       }
     }
@@ -261,10 +261,10 @@ class FFmpegConverter {
               try {
                 const time = statistics.getTime();
                 this.onProgressCallback({ time, phase: 'converting' });
-              } catch (statsError) {}
+              } catch (statsError: any) {}
             }
           });
-        } catch (callbackError) {
+        } catch (callbackError: any) {
           console.log('[FFmpegConverter] Statistics callback not available');
         }
       }
@@ -275,7 +275,7 @@ class FFmpegConverter {
 
       try {
         await LegacyFileSystem.deleteAsync(playlistPath, { idempotent: true });
-      } catch (cleanupError) {}
+      } catch (cleanupError: any) {}
 
       if (ReturnCode.isSuccess(returnCode)) {
         const outputFileInfo = await LegacyFileSystem.getInfoAsync(outputPathClean);
@@ -294,7 +294,7 @@ class FFmpegConverter {
         this.currentSessionId = null;
         throw new Error('FFmpeg conversion failed: ' + (logs || 'Unknown error'));
       }
-    } catch (error) {
+    } catch (error: any) {
       this.isConverting = false;
       this.currentSessionId = null;
       throw error;
@@ -312,7 +312,7 @@ class FFmpegConverter {
           const numB = parseInt(b.match(/segment_(\d+)/)?.[1] || '0');
           return numA - numB;
         });
-    } catch (error) {
+    } catch (error: any) {
       return [];
     }
   }
@@ -321,7 +321,7 @@ class FFmpegConverter {
     try {
       const contents = await LegacyFileSystem.readDirectoryAsync(segmentsDir);
       return contents.includes('init.mp4');
-    } catch (error) {
+    } catch (error: any) {
       return false;
     }
   }
@@ -330,7 +330,7 @@ class FFmpegConverter {
     if (this.currentSessionId) {
       try {
         await FFmpegKit.cancel(this.currentSessionId);
-      } catch (error) {}
+      } catch (error: any) {}
     }
     this.isConverting = false;
     this.currentSessionId = null;

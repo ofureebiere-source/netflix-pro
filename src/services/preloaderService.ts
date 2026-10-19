@@ -95,7 +95,7 @@ export class PreloaderService {
       this.preloadComplete = true;
       this.isPreloading = false;
       return homeData;
-    } catch (error) {
+    } catch (error: any) {
       console.error('[Preloader] ❌ Failed to fetch data:', error);
       
       // Try to return cached data even if expired or empty, as fallback
@@ -107,7 +107,7 @@ export class PreloaderService {
           this.isPreloading = false;
           return cached;
         }
-      } catch (cacheError) {
+      } catch (cacheError: any) {
         console.warn('[Preloader] ⚠️ Could not retrieve cache fallback:', cacheError);
       }
       

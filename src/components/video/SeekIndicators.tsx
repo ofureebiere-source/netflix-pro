@@ -11,7 +11,7 @@ const SeekIndicators = ({
   rightSeekOpacity,
   leftArrowTranslate,
   rightArrowTranslate,
-}) => {
+}: any) => {
   return (
     <>
       {!isLiveStream && leftSeekAmount !== 0 && (

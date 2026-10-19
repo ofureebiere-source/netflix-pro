@@ -64,7 +64,7 @@ export function useSearchSuggestions(
         const limited = Array.from(new Set(titles)).slice(0, maxSuggestions);
         setSuggestions(limited);
         setIsVisible(limited.length > 0);
-      } catch (err) {
+      } catch (err: any) {
         if (!isMounted.current) return;
         setError(err instanceof Error ? err.message : 'Failed to get suggestions');
         // Fallback: use query as a suggestion

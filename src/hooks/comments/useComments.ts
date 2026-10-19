@@ -34,7 +34,7 @@ export const useComments = ({
       const data = await commentService.getComments(contentId, limit, order);
       setComments(data);
       setHasMore(data.length === limit);
-    } catch (err) {
+    } catch (err: any) {
       setError('Failed to load comments');
       console.error('[useComments] Load error:', err);
     } finally {
@@ -70,7 +70,7 @@ export const useComments = ({
         return newComment;
       }
       return null;
-    } catch (error) {
+    } catch (error: any) {
       console.error('[useComments] Post error:', error);
       return null;
     }
@@ -92,7 +92,7 @@ export const useComments = ({
             : c
         ));
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('[useComments] Like error:', error);
     }
   }, []);
@@ -109,7 +109,7 @@ export const useComments = ({
       if (success) {
         setComments(prev => prev.filter(c => c.id !== commentId));
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('[useComments] Delete error:', error);
     }
   }, []);
@@ -134,6 +134,7 @@ export const useComments = ({
         }
       };
     }
+    return undefined;
   }, [contentId, enableRealtime]);
 
   // ─────────────────────────────────────────────────────────────────────────

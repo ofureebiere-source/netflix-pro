@@ -12,21 +12,21 @@ import parseSrt from 'parse-srt';
 // tracks and some local files come as .vtt, so we parse those ourselves
 // and normalize timestamps to the same {start, end, startSeconds,
 // endSeconds, text} shape parse-srt produces for .srt.
-const parseVttContent = (content) => {
+const parseVttContent = (content: any) => {
   const body = content.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
-  const blocks = body.split('\n\n').map(b => b.trim()).filter(Boolean);
+  const blocks = body.split('\n\n').map((b: any) => b.trim()).filter(Boolean);
   const cues = [];
 
   for (const block of blocks) {
     const lines = block.split('\n');
-    const timingLineIndex = lines.findIndex(l => l.includes('-->'));
+    const timingLineIndex = lines.findIndex((l: any) => l.includes('-->'));
     if (timingLineIndex === -1) continue; // skip "WEBVTT" header / NOTE blocks / pure cue-id lines
 
     const timingLine = lines[timingLineIndex];
     const match = timingLine.match(/([\d:.]+)\s*-->\s*([\d:.]+)/);
     if (!match) continue;
 
-    const toSrtTime = (t) => {
+    const toSrtTime = (t: any) => {
       const parts = t.trim().split(':');
       const normalized = parts.length === 2 ? `00:${t.trim()}` : t.trim();
       return normalized.replace('.', ',');
@@ -43,18 +43,18 @@ const parseVttContent = (content) => {
   return cues;
 };
 
-export const useSubtitles = (mediaId, mediaType, season, episode) => {
-  const [availableLanguages, setAvailableLanguages] = useState({});
-  const [selectedLanguage, setSelectedLanguage] = useState(null);
-  const [parsedSubtitles, setParsedSubtitles] = useState([]);
+export const useSubtitles = (mediaId: any, mediaType: any, season: any, episode: any) => {
+  const [availableLanguages, setAvailableLanguages] = useState<Record<string, any>>({});
+  const [selectedLanguage, setSelectedLanguage] = useState<any>(null);
+  const [parsedSubtitles, setParsedSubtitles] = useState<any[]>([]);
   const [currentSubtitleText, setCurrentSubtitleText] = useState('');
   const [subtitlesEnabled, setSubtitlesEnabled] = useState(false);
   const [loadingSubtitles, setLoadingSubtitles] = useState(false);
-  const [localSubtitleName, setLocalSubtitleName] = useState(null);
+  const [localSubtitleName, setLocalSubtitleName] = useState<any>(null);
   const [stylePrefs, setStylePrefs] = useState<SubtitleStylePrefs>(DEFAULT_SUBTITLE_STYLE);
 
   const lastSubtitleIndexRef = useRef(0);
-  const preferredSubtitleLanguageLoadedRef = useRef(null);
+  const preferredSubtitleLanguageLoadedRef = useRef<any>(null);
   const initialSubtitlePreferenceAppliedRef = useRef(false);
 
   useEffect(() => {
@@ -94,8 +94,8 @@ export const useSubtitles = (mediaId, mediaType, season, episode) => {
         mediaType === 'tv' ? episode : undefined
       );
 
-      const bestSubtitlesByLang = {};
-      results.forEach(sub => {
+      const bestSubtitlesByLang: Record<string, any> = {};
+      results.forEach((sub: any) => {
         const attr = sub.attributes;
         if (!attr || !attr.language || !attr.files || attr.files.length === 0) {
           return;
@@ -158,14 +158,14 @@ export const useSubtitles = (mediaId, mediaType, season, episode) => {
       });
 
       setAvailableLanguages(bestSubtitlesByLang);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error searching subtitles:", err);
     } finally {
       setLoadingSubtitles(false);
     }
   }, [mediaId, mediaType, season, episode, loadingSubtitles]);
 
-  const selectSubtitle = useCallback(async (langCode) => {
+  const selectSubtitle = useCallback(async (langCode: any) => {
     if (!langCode) {
       setParsedSubtitles([]);
       setSelectedLanguage(null);
@@ -215,7 +215,7 @@ export const useSubtitles = (mediaId, mediaType, season, episode) => {
         setSubtitlesEnabled(false);
         saveSubtitleLanguagePreference(null);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error during subtitle download or parsing:", err);
       setSelectedLanguage(null);
       setSubtitlesEnabled(false);
@@ -229,7 +229,7 @@ export const useSubtitles = (mediaId, mediaType, season, episode) => {
   // playback backend) rather than found via OpenSubtitles search.
   // Detects .srt vs .vtt by content/extension and feeds the same
   // parsedSubtitles pipeline the rest of the hook already drives.
-  const loadTrackSubtitle = useCallback(async (url, label) => {
+  const loadTrackSubtitle = useCallback(async (url: any, label: any) => {
     if (!url) return { success: false, error: 'No subtitle URL provided.' };
     setLoadingSubtitles(true);
     setParsedSubtitles([]);
@@ -259,7 +259,7 @@ export const useSubtitles = (mediaId, mediaType, season, episode) => {
       setSelectedLanguage(code);
       setSubtitlesEnabled(true);
       return { success: true, code };
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error loading track subtitle:', err);
       setSubtitlesEnabled(false);
       return { success: false, error: err instanceof Error ? err.message : 'Failed to load subtitle.' };
@@ -271,7 +271,7 @@ export const useSubtitles = (mediaId, mediaType, season, episode) => {
   // Imports a .srt file the user already has on their device (via
   // expo-document-picker on the screen side) and feeds it into the same
   // rendering pipeline as remote/track subtitles.
-  const loadLocalSubtitle = useCallback(async (uri, fileName) => {
+  const loadLocalSubtitle = useCallback(async (uri: any, fileName: any) => {
     if (!uri) return { success: false, error: 'No file selected.' };
     if (!/\.srt$/i.test(fileName || uri)) {
       return { success: false, error: 'Unsupported subtitle format — only .srt files are supported right now.' };
@@ -301,7 +301,7 @@ export const useSubtitles = (mediaId, mediaType, season, episode) => {
       setSubtitlesEnabled(true);
       setLocalSubtitleName(fileName || 'Imported subtitle');
       return { success: true, code };
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error loading local subtitle:', err);
       setSubtitlesEnabled(false);
       return { success: false, error: err instanceof Error ? err.message : 'Failed to read subtitle file.' };
@@ -310,7 +310,7 @@ export const useSubtitles = (mediaId, mediaType, season, episode) => {
     }
   }, []);
 
-  const updateCurrentSubtitle = useCallback((currentPositionSeconds) => {
+  const updateCurrentSubtitle = useCallback((currentPositionSeconds: any) => {
     if (!subtitlesEnabled || parsedSubtitles.length === 0) {
       if (currentSubtitleText !== '') setCurrentSubtitleText('');
       return;

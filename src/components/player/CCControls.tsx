@@ -1,17 +1,15 @@
 // src/components/player/CCControls.tsx
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   Animated,
-  PanResponder,
   Modal,
   ScrollView,
   Switch,
-  Slider,
-} from 'react-native';
+  } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -141,7 +139,7 @@ export const CCControls: React.FC<CCControlsProps> = ({
       >
         <View style={styles.ccButtonContent}>
           <Ionicons
-            name={subtitlesEnabled ? 'closed-captioning' : 'closed-captioning-outline'}
+            name={subtitlesEnabled ? 'logo-closed-captioning' : 'text-outline'}
             size={22}
             color={subtitlesEnabled ? colors.accent : colors.textMuted}
           />
@@ -211,7 +209,7 @@ export const CCControls: React.FC<CCControlsProps> = ({
               {/* Toggle */}
               <View style={[styles.settingRow, { borderBottomColor: colors.border }]}>
                 <View style={styles.settingInfo}>
-                  <Ionicons name="closed-captioning" size={20} color={colors.accent} />
+                  <Ionicons name="logo-closed-captioning" size={20} color={colors.accent} />
                   <Text style={[styles.settingLabel, { color: colors.text }]}>
                     Subtitles
                   </Text>

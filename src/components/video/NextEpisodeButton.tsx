@@ -12,7 +12,7 @@ const NextEpisodeButton = ({
   duration,
   opacityAnim,
   onPress,
-}) => {
+}: any) => {
   if (!showNextEpisodeButton) {
     return null;
   }

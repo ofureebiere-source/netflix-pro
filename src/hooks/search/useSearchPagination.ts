@@ -49,9 +49,7 @@ export function useSearchPagination<T = IMetadataResult>(
 ): UseSearchPaginationReturn<T> {
   const {
     initialPage = 1,
-    pageSize = 20,
-    autoLoad = true,
-  } = options;
+    } = options;
 
   const [state, setState] = useState<PaginationState<T>>({
     items: [],
@@ -91,7 +89,7 @@ export function useSearchPagination<T = IMetadataResult>(
         totalCount: result.totalCount || prev.totalCount,
         error: null,
       }));
-    } catch (err) {
+    } catch (err: any) {
       if (!isMounted.current) return;
       setState(prev => ({
         ...prev,
@@ -125,7 +123,7 @@ export function useSearchPagination<T = IMetadataResult>(
         page: initialPage,
         totalCount: result.totalCount,
       });
-    } catch (err) {
+    } catch (err: any) {
       if (!isMounted.current) return;
       setState(prev => ({
         ...prev,
@@ -172,9 +170,6 @@ export function useSearchPagination<T = IMetadataResult>(
   // We don't auto-load here to give parent control
 
   // Cleanup
-  const cleanup = useCallback(() => {
-    isMounted.current = false;
-  }, []);
 
   return {
     // State

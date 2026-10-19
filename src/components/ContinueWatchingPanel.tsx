@@ -51,6 +51,7 @@ export const ContinueWatchingPanel: React.FC<ContinueWatchingPanelProps> = ({
 
       return () => clearInterval(interval);
     }
+    return undefined;
   }, [items.length, isOpen]);
 
   // ─── Scroll to current index ───
@@ -282,7 +283,7 @@ export const ContinueWatchingPanel: React.FC<ContinueWatchingPanelProps> = ({
           pagingEnabled
           showsHorizontalScrollIndicator={false}
           scrollEnabled={false} // Disable manual scrolling for auto-slideshow
-          getItemLayout={(data, index) => ({
+          getItemLayout={(_data, index) => ({
             length: PANEL_WIDTH - 32,
             offset: (PANEL_WIDTH - 32) * index,
             index,
@@ -464,7 +465,6 @@ const styles = StyleSheet.create({
   paginationDot: {
     height: 6,
     borderRadius: 3,
-    transitionDuration: '300ms',
   },
   footer: {
     paddingTop: 12,

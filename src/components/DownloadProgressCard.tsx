@@ -8,7 +8,7 @@ const DownloadProgressCard = ({
   item,
   onCancel,
   onRetry,
-}) => {
+}: any) => {
   const {
     id,
     title,
@@ -82,7 +82,7 @@ const DownloadProgressCard = ({
       <View style={styles.thumbnailContainer}>
         {posterPath ? (
           <Image
-            source={{ uri: getImageUrl(posterPath) }}
+            source={{ uri: getImageUrl(posterPath) ?? undefined }}
             style={styles.thumbnail}
             resizeMode="cover"
           />

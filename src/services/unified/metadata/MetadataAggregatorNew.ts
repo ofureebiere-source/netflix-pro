@@ -31,7 +31,7 @@
  * - Added logging for season data in getById
  */
 
-import { IMetadataResult, SearchRequest, DiscoverFilters, ISeason } from '../../unified/types/MetadataTypes';
+import { IMetadataResult, SearchRequest, DiscoverFilters } from '../../unified/types/MetadataTypes';
 import { TMDBMetadataAdapter } from './adapters/TMDBMetadataAdapter';
 import { KuryanaMetadataAdapter } from './adapters/KuryanaMetadataAdapter';
 import { TraktMetadataAdapter } from './adapters/TraktMetadataAdapter';
@@ -247,7 +247,7 @@ export class MetadataAggregatorNew {
           console.log(`[MetadataAggregator] Initializing ${provider.name}...`);
           await (provider as any).ensureInitialized();
           console.log(`[MetadataAggregator] ✅ ${provider.name} initialized`);
-        } catch (error) {
+        } catch (error: any) {
           console.error(`[MetadataAggregator] ❌ Provider ${provider.name} init failed:`, error);
         }
       }
@@ -435,13 +435,13 @@ export class MetadataAggregatorNew {
             } else if (Array.isArray(results)) {
               console.log(`[MetadataAggregator] ⚠️ ${provider.name} (${mediaType}) returned 0 results`);
             }
-          } catch (error) {
+          } catch (error: any) {
             console.error(`[MetadataAggregator] ❌ Provider ${provider.name} (${mediaType}) search failed:`, error);
           }
         }
 
         providerResults[provider.name] = providerTotalResults;
-      } catch (error) {
+      } catch (error: any) {
         console.error(`[MetadataAggregator] ❌ Provider ${provider.name} search failed:`, error);
         if (error instanceof Error) {
           console.error(`[MetadataAggregator] ${provider.name} error details:`, error.message);
@@ -615,7 +615,7 @@ export class MetadataAggregatorNew {
             providerResults[`${provider.name}-${mediaType}`] = results.length;
             buckets[providerIdx].push(...results);
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error(`[MetadataAggregator] ❌ Provider ${provider.name} discover (${mediaType}) failed:`, error);
           providerResults[`${provider.name}-${mediaType}`] = 0;
         }
@@ -717,7 +717,7 @@ export class MetadataAggregatorNew {
           
           return result;
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error(`[MetadataAggregator] ❌ Provider ${provider.name} getById failed:`, error);
       }
     }
@@ -748,7 +748,7 @@ export class MetadataAggregatorNew {
             console.log(`[MetadataAggregator] ✅ ${provider.name} returned ${results.length} trending results`);
             allResults.push(...results);
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error(`[MetadataAggregator] ❌ Provider ${provider.name} getTrending failed:`, error);
         }
       }
@@ -781,7 +781,7 @@ export class MetadataAggregatorNew {
             console.log(`[MetadataAggregator] ✅ ${provider.name} returned ${results.length} results`);
             allResults.push(...results);
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error(`[MetadataAggregator] ❌ Provider ${provider.name} getTrendingByCategory failed:`, error);
         }
       }

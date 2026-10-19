@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-const ImagePlaceholder = ({ width, height, iconSize = 50 }) => {
+const ImagePlaceholder = ({ width, height, iconSize = 50 }: any) => {
   return (
     <View style={[styles.container, { width, height }]}>
       <Ionicons name="film-outline" size={iconSize} color="#555" />

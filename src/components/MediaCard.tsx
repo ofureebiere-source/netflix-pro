@@ -12,7 +12,7 @@ import Badge from './Badge';
 const { width } = Dimensions.get('window');
 const FOOTER_HEIGHT = 45;
 
-const formatStartTime = (timestamp) => {
+const formatStartTime = (timestamp: any) => {
   const date = new Date(timestamp * 1000);
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -52,7 +52,7 @@ const MediaCard = ({
   isContinueWatching = false,
   isLiveStream = false,
   hasWatched = false,
-}) => {
+}: any) => {
   const { colors, isDark } = useTheme();
   const [imageError, setImageError] = useState(false);
   // Press feedback: a subtle scale-down while pressed, spring back on
@@ -130,7 +130,7 @@ const MediaCard = ({
     // this feature is either rebuilt on a licensed source or removed for good.
     imageSource = null;
   } else {
-    imageSource = posterPath && !imageError ? { uri: getImageUrl(posterPath) } : null;
+    imageSource = posterPath && !imageError ? { uri: getImageUrl(posterPath) ?? undefined } : null;
   }
 
   const handleRemove = () => {

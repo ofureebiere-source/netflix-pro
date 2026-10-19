@@ -19,7 +19,7 @@ export const useGestures = ({
   brightnessLevel,
   handleVolumeChange,
   volumeLevel,
-}) => {
+}: any) => {
   const [isZoomed, setIsZoomed] = useState(false);
   const [screenDimensions, setScreenDimensions] = useState(Dimensions.get('window'));
   const animatedScale = useRef(new Animated.Value(1)).current;
@@ -30,17 +30,17 @@ export const useGestures = ({
   const rightSeekOpacity = useRef(new Animated.Value(0)).current;
   const leftArrowTranslate = useRef(new Animated.Value(0)).current;
   const rightArrowTranslate = useRef(new Animated.Value(0)).current;
-  const leftSeekTimeoutRef = useRef(null);
-  const rightSeekTimeoutRef = useRef(null);
+  const leftSeekTimeoutRef = useRef<any>(null);
+  const rightSeekTimeoutRef = useRef<any>(null);
   const pendingSeekAmount = useRef(0);
-  const seekDebounceTimeout = useRef(null);
+  const seekDebounceTimeout = useRef<any>(null);
   const wasPlayingBeforeDoubleTapSeek = useRef(false);
   const pinchScale = useRef(1);
 
-  const onLayoutRootView = useCallback((event) => {
+  const onLayoutRootView = useCallback((event: any) => {
     const { width, height } = event.nativeEvent.layout;
     if (screenDimensions.width !== width || screenDimensions.height !== height) {
-      setScreenDimensions({ width, height });
+      setScreenDimensions((prev) => ({ ...prev, width, height }));
     }
   }, [screenDimensions]);
 
@@ -228,11 +228,11 @@ export const useGestures = ({
   // --- Unified drag: horizontal = seek, vertical-left = brightness,
   // vertical-right = volume. One responder so the three don't fight over
   // the same touch (per Phase 1 scope in HANDOVER.md).
-  const dragModeRef = useRef(null); // 'seek' | 'brightness' | 'volume' | null
+  const dragModeRef = useRef<any>(null); // 'seek' | 'brightness' | 'volume' | null
   const dragStartPositionRef = useRef(0);
   const dragStartLevelRef = useRef(0);
 
-  const handleDragBegin = useCallback((x, screenWidth) => {
+  const handleDragBegin = useCallback((x: any, screenWidth: any) => {
     dragModeRef.current = null;
     dragStartPositionRef.current = position || 0;
     // Snapshot whichever side of the screen the touch started on, since
@@ -240,7 +240,7 @@ export const useGestures = ({
     dragStartLevelRef.current = x < screenWidth / 2 ? brightnessLevel : volumeLevel;
   }, [position, brightnessLevel, volumeLevel]);
 
-  const handleDragUpdate = useCallback((x, screenWidth, translationX, translationY) => {
+  const handleDragUpdate = useCallback((x: any, screenWidth: any, translationX: any, translationY: any) => {
     if (dragModeRef.current === null) {
       const absX = Math.abs(translationX);
       const absY = Math.abs(translationY);

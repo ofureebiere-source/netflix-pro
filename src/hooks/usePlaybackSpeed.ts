@@ -27,7 +27,7 @@ export const usePlaybackSpeed = (player: any) => {
       if ('preservesPitch' in player) {
         player.preservesPitch = true;
       }
-    } catch (e) {
+    } catch (e: any) {
       // Player may not be ready yet — the effect re-runs when it is.
     }
   }, [player, playbackSpeed]);

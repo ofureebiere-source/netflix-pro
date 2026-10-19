@@ -6,7 +6,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  Dimensions,
   Platform,
   Keyboard,
 } from 'react-native';
@@ -24,7 +23,6 @@ import Animated, {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../contexts/ThemeContext';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // ─── Animation Timing Constants (matches spec exactly) ───
 const ANIMATION = {
@@ -60,13 +58,13 @@ export const AnimatedHeader: React.FC<AnimatedHeaderProps> = ({
   onSearchPress,
   notificationCount = 0,
 }) => {
-  const { colors, isDark } = useTheme();
-  const navigation = useNavigation();
+  const { isDark } = useTheme();
+  useNavigation();
 
   // ─── Search State ───
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchFocused, setSearchFocused] = useState(false);
-  const [showSearchInput, setShowSearchInput] = useState(false);
+  const [searchQuery, _setSearchQuery] = useState('');
+  const [searchFocused, _setSearchFocused] = useState(false);
+  const [_showSearchInput, setShowSearchInput] = useState(false);
   const searchInputRef = useRef<TextInput>(null);
 
   // ─── Debounced search for live search ───
@@ -97,8 +95,8 @@ export const AnimatedHeader: React.FC<AnimatedHeaderProps> = ({
 
   // ─── Glass gradient colors ───
   const glassGradientColors = isDark
-    ? ['rgba(30,30,30,0.4)', 'rgba(20,20,20,0.3)']
-    : ['rgba(255,255,255,0.5)', 'rgba(240,240,240,0.4)'];
+    ? (['rgba(30,30,30,0.4)', 'rgba(20,20,20,0.3)'] as const)
+    : (['rgba(255,255,255,0.5)', 'rgba(240,240,240,0.4)'] as const);
 
   // ─── Main Animation Sequence (Once Per Render) ───
   const runAnimationSequence = useCallback(() => {

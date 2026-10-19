@@ -16,11 +16,8 @@ import {
   getCompletedDownloads,
   DOWNLOAD_STATUS,
   generateDownloadId,
-  createDownloadEntry,
   markAsWatched as markDownloadAsWatched,
-  getSecureBaseDirectory,
   getSecureContentDirectory,
-  getEncodedFilePath,
   hideFileFromMediaScanner,
   encryptAndSaveVideo,
   saveContentMetadata,
@@ -28,13 +25,11 @@ import {
   loadContentMetadata,
   loadDownloadInfo,
   getAvailableSubtitles,
-  getSubtitlePath,
   saveSubtitle,
   ensureDirectoryExists,
   decryptFileToTemp,
   cleanupTempFile,
 } from '../../utils/downloadStorage';
-import { getImageUrl } from '../unified/metadata/TMDBMetadata';
 import { getDownloadSource } from '../licensedPlayback/LicensedPlaybackService';
 
 class DownloadManager {
@@ -64,13 +59,13 @@ class DownloadManager {
       await networkMonitor.start();
       await ffmpegConverter.initialize();
 
-      this.networkUnsubscribe = networkMonitor.subscribe((state) => {
+      this.networkUnsubscribe = networkMonitor.subscribe((state: any) => {
         this.handleNetworkChange(state);
       });
 
       this.isInitialized = true;
       this.processQueue();
-    } catch (error) {
+    } catch (error: any) {
       console.warn('[DownloadManager] Initialization warning:', error);
       this.isInitialized = true;
     }
@@ -99,7 +94,7 @@ class DownloadManager {
       this.notifyListeners('queue-updated', downloadQueue.getAll());
       this.processQueue();
       return entry;
-    } catch (error) {
+    } catch (error: any) {
       throw error;
     }
   }
@@ -134,7 +129,7 @@ class DownloadManager {
 
         const entry = await this.addToQueue(mediaInfo);
         entries.push(entry);
-      } catch (error) {
+      } catch (error: any) {
         console.warn('[DownloadManager] Failed to add episode to queue:', error);
       }
     }
@@ -325,7 +320,7 @@ class DownloadManager {
       });
 
       // --- Encrypt and save video ---
-      const videoPath = await encryptAndSaveVideo(result.filePath, contentDir);
+      await encryptAndSaveVideo(result.filePath, contentDir);
 
       // --- Download and save subtitles (if available) ---
       if (entry.subtitles && entry.subtitles.length > 0) {
@@ -335,7 +330,7 @@ class DownloadManager {
             if (subContent) {
               await saveSubtitle(contentDir, sub.language || 'en', subContent);
             }
-          } catch (subError) {
+          } catch (subError: any) {
             console.warn('[DownloadManager] Subtitle download error:', subError);
           }
         }
@@ -360,7 +355,7 @@ class DownloadManager {
         contentDir,
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('[DownloadManager] Complete error:', error);
       await this.handleError(downloadId, error);
     }
@@ -373,7 +368,7 @@ class DownloadManager {
       const response = await fetch(url);
       if (!response.ok) return null;
       return await response.text();
-    } catch (error) {
+    } catch (error: any) {
       console.warn('[DownloadManager] Fetch subtitle error:', error);
       return null;
     }
@@ -510,7 +505,7 @@ class DownloadManager {
     for (const item of itemsToRetry) {
       try {
         await this.addToQueue(item);
-      } catch (error) {
+      } catch (error: any) {
         // Skip items that fail to re-queue
       }
     }
@@ -573,7 +568,7 @@ class DownloadManager {
     const downloads = await getCompletedDownloads();
     const validDownloads = [];
 
-    for (const entry of downloads) {
+    for (const entry of downloads as any[]) {
       try {
         // Check if the content directory exists
         const contentDir = await getSecureContentDirectory(
@@ -600,7 +595,7 @@ class DownloadManager {
         } else {
           await deleteDownload(entry.id);
         }
-      } catch (error) {
+      } catch (error: any) {
         validDownloads.push(entry);
       }
     }
@@ -628,7 +623,7 @@ class DownloadManager {
         return false;
       }
       return true;
-    } catch (error) {
+    } catch (error: any) {
       return true;
     }
   }
@@ -647,7 +642,7 @@ class DownloadManager {
           await deleteDownload(downloadId);
           return null;
         }
-      } catch (error) {
+      } catch (error: any) {
         // If we can't check, assume it exists
       }
     }
@@ -697,7 +692,7 @@ class DownloadManager {
         subtitles,
         contentDir,
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('[DownloadManager] Get content error:', error);
       return null;
     }
@@ -722,7 +717,7 @@ class DownloadManager {
         metadata: content.metadata,
         subtitles: content.subtitles,
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('[DownloadManager] Decrypt error:', error);
       return null;
     }
@@ -744,7 +739,7 @@ class DownloadManager {
     this.listeners.forEach(callback => {
       try {
         callback(event, data);
-      } catch (error) {
+      } catch (error: any) {
         // Listener error, ignore
       }
     });

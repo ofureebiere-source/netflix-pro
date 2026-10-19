@@ -4,26 +4,24 @@ import { PanResponder } from 'react-native';
 export const useSeekBar = ({
   player,
   duration,
-  position,
   isPlaying,
-  showControls,
   setPosition,
   setShowControls,
   setIsSeekingForControls,
   manualFinishTriggeredRef,
   lastPositionRef,
   lastPositionTimeRef,
-}) => {
+}: any) => {
   const [isSeeking, setIsSeeking] = useState(false);
-  const [seekPreviewPosition, setSeekPreviewPosition] = useState(null);
+  const [seekPreviewPosition, setSeekPreviewPosition] = useState<any>(null);
   const [seekPreviewXPosition, setSeekPreviewXPosition] = useState(0);
   const wasPlayingBeforeSeek = useRef(false);
   const seekGestureStartedRef = useRef(false);
-  const progressBarRef = useRef(null);
+  const progressBarRef = useRef<any>(null);
 
-  const updateSeekPreview = (nativeEvent) => {
+  const updateSeekPreview = (nativeEvent: any) => {
     if (!duration || !progressBarRef.current) return;
-    progressBarRef.current.measure((x, y, width, height, pageX, pageY) => {
+    progressBarRef.current.measure((_x: any, _y: any, width: any, _height: any, pageX: any, _pageY: any) => {
       let calculatedPosition = (nativeEvent.locationX / width) * duration;
       calculatedPosition = Math.max(0, Math.min(calculatedPosition, duration));
       if (!isNaN(calculatedPosition)) {
@@ -48,7 +46,7 @@ export const useSeekBar = ({
     setShowControls(true);
   };
 
-  const previewExternalSeek = (calculatedPosition, xPosition) => {
+  const previewExternalSeek = (calculatedPosition: any, xPosition: any) => {
     if (!duration) return;
     const clamped = Math.max(0, Math.min(calculatedPosition, duration));
     if (!isNaN(clamped)) {
@@ -57,7 +55,7 @@ export const useSeekBar = ({
     }
   };
 
-  const commitExternalSeek = (targetOverride) => {
+  const commitExternalSeek = (targetOverride: any) => {
     const hasMoved = seekGestureStartedRef.current;
     const seekTarget = targetOverride !== undefined ? targetOverride : seekPreviewPosition;
     seekGestureStartedRef.current = false;
@@ -83,7 +81,7 @@ export const useSeekBar = ({
           setIsSeeking(false);
           if (setIsSeekingForControls) setIsSeekingForControls(false);
         }, 100);
-      } catch (e) {
+      } catch (e: any) {
         console.error('Error seeking player on release:', e);
         setIsSeeking(false);
         if (setIsSeekingForControls) setIsSeekingForControls(false);
@@ -107,10 +105,10 @@ export const useSeekBar = ({
   const progressPanResponder = useMemo(() => PanResponder.create({
     onStartShouldSetPanResponder: () => false,
     onStartShouldSetPanResponderCapture: () => false,
-    onMoveShouldSetPanResponder: (evt, gestureState) => {
+    onMoveShouldSetPanResponder: (_evt, gestureState) => {
       return Math.abs(gestureState.dx) > 3 || Math.abs(gestureState.dy) > 3;
     },
-    onMoveShouldSetPanResponderCapture: (evt, gestureState) => {
+    onMoveShouldSetPanResponderCapture: (_evt, gestureState) => {
       return Math.abs(gestureState.dx) > 3 || Math.abs(gestureState.dy) > 3;
     },
     onPanResponderGrant: (evt) => {
@@ -128,7 +126,7 @@ export const useSeekBar = ({
       updateSeekPreview(evt.nativeEvent);
       setShowControls(true);
     },
-    onPanResponderRelease: (evt) => {
+    onPanResponderRelease: (_evt) => {
       const hasMoved = seekGestureStartedRef.current;
       const seekTarget = seekPreviewPosition;
       seekGestureStartedRef.current = false;
@@ -154,7 +152,7 @@ export const useSeekBar = ({
             setIsSeeking(false);
             if (setIsSeekingForControls) setIsSeekingForControls(false);
           }, 100);
-        } catch (e) {
+        } catch (e: any) {
           console.error('Error seeking player on release:', e);
           setIsSeeking(false);
           if (setIsSeekingForControls) setIsSeekingForControls(false);

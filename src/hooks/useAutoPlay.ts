@@ -4,6 +4,39 @@ import { getAutoPlaySetting } from '../utils/storage';
 
 const TWO_MINUTE_THRESHOLD_SECONDS = 120;
 
+interface UseAutoPlayParams {
+  mediaId: string;
+  mediaType: string;
+  season?: number;
+  episode?: number;
+  title: string;
+  poster_path: string;
+  /** Release year, forwarded so the next episode can still resolve. */
+  year?: number;
+  /** Full release date, used as a year fallback and to label the next episode. */
+  releaseDate?: string;
+  position: number;
+  duration: number;
+  isLiveStream: boolean;
+  player: any;
+  router: any;
+  handleGoBack: (isUnmounting?: boolean) => void;
+  setIsUnmounting: (value: boolean) => void;
+}
+
+interface NextEpisodeDetails {
+  mediaId: string;
+  mediaType: string;
+  season: number;
+  episode: number;
+  title: string;
+  episodeTitle: string;
+  poster_path: string;
+  year?: number;
+  releaseDate?: string;
+  air_date?: string;
+}
+
 export const useAutoPlay = ({
   mediaId,
   mediaType,
@@ -11,6 +44,8 @@ export const useAutoPlay = ({
   episode,
   title,
   poster_path,
+  year,
+  releaseDate,
   position,
   duration,
   isLiveStream,
@@ -18,11 +53,11 @@ export const useAutoPlay = ({
   router,
   handleGoBack,
   setIsUnmounting,
-}) => {
+}: UseAutoPlayParams) => {
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(true);
   const [showNextEpisodeButton, setShowNextEpisodeButton] = useState(false);
   const [isFindingNextEpisode, setIsFindingNextEpisode] = useState(false);
-  const nextEpisodeDetailsRef = useRef(null);
+  const nextEpisodeDetailsRef = useRef<NextEpisodeDetails | null>(null);
 
   const loadAutoPlaySetting = useCallback(async () => {
     const isEnabled = await getAutoPlaySetting();
@@ -36,21 +71,21 @@ export const useAutoPlay = ({
     }
     setIsFindingNextEpisode(true);
     try {
-      const showData = await fetchTVShowDetails(mediaId);
+      const showData = await fetchTVShowDetails(Number(mediaId));
       if (!showData || !showData.seasons) {
         setIsFindingNextEpisode(false);
         return;
       }
-      const validSeasons = showData.seasons.filter(s => s.season_number > 0 || showData.seasons.length === 1);
+      const validSeasons = showData.seasons.filter((s: any) => s.season_number > 0 || showData.seasons.length === 1);
       if (validSeasons.length === 0) {
         setIsFindingNextEpisode(false);
         return;
       }
-      const currentSeasonData = validSeasons.find(s => s.season_number === season);
-      const currentSeasonIndex = validSeasons.findIndex(s => s.season_number === season);
+      const currentSeasonData = validSeasons.find((s: any) => s.season_number === season);
+      const currentSeasonIndex = validSeasons.findIndex((s: any) => s.season_number === season);
       let nextEp = null;
       let nextSe = null;
-      if (currentSeasonData && episode < currentSeasonData.episode_count) {
+      if (currentSeasonData && episode != null && episode < currentSeasonData.episode_count) {
         nextSe = season;
         nextEp = episode + 1;
       } else if (currentSeasonIndex !== -1 && currentSeasonIndex < validSeasons.length - 1) {
@@ -64,12 +99,12 @@ export const useAutoPlay = ({
         let episodeName = `Episode ${nextEp}`;
         let nextEpisodeData;
         try {
-          const nextSeasonFullDetails = await fetchSeasonDetails(mediaId, nextSe);
-          nextEpisodeData = nextSeasonFullDetails?.episodes?.find(e => e.episode_number === nextEp);
+          const nextSeasonFullDetails = await fetchSeasonDetails(Number(mediaId), nextSe);
+          nextEpisodeData = nextSeasonFullDetails?.episodes?.find((e: any) => e.episode_number === nextEp);
           if (nextEpisodeData?.name) {
             episodeName = nextEpisodeData.name;
           }
-        } catch (fetchErr) {
+        } catch (fetchErr: any) {
           console.warn(`Could not fetch details for S${nextSe} E${nextEp} to get title:`, fetchErr);
         }
         const nextDetails = {
@@ -80,6 +115,8 @@ export const useAutoPlay = ({
           title: title,
           episodeTitle: episodeName,
           poster_path: poster_path,
+          year: year || undefined,
+          releaseDate: releaseDate || nextEpisodeData?.air_date || undefined,
           air_date: nextEpisodeData?.air_date,
         };
         nextEpisodeDetailsRef.current = nextDetails;
@@ -88,7 +125,7 @@ export const useAutoPlay = ({
         nextEpisodeDetailsRef.current = null;
         setShowNextEpisodeButton(true);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error finding next episode:", err);
     } finally {
       setIsFindingNextEpisode(false);
@@ -119,6 +156,9 @@ export const useAutoPlay = ({
           poster_path: nextDetails.poster_path,
           season: String(nextDetails.season),
           episode: String(nextDetails.episode),
+          // Carried so the re-resolve reaches the title-based providers.
+          ...(nextDetails.year ? { year: String(nextDetails.year) } : {}),
+          ...(nextDetails.releaseDate ? { release_date: String(nextDetails.releaseDate) } : {}),
         },
       });
     } else {

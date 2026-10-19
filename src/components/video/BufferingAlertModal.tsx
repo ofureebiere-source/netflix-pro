@@ -1,10 +1,10 @@
 import React from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Modal, View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { SPACING, RADIUS, TYPOGRAPHY } from '../../theme/tokens';
 import { GlassPanel, GlassButton } from '../glass';
 
-const BufferingAlertModal = ({ visible, onKeepBuffering, onRetryExtraction }) => {
+const BufferingAlertModal = ({ visible, onKeepBuffering, onRetryExtraction }: any) => {
   const { colors } = useTheme();
 
   return (

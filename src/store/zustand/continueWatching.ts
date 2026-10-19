@@ -15,6 +15,14 @@ export interface ContinueWatchingItem {
   progress: number;
   currentTime: number;
   duration: number;
+  /**
+   * Release year, stored so playback can be resumed later.
+   *
+   * The backend needs a year alongside the title to reach the title-based
+   * providers, so a resume that only carries a TMDB id would resolve nothing.
+   */
+  year?: number;
+  releaseDate?: string;
   lastWatchedAt: string;
   watchedAt: string;
 }

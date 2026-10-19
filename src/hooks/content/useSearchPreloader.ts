@@ -78,7 +78,7 @@ export const useSearchPreloader = () => {
 
         setTrendingItems(finalItems);
         await cacheManager.set('trending_search_items', finalItems, 300000);
-      } catch (error) {
+      } catch (error: any) {
         console.warn('[useSearchPreloader] Error:', error);
         setTrendingItems([]);
       } finally {

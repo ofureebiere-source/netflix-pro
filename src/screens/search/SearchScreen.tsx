@@ -32,13 +32,14 @@ import { useAlert } from '../../contexts/AlertContext';
 // ─── Unified multi-source search engine ───
 import { metadataService } from '../../services/unified/MetadataService';
 import { IMetadataResult, DiscoverFilters } from '../../services/unified/types/MetadataTypes';
+import type { UnifiedMediaResult } from '../../services/unified/types/ProviderTypes';
 
 // ─── Search suggestions (TMDB-backed) ───
 import { searchMedia } from '../../services/unified/metadata/TMDBMetadata';
 
 // Utils
 import { saveSearchQuery, getSearchHistory, removeSearchQuery, clearSearchHistory } from '../../utils/storage';
-import { getContinueWatching, saveContinueWatching, removeFromContinueWatching, ContinueWatchingItem } from '../../utils/continueWatching';
+import { getContinueWatching, removeFromContinueWatching, ContinueWatchingItem } from '../../utils/continueWatching';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -186,7 +187,6 @@ const CATEGORY_CARDS: {
 
 const currentYear = new Date().getFullYear();
 const YEAR_OPTIONS: string[] = Array.from({ length: 12 }, (_, i) => String(currentYear - i));
-const YEAR_RANGE_OPTIONS: string[] = ['2020-2024', '2010-2019', '2000-2009', '1990-1999', 'Pre-1990'];
 
 const parseYearRange = (range: string): { startYear?: number; endYear?: number } => {
   if (!range) return {};
@@ -196,38 +196,7 @@ const parseYearRange = (range: string): { startYear?: number; endYear?: number }
   return {};
 };
 
-const LANGUAGE_OPTIONS: { label: string; code: string }[] = [
-  { label: 'All', code: '' },
-  { label: 'English', code: 'en' },
-  { label: 'Hindi', code: 'hi' },
-  { label: 'Korean', code: 'ko' },
-  { label: 'Japanese', code: 'ja' },
-  { label: 'Chinese', code: 'zh' },
-  { label: 'Spanish', code: 'es' },
-  { label: 'French', code: 'fr' },
-  { label: 'German', code: 'de' },
-  { label: 'Italian', code: 'it' },
-  { label: 'Portuguese', code: 'pt' },
-  { label: 'Russian', code: 'ru' },
-  { label: 'Arabic', code: 'ar' },
-  { label: 'Turkish', code: 'tr' },
-  { label: 'Thai', code: 'th' },
-  { label: 'Vietnamese', code: 'vi' },
-];
 
-const CERTIFICATION_OPTIONS: { label: string; code: string }[] = [
-  { label: 'All', code: '' },
-  { label: 'G', code: 'G' },
-  { label: 'PG', code: 'PG' },
-  { label: 'PG-13', code: 'PG-13' },
-  { label: 'R', code: 'R' },
-  { label: 'NC-17', code: 'NC-17' },
-  { label: 'TV-Y', code: 'TV-Y' },
-  { label: 'TV-Y7', code: 'TV-Y7' },
-  { label: 'TV-PG', code: 'TV-PG' },
-  { label: 'TV-14', code: 'TV-14' },
-  { label: 'TV-MA', code: 'TV-MA' },
-];
 
 // ─── Genre name to TMDB ID mapping ───
 const GENRE_NAME_TO_ID: Record<string, number> = {
@@ -261,6 +230,15 @@ const GENRE_NAME_TO_ID: Record<string, number> = {
   'War & Politics': 10768,
 };
 
+/**
+ * Providers hand back `UnifiedMediaResult`, which carries every field the
+ * search UI reads plus stream sources. This screen only ever consumes the
+ * metadata shape, so normalise once here instead of casting at each call site.
+ */
+const toMetadataResults = (
+  items: (IMetadataResult | UnifiedMediaResult)[]
+): IMetadataResult[] => items as IMetadataResult[];
+
 // ─── Deduplicate results ───
 const deduplicateResults = (items: IMetadataResult[]): IMetadataResult[] => {
   const seen = new Set<string>();
@@ -281,7 +259,7 @@ const getGenreIds = (item: IMetadataResult): number[] => {
   
   // If genres are already numbers, return them
   if (typeof item.genres[0] === 'number') {
-    return item.genres as number[];
+    return item.genres as unknown as number[];
   }
   
   // If genres are strings, they're either numeric-ID strings ("28") or
@@ -327,37 +305,31 @@ const PRELOAD_TV_DETAILS_COUNT = 20;
 const SearchScreen = () => {
   const { colors, isDark } = useTheme();
   const { showToast } = useAlert();
-  const { networkStatus } = useAppStore();
+  const { networkStatus: _networkStatus } = useAppStore();
 
   // ─── Zustand Preloaded Store ───
   const {
     allItems,
-    categories,
     setAllItems,
     setCategories,
     getRandomItems,
-    getItemById,
     initialized: preloadInitialized,
     isLoading: preloadLoading,
-    error: preloadError,
     setLoading: setPreloadLoading,
     setInitialized: setPreloadInitialized,
     setError: setPreloadError,
     setLastFetchedAt,
     // ─── NEW: Preloaded data actions ───
-    setPreloadedTVDetails,
-    setPreloadedSeason,
     batchPreloadTVDetails,
     batchPreloadSeasons,
     hasPreloadedTVDetails,
-    hasPreloadedStreams,
-  } = usePreloadedMediaStore();
+    } = usePreloadedMediaStore();
 
 
   const [query, setQuery] = useState('');
 
   const [activeMode, setActiveMode] = useState<ActiveMode>('discover');
-  const [resultsTitle, setResultsTitle] = useState('Popular Searches');
+  const [_resultsTitle, setResultsTitle] = useState('Popular Searches');
 
   const [activeCategoryLabel, setActiveCategoryLabel] = useState<string | null>(null);
 
@@ -443,7 +415,7 @@ const SearchScreen = () => {
   }, []);
 
   // ─── ENHANCED: TanStack Query for preloading ───
-  const { data: preloadedData, isLoading: isPreloading, refetch: refetchPreload } = useQuery({
+  const { isLoading: isPreloading } = useQuery({
     queryKey: ['preloadedMedia', 'all'],
     queryFn: async () => {
       console.log('[Preloader] 🔄 Fetching preloaded media...');
@@ -470,7 +442,7 @@ const SearchScreen = () => {
         const allItems = [...trending, ...popular, ...topRated, ...anime, ...movies, ...tvShows];
         
         // Deduplicate by ID and source
-        const uniqueItems = deduplicateResults(allItems);
+        const uniqueItems = deduplicateResults(toMetadataResults(allItems));
         
         console.log(`[Preloader] ✅ Fetched ${uniqueItems.length} unique items`);
         console.log(`[Preloader] 📊 Trending: ${trending.length}, Popular: ${popular.length}, Top Rated: ${topRated.length}, Anime: ${anime.length}, Movies: ${movies.length}, TV: ${tvShows.length}`);
@@ -479,13 +451,11 @@ const SearchScreen = () => {
         setAllItems(uniqueItems);
         setCategories({
           trending,
-          popular,
-          topRated,
-          anime,
-          movies,
-          tvShows,
-          koreanDramas: [],
-          bollywood: [],
+          popular: toMetadataResults(popular),
+          topRated: toMetadataResults(topRated),
+          anime: toMetadataResults(anime),
+          movies: toMetadataResults(movies),
+          tvShows: toMetadataResults(tvShows),
         });
         
         // ─── Step 2: Preload TV details with seasons ───
@@ -512,7 +482,7 @@ const SearchScreen = () => {
               };
             }
             return null;
-          } catch (error) {
+          } catch (error: any) {
             console.warn(`[Preloader] ⚠️ Failed to preload TV details for ${item.id}:`, error);
             return null;
           }
@@ -545,7 +515,7 @@ const SearchScreen = () => {
                 }
               }
               return null;
-            } catch (error) {
+            } catch (error: any) {
               console.warn(`[Preloader] ⚠️ Failed to preload season for ${detail.id}:`, error);
               return null;
             }
@@ -575,7 +545,7 @@ const SearchScreen = () => {
           tvShows,
           tvDetails: validTVDetails,
         };
-      } catch (error) {
+      } catch (error: any) {
         console.error('[Preloader] ❌ Failed to preload:', error);
         setPreloadError(error instanceof Error ? error.message : 'Failed to preload');
         throw error;
@@ -733,9 +703,9 @@ const SearchScreen = () => {
         return item;
       });
 
-      setResults(resultsWithFallbackPosters);
+      setResults(toMetadataResults(resultsWithFallbackPosters));
 
-      const sorted = sortResults(resultsWithFallbackPosters, sortByRef.current);
+      const sorted = sortResults(toMetadataResults(resultsWithFallbackPosters), sortByRef.current);
       console.log(`[Discover] 📊 After sorting: ${sorted.length} results`);
 
       setFilteredResults(sorted);
@@ -746,7 +716,7 @@ const SearchScreen = () => {
       } else {
         console.log(`[Discover] ✅ Found ${sorted.length} results for "${title}"`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('[Discover] ❌ Error during discover:', error);
       if (error instanceof Error) {
         console.error('[Discover] ❌ Error name:', error.name);
@@ -877,9 +847,9 @@ const SearchScreen = () => {
         return item;
       });
 
-      setResults(resultsWithFallbackPosters);
+      setResults(toMetadataResults(resultsWithFallbackPosters));
 
-      const sorted = sortResults(resultsWithFallbackPosters, sortByRef.current);
+      const sorted = sortResults(toMetadataResults(resultsWithFallbackPosters), sortByRef.current);
       console.log(`[Search] 📊 After sorting: ${sorted.length} results`);
 
       setFilteredResults(sorted);
@@ -890,7 +860,7 @@ const SearchScreen = () => {
         await saveSearchQuery(trimmedQuery);
         loadSearchHistory();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('[Search] ❌ Error during search:', error);
       if (error instanceof Error) {
         console.error('[Search] ❌ Error name:', error.name);
@@ -945,7 +915,7 @@ const SearchScreen = () => {
           setSuggestions([]);
           setShowSuggestions(false);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('[Suggestions] ❌ Error fetching suggestions:', error);
         setSuggestions([]);
         setShowSuggestions(false);
@@ -1161,7 +1131,7 @@ const SearchScreen = () => {
             
             console.log(`[Search] 📊 Found ${numberOfSeasons} seasons, display: [${displaySeasons.join(', ')}]`);
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error('[Search] ❌ Failed to fetch TV details:', error);
           numberOfSeasons = (item as any).numberOfSeasons || 0;
           numberOfEpisodes = (item as any).numberOfEpisodes || 0;
@@ -1183,7 +1153,7 @@ const SearchScreen = () => {
     params.set('title', item.title);
     params.set('poster_path', rawPosterPath);
     params.set('rating', String(ratingValue));
-    params.set('year', year);
+    params.set('year', String(year));
     params.set('overview', overview);
     params.set('genres', JSON.stringify(genreIds));
     params.set('backdrop', backdrop);
@@ -1343,38 +1313,8 @@ const SearchScreen = () => {
     performTextSearch(nextGenres.join(' ').toLowerCase(), nextGenres.join(', '), false);
   }, [filters.genres, activeMode, query, performTextSearch, resetToDiscover]);
 
-  const toggleLanguage = useCallback((code: string) => {
-    console.log(`[Filter] 🌐 Toggling language: "${code}"`);
-    if (!code) {
-      setFilters(prev => ({ ...prev, languages: [] }));
-      return;
-    }
-    setFilters(prev => ({
-      ...prev,
-      languages: prev.languages.includes(code)
-        ? prev.languages.filter(l => l !== code)
-        : [...prev.languages, code],
-    }));
-  }, []);
 
-  const toggleCertification = useCallback((code: string) => {
-    console.log(`[Filter] 🎫 Toggling certification: "${code}"`);
-    if (!code) {
-      setFilters(prev => ({ ...prev, certifications: [] }));
-      return;
-    }
-    setFilters(prev => ({
-      ...prev,
-      certifications: prev.certifications.includes(code)
-        ? prev.certifications.filter(c => c !== code)
-        : [...prev.certifications, code],
-    }));
-  }, []);
 
-  const toggleYearRange = useCallback((range: string) => {
-    console.log(`[Filter] 📅 Toggling year range: "${range}"`);
-    setFilters(prev => ({ ...prev, yearRange: prev.yearRange === range ? '' : range }));
-  }, []);
 
   // ─── Suggestions Bar ───
   const renderSuggestions = () => {

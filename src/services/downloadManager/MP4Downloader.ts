@@ -5,7 +5,18 @@ import { buildProviderRequestHeaders } from '../../utils/streamHeaders';
 const STALL_TIMEOUT_MS = 30000;
 
 class MP4Downloader {
-  constructor(entry, onProgress, onComplete, onError) {
+  entry: any;
+  onProgress: any;
+  onComplete: any;
+  onError: any;
+  isPaused: any;
+  isCancelled: any;
+  downloadResumable: any;
+  contentDir: any;
+  lastBytesWritten: any;
+  lastProgressTime: any;
+  stallCheckInterval: any;
+  constructor(entry: any, onProgress: any, onComplete: any, onError: any) {
     this.entry = entry;
     this.onProgress = onProgress;
     this.onComplete = onComplete;
@@ -84,7 +95,7 @@ class MP4Downloader {
           fileSize: fileInfo.size,
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       this.clearStallDetection();
       if (this.onError && !this.isCancelled) {
         this.onError(error);
@@ -99,14 +110,14 @@ class MP4Downloader {
       try {
         const savable = await this.downloadResumable.pauseAsync();
         return savable;
-      } catch (error) {
+      } catch (error: any) {
         // Pause failed
       }
     }
     return null;
   }
 
-  async resume(savable = null) {
+  async resume(_savable = null) {
     this.isPaused = false;
     this.lastProgressTime = Date.now();
     this.startStallDetection();
@@ -128,7 +139,7 @@ class MP4Downloader {
             });
           }
         }
-      } catch (error) {
+      } catch (error: any) {
         if (this.onError) {
           this.onError(error);
         }
@@ -171,7 +182,7 @@ class MP4Downloader {
     }
   }
 
-  reportProgress(progress, phase, bytesWritten = 0, totalBytes = 0) {
+  reportProgress(progress: any, phase: any, bytesWritten = 0, totalBytes = 0) {
     if (this.onProgress) {
       this.onProgress({
         progress: Math.min(100, Math.max(0, progress)),

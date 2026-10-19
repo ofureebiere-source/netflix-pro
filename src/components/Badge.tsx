@@ -10,7 +10,7 @@ const Badge = ({
   isLive,
   isUpcoming,
   hasWatched = false,
-}) => {
+}: any) => {
   // ─── Live / Upcoming badges (unrelated to recency tiers, unchanged) ───
   if (isLive !== undefined) {
     if (isUpcoming) {

@@ -5,7 +5,7 @@ import Svg, { Circle, Path, Line } from 'react-native-svg';
 import downloadManager from '../services/downloadManager';
 import { generateDownloadId, DOWNLOAD_STATUS } from '../utils/downloadStorage';
 
-const CircularProgress = ({ progress, size = 28, strokeWidth = 3, color = '#E50914' }) => {
+const CircularProgress = ({ progress, size = 28, strokeWidth = 3, color = '#E50914' }: any) => {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
@@ -81,8 +81,8 @@ const DownloadButton = ({
   onDownloadStart,
   onDownloadComplete,
   onDownloadError,
-}) => {
-  const [status, setStatus] = useState(null);
+}: any) => {
+  const [status, setStatus] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -101,7 +101,7 @@ const DownloadButton = ({
 
       setStatus(currentStatus);
       setProgress(currentProgress || 0);
-    } catch (error) {
+    } catch (error: any) {
       // Error checking status
     } finally {
       setIsLoading(false);
@@ -250,12 +250,12 @@ const DownloadButton = ({
         default:
           break;
       }
-    } catch (error) {
+    } catch (error: any) {
       Alert.alert('Error', 'Failed to process download request');
     }
   };
 
-  const getIconConfig = () => {
+  const getIconConfig = (): { name: keyof typeof Ionicons.glyphMap; color: string; useCustom: boolean } => {
     switch (status) {
       case DOWNLOAD_STATUS.QUEUED:
         return { name: 'hourglass-outline', color: '#fff', useCustom: false };

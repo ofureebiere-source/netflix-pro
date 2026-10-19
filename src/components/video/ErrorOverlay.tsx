@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
-const ErrorOverlay = ({ error, onRetry, onGoBack }) => {
+const ErrorOverlay = ({ error, onRetry, onGoBack }: any) => {
   if (!error) return null;
 
   return (

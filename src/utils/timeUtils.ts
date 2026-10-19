@@ -1,4 +1,4 @@
-export const formatTime = (timeInSeconds, allowNegative = false) => {
+export const formatTime = (timeInSeconds: any, allowNegative = false) => {
   if (isNaN(timeInSeconds)) return '00:00';
 
   const isNegative = timeInSeconds < 0;
@@ -18,7 +18,7 @@ export const formatTime = (timeInSeconds, allowNegative = false) => {
   return (isNegative && allowNegative) ? `${timeString}` : timeString;
 };
 
-export const formatRuntime = (minutes) => {
+export const formatRuntime = (minutes: any) => {
   if (!minutes || isNaN(minutes)) return '';
   const hrs = Math.floor(minutes / 60);
   const mins = minutes % 60;
@@ -28,7 +28,7 @@ export const formatRuntime = (minutes) => {
   return `${mins}m`;
 };
 
-export const timeToSeconds = (timeInput) => {
+export const timeToSeconds = (timeInput: any) => {
   if (typeof timeInput === 'number' && !isNaN(timeInput)) {
     return timeInput;
   }
@@ -51,13 +51,13 @@ export const timeToSeconds = (timeInput) => {
       throw new Error('Invalid number parsed from string parts');
     }
     return hours * 3600 + minutes * 60 + seconds + milliseconds / 1000;
-  } catch (e) {
+  } catch (e: any) {
     console.error(`Error parsing time string "${timeInput}":`, e);
     return 0;
   }
 };
 
-export const isFutureDate = (airDateString) => {
+export const isFutureDate = (airDateString: any) => {
   if (!airDateString) return false;
   const airDate = new Date(airDateString);
   const today = new Date();

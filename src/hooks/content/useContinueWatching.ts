@@ -39,7 +39,7 @@ export function useContinueWatching(): UseContinueWatchingReturn {
       setError(null);
       const data = await getContinueWatching();
       setItems(data);
-    } catch (err) {
+    } catch (err: any) {
       setError(err instanceof Error ? err.message : 'Failed to load continue watching');
       console.error('[useContinueWatching] Load error:', err);
     } finally {
@@ -56,7 +56,7 @@ export function useContinueWatching(): UseContinueWatchingReturn {
   ): Promise<ContinueWatchingItem | null> => {
     try {
       return await getContinueWatchingItem(id, type, season, episode);
-    } catch (err) {
+    } catch (err: any) {
       console.error('[useContinueWatching] Get item error:', err);
       return null;
     }
@@ -71,7 +71,7 @@ export function useContinueWatching(): UseContinueWatchingReturn {
   ): Promise<boolean> => {
     try {
       return await isInContinueWatching(id, type, season, episode);
-    } catch (err) {
+    } catch (err: any) {
       console.error('[useContinueWatching] Check error:', err);
       return false;
     }
@@ -86,7 +86,7 @@ export function useContinueWatching(): UseContinueWatchingReturn {
   ): Promise<number | null> => {
     try {
       return await getContinueWatchingProgress(id, type, season, episode);
-    } catch (err) {
+    } catch (err: any) {
       console.error('[useContinueWatching] Progress error:', err);
       return null;
     }
@@ -102,7 +102,7 @@ export function useContinueWatching(): UseContinueWatchingReturn {
     try {
       await removeFromContinueWatching(id, type, season, episode);
       await loadItems();
-    } catch (err) {
+    } catch (err: any) {
       setError(err instanceof Error ? err.message : 'Failed to remove item');
       console.error('[useContinueWatching] Remove error:', err);
     }
@@ -113,7 +113,7 @@ export function useContinueWatching(): UseContinueWatchingReturn {
     try {
       await clearContinueWatching();
       await loadItems();
-    } catch (err) {
+    } catch (err: any) {
       setError(err instanceof Error ? err.message : 'Failed to clear items');
       console.error('[useContinueWatching] Clear error:', err);
     }

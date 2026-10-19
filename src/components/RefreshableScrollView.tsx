@@ -1,6 +1,6 @@
 // src/components/RefreshableScrollView.tsx
 import React from 'react';
-import { RefreshControl, ScrollView, ScrollViewProps, ActivityIndicator, View, Text } from 'react-native';
+import { RefreshControl, ScrollView, ScrollViewProps, View, Text } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 
 interface RefreshableScrollViewProps extends ScrollViewProps {

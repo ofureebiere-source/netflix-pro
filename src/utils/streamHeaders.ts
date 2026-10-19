@@ -1,9 +1,9 @@
 // src/utils/streamHeaders.ts
 
-import { userAgents } from 'user-agents';
+import userAgents from 'user-agents';
 
 // ─── User-Agent Rotation ───
-let cachedUserAgent: string | null = null;
+let cachedUserAgent: string = '';
 let lastRotation = Date.now();
 const ROTATION_INTERVAL_MS = 300000; // 5 minutes
 
@@ -21,7 +21,7 @@ function getRandomUserAgent(): string {
       });
       cachedUserAgent = ua.toString();
       lastRotation = now;
-    } catch (error) {
+    } catch (error: any) {
       // Fallback if package fails
       cachedUserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
     }
@@ -205,9 +205,9 @@ export const parseUserAgent = (userAgent: string): { browser: string; os: string
   try {
     const ua = new userAgents(userAgent);
     return {
-      browser: ua.browser || 'unknown',
-      os: ua.os || 'unknown',
-      device: ua.deviceCategory || 'unknown'
+      browser: ua.data?.vendor || 'unknown',
+      os: ua.data?.platform || 'unknown',
+      device: ua.data?.platform || 'unknown'
     };
   } catch {
     return { browser: 'unknown', os: 'unknown', device: 'unknown' };

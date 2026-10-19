@@ -1,4 +1,4 @@
-const languageMap = {
+const languageMap: Record<string, string> = {
 en: 'English',
 es: 'Español (Spanish)',
 pt: 'Português (Portuguese)',
@@ -14,7 +14,7 @@ ru: 'Русский (Russian)',
 // Add more as needed
 };
 
-export const getLanguageName = (code) => {
+export const getLanguageName = (code: any) => {
 if (!code) return 'Unknown';
 if (code.startsWith('local:')) return code.slice('local:'.length);
 return languageMap[code.toLowerCase()] || code.toUpperCase();
@@ -29,7 +29,7 @@ export const commonLanguages = [
 { code: 'pt', name: 'Português' },
 ];
 
-const flagMap = {
+const flagMap: Record<string, string> = {
   en: '🇺🇸', // US flag for English (common default)
   es: '🇪🇸', // Spain flag for Spanish
   pt: '🇵🇹', // Portugal flag for Portuguese (could also use BR)
@@ -45,7 +45,7 @@ const flagMap = {
   // Add more as needed, be mindful of regional variations vs. general language
 };
 
-export const getLanguageFlag = (code) => {
+export const getLanguageFlag = (code: any) => {
   if (!code) return '';
   return flagMap[code.toLowerCase()] || '🏳️'; // Default to white flag
 };

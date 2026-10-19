@@ -10,7 +10,7 @@ const LoadingOverlay = ({
   currentAttemptingSource,
   onGoBack,
   onCaptchaDone,
-}) => {
+}: any) => {
   if (!isInitialLoading) return null;
 
   return (

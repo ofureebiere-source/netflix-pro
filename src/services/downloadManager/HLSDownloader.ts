@@ -1,4 +1,3 @@
-import * as FileSystem from 'expo-file-system';
 import { File } from 'expo-file-system';
 import * as LegacyFileSystem from 'expo-file-system/legacy';
 import storageManager from './StorageManager';
@@ -8,7 +7,23 @@ import { resolveUrl, selectBestVariantByHeight } from '../../utils/m3u8QualitySe
 import { buildProviderRequestHeaders } from '../../utils/streamHeaders';
 
 class HLSDownloader {
-  constructor(entry, onProgress, onComplete, onError) {
+  entry: any;
+  onProgress: any;
+  onComplete: any;
+  onError: any;
+  segments: any;
+  initSegment: any;
+  downloadedSegments: any;
+  totalSegments: any;
+  isPaused: any;
+  isCancelled: any;
+  contentDir: any;
+  segmentsDir: any;
+  totalBytesDownloaded: any;
+  concurrentDownloads: any;
+  failedSegments: any;
+  lastProgressTime: any;
+  constructor(entry: any, onProgress: any, onComplete: any, onError: any) {
     this.entry = entry;
     this.onProgress = onProgress;
     this.onComplete = onComplete;
@@ -120,10 +135,10 @@ class HLSDownloader {
       const mp4Path = `${this.contentDir}video.mp4`;
 
       try {
-        const conversionResult = await ffmpegConverter.convertHLSToMP4(
+        const conversionResult: any = await ffmpegConverter.convertHLSToMP4(
           this.segmentsDir,
           mp4Path,
-          (progressData) => {
+          (_progressData) => {
             this.reportProgress(95, 'converting');
           },
           {
@@ -153,7 +168,7 @@ class HLSDownloader {
             }
           }
         }
-      } catch (conversionError) {
+      } catch (conversionError: any) {
         const localM3u8Path = await this.createLocalPlaylist();
         const totalSize = await this.calculateTotalSize();
 
@@ -167,7 +182,7 @@ class HLSDownloader {
           });
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       if (this.onError && !this.isCancelled) {
         this.onError(error);
       }
@@ -181,12 +196,12 @@ class HLSDownloader {
 
       const m3u8Path = `${this.contentDir}video.m3u8`.replace('file://', '');
       await LegacyFileSystem.deleteAsync(m3u8Path, { idempotent: true });
-    } catch (error) {
+    } catch (error: any) {
       // Ignore cleanup errors
     }
   }
 
-  async fetchPlaylist(url) {
+  async fetchPlaylist(url: any) {
     try {
       const headers = buildProviderRequestHeaders(
         this.entry.streamHeaders,
@@ -199,18 +214,23 @@ class HLSDownloader {
         throw new Error(`Failed to fetch playlist: ${response.status}`);
       }
       return await response.text();
-    } catch (error) {
+    } catch (error: any) {
       throw new Error(`Failed to fetch playlist: ${error.message}`);
     }
   }
 
-  parsePlaylist(content, baseUrl) {
-    const lines = content.split('\n').map(line => line.trim()).filter(line => line);
+  parsePlaylist(content: any, baseUrl: any) {
+    const lines = content.split('\n').map((line: any) => line.trim()).filter((line: any) => line);
     const result = {
       isMaster: false,
-      variants: [],
-      segments: [],
-      initSegment: null,
+      variants: [] as { bandwidth: number; resolution: string; url: string }[],
+      segments: [] as {
+        url: string;
+        duration: number;
+        index: number;
+        byteRange: { length: number; offset: number | null } | null;
+      }[],
+      initSegment: null as { url: string; byteRange: string | null } | null,
       isVOD: false,
       totalDuration: 0,
     };
@@ -299,7 +319,7 @@ class HLSDownloader {
     return result;
   }
 
-  isSegmentUrl(url) {
+  isSegmentUrl(url: any) {
     if (!url || url.length === 0) return false;
 
     const segmentExtensions = ['.ts', '.m4s', '.mp4', '.m4v', '.m4a', '.aac', '.fmp4', '.cmfv', '.cmfa'];
@@ -322,7 +342,7 @@ class HLSDownloader {
     return false;
   }
 
-  extractAttribute(line, attr) {
+  extractAttribute(line: any, attr: any) {
     const regex = new RegExp(`${attr}=([^,\\s]+|"[^"]*")`);
     const match = line.match(regex);
     if (match) {
@@ -331,10 +351,10 @@ class HLSDownloader {
     return null;
   }
 
-  selectBestVariant(variants) {
+  selectBestVariant(variants: any) {
     if (!variants || variants.length === 0) return null;
 
-    const withHeight = variants.map(v => ({
+    const withHeight = variants.map((v: any) => ({
       ...v,
       height: v.resolution ? parseInt(v.resolution.split('x')[1]) || 0 : 0,
     }));
@@ -372,7 +392,7 @@ class HLSDownloader {
           }
         }
 
-        const result = await this.downloadWithTimeout(
+        const result: any = await this.downloadWithTimeout(
           this.initSegment.url,
           filePath,
           headers,
@@ -390,7 +410,7 @@ class HLSDownloader {
         }
 
         throw new Error(`Init segment download failed with status ${result.status}`);
-      } catch (error) {
+      } catch (error: any) {
         lastError = error;
         if (attempt < maxRetries - 1) {
           await this.delay(1000 * (attempt + 1));
@@ -401,7 +421,7 @@ class HLSDownloader {
     throw new Error(`Failed to download init segment after ${maxRetries} attempts: ${lastError?.message}`);
   }
 
-  parseByteRange(byteRangeStr) {
+  parseByteRange(byteRangeStr: any) {
     if (!byteRangeStr) return null;
     const match = byteRangeStr.match(/(\d+)(?:@(\d+))?/);
     if (match) {
@@ -412,9 +432,9 @@ class HLSDownloader {
     return null;
   }
 
-  async downloadWithTimeout(url, filePath, headers, timeoutMs) {
+  async downloadWithTimeout(url: any, filePath: any, headers: any, timeoutMs: any) {
     let timedOut = false;
-    let timerId;
+    let timerId: ReturnType<typeof setTimeout> | undefined;
 
     const downloadPromise = LegacyFileSystem.downloadAsync(url, filePath, { headers }).then(result => {
       clearTimeout(timerId);
@@ -432,7 +452,7 @@ class HLSDownloader {
     return Promise.race([downloadPromise, timeoutPromise]);
   }
 
-  async deleteFileIfExists(filePath) {
+  async deleteFileIfExists(filePath: any) {
     try {
       await LegacyFileSystem.deleteAsync(filePath, { idempotent: true });
     } catch {
@@ -446,8 +466,8 @@ class HLSDownloader {
     let activeDownloads = 0;
     const stallTimeoutMs = 90000;
 
-    return new Promise((resolve, reject) => {
-      let stallCheckInterval = null;
+    return new Promise<void>((resolve, reject) => {
+      let stallCheckInterval: ReturnType<typeof setInterval> | null = null;
       let resolved = false;
 
       const finish = () => {
@@ -516,7 +536,7 @@ class HLSDownloader {
     });
   }
 
-  async downloadSegmentWithRetry(segment, index) {
+  async downloadSegmentWithRetry(segment: any, index: any) {
     const extension = segment.byteRange ? '.m4s' : '.ts';
     const filename = `segment_${String(index).padStart(5, '0')}${extension}`;
     const filePath = `${this.segmentsDir}${filename}`;
@@ -546,7 +566,7 @@ class HLSDownloader {
           headers['Range'] = `bytes=${start}-${end}`;
         }
 
-        const result = await this.downloadWithTimeout(
+        const result: any = await this.downloadWithTimeout(
           segment.url,
           filePath,
           headers,
@@ -574,7 +594,7 @@ class HLSDownloader {
         }
 
         throw new Error(`HTTP ${result.status}`);
-      } catch (error) {
+      } catch (error: any) {
         lastError = error;
         const isTimeout = error.message.includes('timeout') || error.message.includes('Timeout');
         const isRateLimit = error.message.includes('429');
@@ -602,7 +622,7 @@ class HLSDownloader {
   }
 
   async createLocalPlaylist() {
-    const isFragmentedMp4 = this.initSegment || this.segments.some(s => s.byteRange);
+    const isFragmentedMp4 = this.initSegment || this.segments.some((s: any) => s.byteRange);
 
     let playlistContent = '#EXTM3U\n';
     playlistContent += isFragmentedMp4 ? '#EXT-X-VERSION:7\n' : '#EXT-X-VERSION:3\n';
@@ -644,7 +664,7 @@ class HLSDownloader {
     try {
       const dirInfo = await storageManager.getDirectorySize(this.contentDir);
       return dirInfo || this.totalBytesDownloaded;
-    } catch (error) {
+    } catch (error: any) {
       return this.totalBytesDownloaded;
     }
   }
@@ -662,7 +682,7 @@ class HLSDownloader {
     this.isPaused = false;
   }
 
-  reportProgress(progress, phase) {
+  reportProgress(progress: any, phase: any) {
     if (this.onProgress) {
       this.onProgress({
         progress: Math.min(100, Math.max(0, progress)),
@@ -674,7 +694,7 @@ class HLSDownloader {
     }
   }
 
-  delay(ms) {
+  delay(ms: any) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 }

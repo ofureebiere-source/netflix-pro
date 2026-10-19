@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-const LiveIndicator = ({ isAtLiveEdge }) => {
+const LiveIndicator = ({ isAtLiveEdge }: any) => {
   return (
     <View style={styles.liveIndicatorContainer}>
       <View style={[styles.liveCircle, { backgroundColor: isAtLiveEdge ? '#FF0000' : '#888888' }]} />

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * TraktMetadataAdapter - Adapter that wraps Trakt API.
  * Provides social metadata, trending, popular, and recommendations.
  * Supports: search, discover, trending, popular, anticipated content.
@@ -18,16 +18,10 @@ import {
   TraktShowExtended,
   TraktTrendingMovie,
   TraktTrendingShow,
-  TraktPlayedItem,
-  TraktAnticipatedItem,
-  TraktBoxOfficeItem,
   TraktSearchResult,
   TraktMovie,
   TraktShow,
-  TraktPerson,
-  TraktCastMember,
-  TraktCrewMember,
-} from '../../../unified/social/TraktService';
+  } from '../../../unified/social/TraktService';
 
 // ─── Genre mapping for flexible matching ───
 const TRAKT_GENRE_MAP: Record<string, string[]> = {
@@ -104,7 +98,7 @@ const COUNTRY_TO_LANGUAGE: Record<string, string> = {
   'MY': 'ms', 'ID': 'id', 'SG': 'en', 'NZ': 'en', 'AU': 'en',
   'CA': 'en', 'ZA': 'en', 'NL': 'nl', 'BE': 'nl', 'CH': 'de',
   'AT': 'de', 'SE': 'sv', 'NO': 'no', 'DK': 'da', 'FI': 'fi',
-  'BR': 'pt', 'MX': 'es', 'AR': 'es', 'CL': 'es', 'CO': 'es',
+  'BR': 'pt', 'MX': 'es', 'CL': 'es', 'CO': 'es',
   'PE': 'es', 'PK': 'ur', 'BD': 'bn', 'LK': 'si', 'NP': 'ne',
   'BT': 'dz', 'MV': 'dv', 'MO': 'zh', 'MM': 'my', 'KH': 'km',
   'LA': 'lo', 'BN': 'ms', 'TL': 'pt', 'IL': 'he', 'SA': 'ar',
@@ -113,11 +107,10 @@ const COUNTRY_TO_LANGUAGE: Record<string, string> = {
   'QA': 'ar', 'BH': 'ar', 'OM': 'ar', 'YE': 'ar', 'SY': 'ar',
   'IR': 'fa', 'IQ': 'ar', 'AF': 'ps', 'AZ': 'az', 'GE': 'ka',
   'AM': 'hy', 'AL': 'sq', 'BA': 'bs', 'BG': 'bg', 'HR': 'hr',
-  'CZ': 'cs', 'DK': 'da', 'EE': 'et', 'HU': 'hu', 'IS': 'is',
+  'CZ': 'cs', 'EE': 'et', 'HU': 'hu', 'IS': 'is',
   'IE': 'en', 'LV': 'lv', 'LT': 'lt', 'LU': 'lb', 'MT': 'mt',
   'PL': 'pl', 'RO': 'ro', 'SK': 'sk', 'SI': 'sl', 'UA': 'uk',
-  'BY': 'be', 'MD': 'ro', 'GE': 'ka', 'AM': 'hy', 'AZ': 'az',
-  'KZ': 'kk', 'UZ': 'uz', 'TM': 'tk', 'KG': 'ky', 'TJ': 'tg',
+  'BY': 'be', 'MD': 'ro', 'KZ': 'kk', 'UZ': 'uz', 'TM': 'tk', 'KG': 'ky', 'TJ': 'tg',
   'MN': 'mn', 'KP': 'ko', 'CU': 'es', 'DO': 'es', 'PR': 'es',
   'CR': 'es', 'SV': 'es', 'GT': 'es', 'HN': 'es', 'NI': 'es',
   'PA': 'es', 'PY': 'es', 'UY': 'es', 'VE': 'es', 'BO': 'es',
@@ -129,8 +122,7 @@ const COUNTRY_TO_LANGUAGE: Record<string, string> = {
   'CF': 'fr', 'TD': 'fr', 'CG': 'fr', 'CD': 'fr', 'BJ': 'fr',
   'BF': 'fr', 'BI': 'fr', 'CM': 'fr', 'CI': 'fr', 'DJ': 'fr',
   'GA': 'fr', 'GN': 'fr', 'ML': 'fr', 'NE': 'fr', 'SN': 'fr',
-  'TG': 'fr', 'MG': 'fr', 'KM': 'fr', 'MU': 'fr', 'SC': 'fr',
-};
+  'TG': 'fr', 'MG': 'fr', 'KM': 'fr', };
 
 // ─── Country code to country name mapping ───
 const COUNTRY_CODE_TO_NAME: Record<string, string> = {
@@ -169,8 +161,7 @@ const COUNTRY_CODE_TO_NAME: Record<string, string> = {
   'YE': 'Yemen', 'SY': 'Syria', 'IQ': 'Iraq', 'IR': 'Iran',
   'AF': 'Afghanistan', 'PS': 'Palestine', 'AZ': 'Azerbaijan', 'GE': 'Georgia',
   'AM': 'Armenia', 'AL': 'Albania', 'BA': 'Bosnia and Herzegovina',
-  'BG': 'Bulgaria', 'HR': 'Croatia', 'CZ': 'Czech Republic', 'DK': 'Denmark',
-  'EE': 'Estonia', 'HU': 'Hungary', 'IS': 'Iceland', 'IE': 'Ireland',
+  'BG': 'Bulgaria', 'HR': 'Croatia', 'CZ': 'Czech Republic', 'EE': 'Estonia', 'HU': 'Hungary', 'IS': 'Iceland', 'IE': 'Ireland',
   'LV': 'Latvia', 'LT': 'Lithuania', 'LU': 'Luxembourg', 'MT': 'Malta',
   'PL': 'Poland', 'RO': 'Romania', 'SK': 'Slovakia', 'SI': 'Slovenia',
   'UA': 'Ukraine', 'BY': 'Belarus', 'MD': 'Moldova', 'KZ': 'Kazakhstan',
@@ -196,7 +187,7 @@ export class TraktMetadataAdapter {
 
   async ensureInitialized(): Promise<void> {
     if (this.initialized) return;
-    
+
     if (!this.clientId) {
       console.warn('[TraktMetadataAdapter] No clientId configured');
       this.initialized = true;
@@ -207,7 +198,7 @@ export class TraktMetadataAdapter {
       this.service = getTraktService(this.clientId);
       this.initialized = true;
       console.log('[TraktMetadataAdapter] Initialized successfully');
-    } catch (error) {
+    } catch (error: any) {
       console.error('[TraktMetadataAdapter] Failed to initialize:', error);
       throw error;
     }
@@ -229,7 +220,7 @@ export class TraktMetadataAdapter {
     endYear?: number;
     keywords?: string[];
     includeAdult?: boolean;
-    sortBy?: string;
+    sortBy?: DiscoverFilters['sortBy'];
     language?: string;
     watchRegion?: string;
     extended?: string;
@@ -321,7 +312,7 @@ export class TraktMetadataAdapter {
       const results = await this.service.search(query, searchType, searchParams);
 
       // Map results to IMetadataResult
-      let mapped = results.map((result: TraktSearchResult) => 
+      let mapped = results.map((result: TraktSearchResult) =>
         this.mapSearchResult(result)
       );
 
@@ -343,7 +334,7 @@ export class TraktMetadataAdapter {
       mapped = this.sortResults(mapped, sortBy);
 
       return mapped.slice(0, limit);
-    } catch (error) {
+    } catch (error: any) {
       console.error('[TraktMetadataAdapter] Search failed:', error);
       return [];
     }
@@ -387,7 +378,7 @@ export class TraktMetadataAdapter {
         } else {
           console.log(`[TraktMetadataAdapter] Search for "${searchTerm}" returned 0 results, trying fallback...`);
         }
-      } catch (searchError) {
+      } catch (searchError: any) {
         console.log('[TraktMetadataAdapter] Search failed, falling back to trending/popular:', searchError);
       }
 
@@ -398,7 +389,7 @@ export class TraktMetadataAdapter {
             limit: Math.min(limit + 10, 50),
             extended: 'full,images',
           });
-          const mapped = trending.map((item: TraktTrendingMovie) => 
+          const mapped = trending.map((item: TraktTrendingMovie) =>
             this.mapTrendingMovie(item)
           );
           // Only add if not already in results (deduplicate by ID)
@@ -406,7 +397,7 @@ export class TraktMetadataAdapter {
           const newItems = mapped.filter(r => !existingIds.has(r.id));
           results.push(...newItems);
           console.log(`[TraktMetadataAdapter] Added ${newItems.length} trending movies`);
-        } catch (error) {
+        } catch (error: any) {
           console.error('[TraktMetadataAdapter] Trending movies failed:', error);
         }
       }
@@ -418,14 +409,14 @@ export class TraktMetadataAdapter {
             limit: Math.min(limit + 10, 50),
             extended: 'full,images',
           });
-          const mapped = trending.map((item: TraktTrendingShow) => 
+          const mapped = trending.map((item: TraktTrendingShow) =>
             this.mapTrendingShow(item)
           );
           const existingIds = new Set(results.map(r => r.id));
           const newItems = mapped.filter(r => !existingIds.has(r.id));
           results.push(...newItems);
           console.log(`[TraktMetadataAdapter] Added ${newItems.length} trending shows`);
-        } catch (error) {
+        } catch (error: any) {
           console.error('[TraktMetadataAdapter] Trending shows failed:', error);
         }
       }
@@ -442,7 +433,7 @@ export class TraktMetadataAdapter {
           const newItems = mapped.filter(r => !existingIds.has(r.id));
           results.push(...newItems);
           console.log(`[TraktMetadataAdapter] Added ${newItems.length} popular movies`);
-        } catch (error) {
+        } catch (error: any) {
           console.error('[TraktMetadataAdapter] Popular movies failed:', error);
         }
       }
@@ -459,7 +450,7 @@ export class TraktMetadataAdapter {
           const newItems = mapped.filter(r => !existingIds.has(r.id));
           results.push(...newItems);
           console.log(`[TraktMetadataAdapter] Added ${newItems.length} popular shows`);
-        } catch (error) {
+        } catch (error: any) {
           console.error('[TraktMetadataAdapter] Popular shows failed:', error);
         }
       }
@@ -491,10 +482,10 @@ export class TraktMetadataAdapter {
 
       // Sort and limit
       filtered = this.sortResults(filtered, filters.sortBy || 'popularity.desc');
-      
+
       console.log(`[TraktMetadataAdapter] Discover returning ${Math.min(filtered.length, limit)} results`);
       return filtered.slice(0, limit);
-    } catch (error) {
+    } catch (error: any) {
       console.error('[TraktMetadataAdapter] Discover failed:', error);
       return [];
     }
@@ -571,7 +562,7 @@ export class TraktMetadataAdapter {
         const show = await this.service.getShow(id, { extended: 'full,images' });
         return this.mapShowExtended(show);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(`[TraktMetadataAdapter] Get by ID ${id} failed:`, error);
       return null;
     }
@@ -593,7 +584,7 @@ export class TraktMetadataAdapter {
           limit: Math.min(limit + 10, 30),
           extended: 'full,images',
         });
-        const mapped = trending.map((item: TraktTrendingMovie) => 
+        const mapped = trending.map((item: TraktTrendingMovie) =>
           this.mapTrendingMovie(item)
         );
         results.push(...mapped);
@@ -604,7 +595,7 @@ export class TraktMetadataAdapter {
           limit: Math.min(limit + 10, 30),
           extended: 'full,images',
         });
-        const mapped = trending.map((item: TraktTrendingShow) => 
+        const mapped = trending.map((item: TraktTrendingShow) =>
           this.mapTrendingShow(item)
         );
         results.push(...mapped);
@@ -620,13 +611,13 @@ export class TraktMetadataAdapter {
       });
 
       return deduplicated.slice(0, limit);
-    } catch (error) {
+    } catch (error: any) {
       console.error('[TraktMetadataAdapter] GetTrending failed:', error);
       return [];
     }
   }
 
-  async getTrendingByCategory(category: string, limit: number = 20, region?: string): Promise<IMetadataResult[]> {
+  async getTrendingByCategory(category: string, limit: number = 20, _region?: string): Promise<IMetadataResult[]> {
     await this.ensureInitialized();
 
     if (!this.service) {
@@ -658,7 +649,7 @@ export class TraktMetadataAdapter {
 
       // Try search first
       const results: IMetadataResult[] = [];
-      
+
       try {
         const searchResults = await this.service.search(
           config.searchTerm,
@@ -671,7 +662,7 @@ export class TraktMetadataAdapter {
         );
         const mapped = searchResults.map((result: TraktSearchResult) => this.mapSearchResult(result));
         results.push(...mapped);
-      } catch (searchError) {
+      } catch (searchError: any) {
         console.log('[TraktMetadataAdapter] Category search failed, falling back to trending:', searchError);
       }
 
@@ -682,7 +673,7 @@ export class TraktMetadataAdapter {
             limit: Math.min(limit + 10, 30),
             extended: 'full,images',
           });
-          const mapped = trending.map((item: TraktTrendingMovie) => 
+          const mapped = trending.map((item: TraktTrendingMovie) =>
             this.mapTrendingMovie(item)
           );
           results.push(...mapped);
@@ -693,7 +684,7 @@ export class TraktMetadataAdapter {
             limit: Math.min(limit + 10, 30),
             extended: 'full,images',
           });
-          const mapped = trending.map((item: TraktTrendingShow) => 
+          const mapped = trending.map((item: TraktTrendingShow) =>
             this.mapTrendingShow(item)
           );
           results.push(...mapped);
@@ -710,7 +701,7 @@ export class TraktMetadataAdapter {
       });
 
       return deduplicated.slice(0, limit);
-    } catch (error) {
+    } catch (error: any) {
       console.error('[TraktMetadataAdapter] GetTrendingByCategory failed:', error);
       return [];
     }
@@ -744,7 +735,7 @@ export class TraktMetadataAdapter {
       originalLanguage: language,
       originCountry: countryCode ? [countryCode] : [],
       originalTitle: movie.title || '',
-      status: extended.status || undefined,
+      status: (extended.status as IMetadataResult['status']) || undefined,
       source: 'trakt',
       cast: [],
       keywords: [],
@@ -786,7 +777,7 @@ export class TraktMetadataAdapter {
       originalLanguage: language,
       originCountry: countryCode ? [countryCode] : [],
       originalTitle: show.title || '',
-      status: extended.status || undefined,
+      status: (extended.status as IMetadataResult['status']) || undefined,
       numberOfSeasons: undefined,
       numberOfEpisodes: extended.aired_episodes || undefined,
       lastAirDate: extended.first_aired || undefined,
@@ -912,7 +903,7 @@ export class TraktMetadataAdapter {
       filtered = filtered.filter(item => {
         if (!item.originalLanguage) return false;
         const itemLang = item.originalLanguage.toLowerCase();
-        return langs.some((l: string) => 
+        return langs.some((l: string) =>
           itemLang.includes(l) || l.includes(itemLang)
         );
       });
@@ -925,7 +916,7 @@ export class TraktMetadataAdapter {
         if (!item.originCountry || item.originCountry.length === 0) return false;
         return item.originCountry.some((c: string) => {
           const countryCode = c.toUpperCase();
-          return ctrys.some((filterCountry: string) => 
+          return ctrys.some((filterCountry: string) =>
             countryCode.includes(filterCountry) || filterCountry.includes(countryCode)
           );
         });
@@ -948,7 +939,7 @@ export class TraktMetadataAdapter {
     if (filters.certifications && filters.certifications.length > 0) {
       const certs = filters.certifications.map((c: string) => c.toUpperCase());
       filtered = filtered.filter(item =>
-        item.certification && certs.some((c: string) => 
+        item.certification && certs.some((c: string) =>
           item.certification?.toUpperCase().includes(c) || c.includes(item.certification?.toUpperCase() || '')
         )
       );
@@ -997,7 +988,7 @@ export class TraktMetadataAdapter {
       filtered = filtered.filter(item => {
         const title = item.title?.toLowerCase() || '';
         const overview = item.overview?.toLowerCase() || '';
-        return keywords.some((k: string) => 
+        return keywords.some((k: string) =>
           title.includes(k) || overview.includes(k)
         );
       });

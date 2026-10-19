@@ -3,10 +3,10 @@ import { clearSpecificStreamFromCache } from '../utils/storage';
 
 const BUFFER_TIMEOUT = 20;
 
-export const useBuffering = (handleReload, contentId) => {
+export const useBuffering = (handleReload: any, contentId: any) => {
   const [isBufferingVideo, setIsBufferingVideo] = useState(false);
   const [showBufferingAlert, setShowBufferingAlert] = useState(false);
-  const bufferingTimeoutRef = useRef(null);
+  const bufferingTimeoutRef = useRef<any>(null);
 
   const clearBufferingTimer = useCallback(() => {
     if (bufferingTimeoutRef.current) {

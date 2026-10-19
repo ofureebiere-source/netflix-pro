@@ -113,7 +113,7 @@ const HEADER_STRATEGIES: HeaderStrategy[] = [
   //    users manually override it with --http-user-agent to a browser
   //    string in practice (see VideoLAN forum threads on this exact
   //    problem). Still no Referer, no Origin — only the UA changes.
-  (url) => ({
+  (_url) => ({
     'Accept': '*/*',
     'Accept-Language': 'en-US,en;q=0.9',
     'User-Agent': BROWSER_UA,
@@ -133,7 +133,7 @@ const HEADER_STRATEGIES: HeaderStrategy[] = [
       const u = new URL(url);
       headers['Referer'] = `${u.protocol}//${u.hostname}/`;
       headers['Origin'] = `${u.protocol}//${u.hostname}`;
-    } catch (e) {
+    } catch (e: any) {
       logWarn('Could not parse stream URL for Referer/Origin', e);
     }
     return headers;
@@ -189,8 +189,24 @@ const VideoPlayerScreen = () => {
 
   const {
     mediaId, mediaType, title, episodeTitle, poster_path, season, episode,
-    isLive, isOffline, offlineFilePath, streamUrl, subtitles: subtitlesParam,
+    isLive, isOffline, offlineFilePath, streamUrl, year, releaseDate,
+    subtitles: subtitlesParam,
   } = params;
+
+  // The backend needs a title and year to reach the title-based providers —
+  // with only a TMDB id it resolves nothing. Prefer an explicit `year`, else
+  // take the year off whichever date param the caller supplied.
+  const playbackYear = useMemo(() => {
+    const explicit = Number(year);
+    if (Number.isFinite(explicit) && explicit > 1800) return explicit;
+    const match = String(releaseDate || '').match(/^(\d{4})/);
+    return match ? Number(match[1]) : undefined;
+  }, [year, releaseDate]);
+
+  const playbackTitle = useMemo(() => {
+    const value = String(title || '').trim();
+    return value || undefined;
+  }, [title]);
 
   const directStreamUrl = useMemo(() => {
     if (!streamUrl) return null;
@@ -241,11 +257,11 @@ const VideoPlayerScreen = () => {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [error, setError] = useState<any>(null);
   const [isUnmounting, setIsUnmounting] = useState(false);
-  const [videoNaturalSize, setVideoNaturalSize] = useState(null);
-  const [isAtLiveEdge, setIsAtLiveEdge] = useState(true);
+  const [_videoNaturalSize, _setVideoNaturalSize] = useState<any>(null);
+  const [isAtLiveEdge, _setIsAtLiveEdge] = useState(true);
   const [showSubtitlesModal, setShowSubtitlesModal] = useState(false);
   const [retryAttempts, setRetryAttempts] = useState(0);
-  const [playerReady, setPlayerReady] = useState(false);
+  const [_playerReady, setPlayerReady] = useState(false);
   const [isLoadingStream, setIsLoadingStream] = useState(false);
   const [subtitleTracks, setSubtitleTracks] = useState<any[]>([]);
   const [selectedSubtitleTrack, setSelectedSubtitleTrack] = useState<any>(null);
@@ -253,13 +269,13 @@ const VideoPlayerScreen = () => {
   useEffect(() => {
     const lockLandscape = async () => {
       try { await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE); logDebug('🔒 Locked to landscape'); }
-      catch (e) { logWarn('Failed to lock orientation:', e); }
+      catch (e: any) { logWarn('Failed to lock orientation:', e); }
     };
     lockLandscape();
     return () => {
       const restore = async () => {
         try { await ScreenOrientation.unlockAsync(); logDebug('🔓 Unlocked orientation'); }
-        catch (e) { logWarn('Failed to unlock orientation:', e); }
+        catch (e: any) { logWarn('Failed to unlock orientation:', e); }
       };
       restore();
     };
@@ -273,7 +289,7 @@ const VideoPlayerScreen = () => {
       activePlayer.staysActiveInBackground = true;
       activePlayer.volume = 1.0;
       logDebug('Player configured');
-    } catch (e) { logError('Player config error', e); }
+    } catch (e: any) { logError('Player config error', e); }
   }, [activePlayer]);
 
   useEffect(() => {
@@ -287,14 +303,13 @@ const VideoPlayerScreen = () => {
           setSelectedSubtitleTrack(autoSelect);
           logInfo('📝 Auto-selected subtitle:', autoSelect?.lang || 'en');
         }
-      } catch (e) { logWarn('Failed to parse subtitles', e); }
+      } catch (e: any) { logWarn('Failed to parse subtitles', e); }
     }
   }, [subtitlesParam]);
 
   const videoControls = useVideoControls(activePlayer);
   const {
-    showControls, isPlaying, isMuted, opacityAnim, setShowControls, setIsPlaying,
-    setIsSeeking: setIsSeekingForControls, toggleControls, togglePlayPause, toggleMute,
+    showControls, isPlaying, isMuted, opacityAnim, setShowControls, setIsSeeking: setIsSeekingForControls, toggleControls, toggleMute,
     seekBackward, seekForward, startControlsTimer, cleanup: cleanupControls,
   } = videoControls;
 
@@ -313,16 +328,14 @@ const VideoPlayerScreen = () => {
   const {
     resumeTime, position, duration, lastPositionRef, lastPositionTimeRef,
     manualFinishTriggeredRef, setResumeTime, setPosition, setDuration,
-    checkSavedProgress, saveProgress, handleDurationChange, lastSaveTimeRef,
-  } = watchProgress;
+    saveProgress, } = watchProgress;
 
   const subtitles = useSubtitles(
     String(mediaId || ''), String(mediaType || 'movie'),
     season ? Number(season) : undefined, episode ? Number(episode) : undefined
   );
   const {
-    availableLanguages, selectedLanguage, loadingSubtitles, setSubtitlesEnabled,
-    loadSubtitlePreference, findSubtitles, selectSubtitle,
+    availableLanguages, selectedLanguage, loadingSubtitles, loadSubtitlePreference, findSubtitles, selectSubtitle,
     subtitlesEnabled, currentSubtitleText: hookSubtitleText,
     updateCurrentSubtitle, loadTrackSubtitle, loadLocalSubtitle, localSubtitleName,
     stylePrefs: subtitleStylePrefs, updateStylePrefs: updateSubtitleStylePrefs, resetStylePrefs: resetSubtitleStylePrefs,
@@ -361,7 +374,7 @@ const VideoPlayerScreen = () => {
       if (!outcome.success) {
         Alert.alert('Subtitle import failed', outcome.error || 'Could not read that file.');
       }
-    } catch (e) {
+    } catch (e: any) {
       logError('Subtitle import failed', e);
       Alert.alert('Subtitle import failed', 'Something went wrong picking that file.');
     }
@@ -382,7 +395,7 @@ const VideoPlayerScreen = () => {
     }
     if (activePlayer) {
       try { if (activePlayer.isPlaying) await activePlayer.pause(); }
-      catch (e) { logWarn('Error pausing player on reload', e); }
+      catch (e: any) { logWarn('Error pausing player on reload', e); }
     }
     buffering.setShowBufferingAlert(false);
     autoPlay.reset();
@@ -404,8 +417,7 @@ const VideoPlayerScreen = () => {
 
   const buffering = useBuffering(handleReload, contentId);
   const {
-    isBufferingVideo, showBufferingAlert, setIsBufferingVideo, setShowBufferingAlert,
-    startBufferingTimer, clearBufferingTimer, handleKeepBuffering, handleRetryExtraction,
+    isBufferingVideo, showBufferingAlert, setIsBufferingVideo, clearBufferingTimer, handleKeepBuffering, handleRetryExtraction,
   } = buffering;
 
   const handleGoBack = useCallback((isEndOfSeries = false) => {
@@ -415,9 +427,9 @@ const VideoPlayerScreen = () => {
     try {
       if (isNativeMode && !isEndOfSeries) {
         try { saveProgress(lastPositionRef.current); }
-        catch (saveErr) { logWarn('Save progress error on go back', saveErr); }
+        catch (saveErr: any) { logWarn('Save progress error on go back', saveErr); }
       }
-      if (activePlayer) { try { activePlayer.pause(); } catch (e) {} }
+      if (activePlayer) { try { activePlayer.pause(); } catch (e: any) {} }
       ScreenOrientation.unlockAsync()
         .catch((e) => logWarn('Failed to unlock orientation', e))
         .finally(() => {
@@ -427,15 +439,15 @@ const VideoPlayerScreen = () => {
             try {
               if (isLive === 'true') r.replace('/(tabs)');
               else r.replace({ pathname: `/movie/${mediaId}`, params: { mediaType: String(mediaType || 'movie'), title: String(title || ''), poster_path: String(poster_path || '') } });
-            } catch (e) {
+            } catch (e: any) {
               logError('Navigation error', e);
-              try { if (r.canGoBack()) r.back(); else r.replace('/(tabs)'); } catch (e2) {}
+              try { if (r.canGoBack()) r.back(); else r.replace('/(tabs)'); } catch (e2: any) {}
             }
           }, 100);
         });
-    } catch (e) {
+    } catch (e: any) {
       logError('Error in handleGoBack', e);
-      try { if (routerRef.current?.canGoBack()) routerRef.current.back(); else routerRef.current?.replace('/(tabs)'); } catch (e2) {}
+      try { if (routerRef.current?.canGoBack()) routerRef.current.back(); else routerRef.current?.replace('/(tabs)'); } catch (e2: any) {}
     }
   }, [isUnmounting, activePlayer, mediaId, mediaType, title, poster_path, saveProgress, isNativeMode, isLive]);
 
@@ -443,17 +455,18 @@ const VideoPlayerScreen = () => {
     mediaId: String(mediaId || ''), mediaType: String(mediaType || 'movie'),
     season: season ? Number(season) : undefined, episode: episode ? Number(episode) : undefined,
     title: String(title || ''), poster_path: String(poster_path || ''),
+    year: playbackYear, releaseDate: String(releaseDate || ''),
     position, duration, isLiveStream: false, player: activePlayer, router,
     handleGoBack, setIsUnmounting,
   });
   const {
-    autoPlayEnabled, showNextEpisodeButton, nextEpisodeDetailsRef, setAutoPlayEnabled,
-    loadAutoPlaySetting, findNextEpisode, playNextEpisode,
+    autoPlayEnabled, showNextEpisodeButton, nextEpisodeDetailsRef, findNextEpisode, playNextEpisode,
   } = autoPlay;
 
   const playback = useLicensedPlaybackSource({
     mediaId: String(mediaId || ''), mediaType: String(mediaType || 'movie'),
     season: season ? Number(season) : undefined, episode: episode ? Number(episode) : undefined,
+    title: playbackTitle, year: playbackYear,
     isOffline: isOffline === 'true', offlineFilePath: String(offlineFilePath || ''),
     directStreamUrl: isNativeMode ? directStreamUrl : null,
   });
@@ -530,7 +543,7 @@ const VideoPlayerScreen = () => {
           setLoading(false); setIsInitialLoading(false);
         }
       });
-    } catch (e) { logError('Failed to add player listener', e); }
+    } catch (e: any) { logError('Failed to add player listener', e); }
     return () => { try { statusListener?.remove?.(); } catch {} };
   }, [activePlayer]);
 
@@ -550,7 +563,7 @@ const VideoPlayerScreen = () => {
           }
         }
       });
-    } catch (e) { logError('Failed to add playingChange listener', e); }
+    } catch (e: any) { logError('Failed to add playingChange listener', e); }
     return () => { try { playingListener?.remove?.(); } catch {} };
   }, [activePlayer]);
 
@@ -719,10 +732,10 @@ const VideoPlayerScreen = () => {
       logInfo('🔄 Unmounting VideoPlayerScreen');
       isMountedRef.current = false; setIsUnmounting(true);
       try {
-        if (isNativeMode) { try { saveProgress(lastPositionRef.current); } catch (e) {} }
-        if (activePlayer && typeof activePlayer.pause === 'function') { try { activePlayer.pause(); } catch (e) {} }
+        if (isNativeMode) { try { saveProgress(lastPositionRef.current); } catch (e: any) {} }
+        if (activePlayer && typeof activePlayer.pause === 'function') { try { activePlayer.pause(); } catch (e: any) {} }
         backHandler.remove(); cleanupControls(); cleanupGestures(); clearBufferingTimer();
-      } catch (e) { logError('Cleanup error', e); }
+      } catch (e: any) { logError('Cleanup error', e); }
     };
   }, []);
 
@@ -736,7 +749,7 @@ const VideoPlayerScreen = () => {
   }, [error, handleGoBack]);
 
   useEffect(() => {
-    const loadPref = async () => { try { await loadSubtitlePreference(); } catch (e) {} };
+    const loadPref = async () => { try { await loadSubtitlePreference(); } catch (e: any) {} };
     loadPref();
   }, [loadSubtitlePreference]);
 
@@ -794,21 +807,21 @@ const VideoPlayerScreen = () => {
     try {
       setError({ message: `Video playback error: ${errorMsg}`, details: errorMsg });
       setLoading(false); setIsInitialLoading(false);
-    } catch (e) { logError('Failed to set error state', e); }
+    } catch (e: any) { logError('Failed to set error state', e); }
   });
 
   const toggleSubtitlesModal = async () => {
     if (!isNativeMode) return;
     if (!showSubtitlesModal) {
-      if (activePlayer && isPlaying) { try { activePlayer.pause(); } catch (e) {} }
+      if (activePlayer && isPlaying) { try { activePlayer.pause(); } catch (e: any) {} }
       try {
         await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
         await new Promise((resolve) => setTimeout(resolve, 100));
-      } catch (e) {}
+      } catch (e: any) {}
       setShowSubtitlesModal(true);
     } else {
       setShowSubtitlesModal(false);
-      try { await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE); } catch (e) {}
+      try { await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE); } catch (e: any) {}
     }
     setShowControls(true);
   };
@@ -958,7 +971,7 @@ const VideoPlayerScreen = () => {
                 currentSeason={season ? Number(season) : undefined}
                 currentEpisode={episode ? Number(episode) : undefined}
                 onSelectSeason={handleSelectSeasonForModal}
-                onSelectEpisode={(episodeDetails) => {
+                onSelectEpisode={(episodeDetails: any) => {
                   setIsUnmounting(true);
                   if (activePlayer) activePlayer.pause();
                   const queryParams = new URLSearchParams({
@@ -994,7 +1007,7 @@ const VideoPlayerScreen = () => {
                 { code: '__import_local__', name: '📁 Import subtitle from device…' },
               ]}
               selectedLanguage={selectedLanguage || 'en'}
-              onSelectLanguage={(langCode) => {
+              onSelectLanguage={(langCode: any) => {
                 if (langCode === '__import_local__') {
                   handleImportLocalSubtitle();
                   return;

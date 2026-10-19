@@ -88,16 +88,18 @@ export class DeviceManager {
       const existing = await AsyncStorage.getItem(DEVICE_PROFILE_KEY);
       if (existing) {
         this.profile = JSON.parse(existing);
-        this.profile.lastActive = new Date().toISOString();
-        await this.saveProfile(this.profile);
-        return this.profile;
+        if (this.profile) {
+          this.profile.lastActive = new Date().toISOString();
+          await this.saveProfile(this.profile);
+          return this.profile;
+        }
       }
 
       // Create new profile
       this.profile = await this.createNewProfile();
       await this.saveProfile(this.profile);
       return this.profile;
-    } catch (error) {
+    } catch (error: any) {
       console.error('[DeviceManager] Initialization error:', error);
       this.profile = this.createEmergencyProfile();
       return this.profile;
@@ -157,7 +159,7 @@ export class DeviceManager {
         await AsyncStorage.setItem(DEVICE_KEY, deviceKey);
       }
       return deviceKey;
-    } catch (error) {
+    } catch (error: any) {
       console.warn('[DeviceManager] Device key error:', error);
       return 'device-' + Date.now();
     }
@@ -184,7 +186,7 @@ export class DeviceManager {
       
       await AsyncStorage.setItem(DEVICE_ALPHANUMERIC_ID_KEY, alphanumeric);
       return alphanumeric;
-    } catch (error) {
+    } catch (error: any) {
       console.warn('[DeviceManager] Alphanumeric ID error:', error);
       return 'user-' + Date.now().toString(36);
     }

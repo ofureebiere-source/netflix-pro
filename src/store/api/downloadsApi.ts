@@ -14,8 +14,8 @@ export const downloadsApi = createApi({
       providesTags: ['Downloads'],
     }),
     getDownloadProgress: builder.query({
-      query: ({ id }) => /downloads//progress,
-      providesTags: (result, error, { id }) => [{ type: 'DownloadProgress', id }],
+      query: ({ id }) => `/downloads/${id}/progress`,
+      providesTags: (_result, _error, { id }) => [{ type: 'DownloadProgress', id }],
     }),
   }),
 });

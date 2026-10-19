@@ -143,7 +143,7 @@ const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
  * that has not reported yet should keep the app in its default dark look
  * rather than flash a light UI.
  */
-export function themeForScheme(deviceTheme: 'light' | 'dark' | null | undefined): {
+export function themeForScheme(deviceTheme: 'light' | 'dark' | 'unspecified' | null | undefined): {
   isDark: boolean;
   colors: ThemeColors;
 } {

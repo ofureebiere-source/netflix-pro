@@ -122,7 +122,7 @@ const COUNTRY_TO_LANGUAGE: Record<string, string> = {
   'MY': 'ms', 'ID': 'id', 'SG': 'en', 'NZ': 'en', 'AU': 'en',
   'CA': 'en', 'ZA': 'en', 'NL': 'nl', 'BE': 'nl', 'CH': 'de',
   'AT': 'de', 'SE': 'sv', 'NO': 'no', 'DK': 'da', 'FI': 'fi',
-  'BR': 'pt', 'MX': 'es', 'AR': 'es', 'CL': 'es', 'CO': 'es',
+  'BR': 'pt', 'MX': 'es', 'CL': 'es', 'CO': 'es',
   'PE': 'es', 'PK': 'ur', 'BD': 'bn', 'LK': 'si', 'NP': 'ne',
   'BT': 'dz', 'MV': 'dv', 'MO': 'zh', 'MM': 'my', 'KH': 'km',
   'LA': 'lo', 'BN': 'ms', 'TL': 'pt', 'IL': 'he', 'SA': 'ar',
@@ -131,11 +131,10 @@ const COUNTRY_TO_LANGUAGE: Record<string, string> = {
   'QA': 'ar', 'BH': 'ar', 'OM': 'ar', 'YE': 'ar', 'SY': 'ar',
   'IR': 'fa', 'IQ': 'ar', 'AF': 'ps', 'AZ': 'az', 'GE': 'ka',
   'AM': 'hy', 'AL': 'sq', 'BA': 'bs', 'BG': 'bg', 'HR': 'hr',
-  'CZ': 'cs', 'DK': 'da', 'EE': 'et', 'HU': 'hu', 'IS': 'is',
+  'CZ': 'cs', 'EE': 'et', 'HU': 'hu', 'IS': 'is',
   'IE': 'en', 'LV': 'lv', 'LT': 'lt', 'LU': 'lb', 'MT': 'mt',
   'PL': 'pl', 'RO': 'ro', 'SK': 'sk', 'SI': 'sl', 'UA': 'uk',
-  'BY': 'be', 'MD': 'ro', 'GE': 'ka', 'AM': 'hy', 'AZ': 'az',
-  'KZ': 'kk', 'UZ': 'uz', 'TM': 'tk', 'KG': 'ky', 'TJ': 'tg',
+  'BY': 'be', 'MD': 'ro', 'KZ': 'kk', 'UZ': 'uz', 'TM': 'tk', 'KG': 'ky', 'TJ': 'tg',
   'MN': 'mn', 'KP': 'ko',
 };
 
@@ -222,7 +221,7 @@ export class KuryanaMetadataAdapter {
       });
       mapped = this.sortResults(mapped, effectiveSortBy);
       return mapped.slice(0, limit);
-    } catch (error) {
+    } catch (error: any) {
       console.error('[KuryanaMetadataAdapter] Search failed:', error);
       return [];
     }
@@ -257,7 +256,7 @@ export class KuryanaMetadataAdapter {
               allResults.push(...mapped);
               console.log(`[KuryanaMetadataAdapter] Found ${mapped.length} results for "${countryName}"`);
             }
-          } catch (error) {
+          } catch (error: any) {
             console.log(`[KuryanaMetadataAdapter] Search by country "${countryName}" failed:`, error);
           }
         }
@@ -303,7 +302,7 @@ export class KuryanaMetadataAdapter {
               allResults.push(...mapped);
               console.log(`[KuryanaMetadataAdapter] Found ${mapped.length} results for "${langName}"`);
             }
-          } catch (error) {
+          } catch (error: any) {
             console.log(`[KuryanaMetadataAdapter] Search by language "${langName}" failed:`, error);
           }
         }
@@ -323,7 +322,7 @@ export class KuryanaMetadataAdapter {
               allResults.push(...mapped);
               console.log(`[KuryanaMetadataAdapter] Found ${mapped.length} results for "${genre}"`);
             }
-          } catch (error) {
+          } catch (error: any) {
             console.log(`[KuryanaMetadataAdapter] Search by genre "${genre}" failed:`, error);
           }
         }
@@ -344,7 +343,7 @@ export class KuryanaMetadataAdapter {
               console.log(`[KuryanaMetadataAdapter] Found ${mapped.length} results for "${term}"`);
               break;
             }
-          } catch (error) {
+          } catch (error: any) {
             console.log(`[KuryanaMetadataAdapter] Fallback search "${term}" failed:`, error);
           }
         }
@@ -365,18 +364,18 @@ export class KuryanaMetadataAdapter {
       
       console.log(`[KuryanaMetadataAdapter] Discover returning ${finalResults.length} results (from ${allResults.length} raw)`);
       return finalResults;
-    } catch (error) {
+    } catch (error: any) {
       console.error('[KuryanaMetadataAdapter] Discover failed:', error);
       return [];
     }
   }
 
-  async getById(id: string, type: 'movie' | 'tv'): Promise<IMetadataResult | null> {
+  async getById(id: string, _type: 'movie' | 'tv'): Promise<IMetadataResult | null> {
     try {
       const item = await kuryanaApiService.getDramaDetails(id);
       if (!item) return null;
       return this.mapKuryanaDrama(item);
-    } catch (error) {
+    } catch (error: any) {
       console.error(`[KuryanaMetadataAdapter] Get by ID ${id} failed:`, error);
       return null;
     }
@@ -386,7 +385,7 @@ export class KuryanaMetadataAdapter {
     try {
       const results = await kuryanaApiService.getDramaReviews(slug);
       return results.slice(0, limit);
-    } catch (error) {
+    } catch (error: any) {
       console.error('[KuryanaMetadataAdapter] GetReviews failed:', error);
       return [];
     }
@@ -396,7 +395,7 @@ export class KuryanaMetadataAdapter {
     try {
       const results = await kuryanaApiService.getDramaCast(slug);
       return results.slice(0, limit);
-    } catch (error) {
+    } catch (error: any) {
       console.error('[KuryanaMetadataAdapter] GetCast failed:', error);
       return [];
     }
@@ -406,7 +405,7 @@ export class KuryanaMetadataAdapter {
     try {
       const results = await kuryanaApiService.getDramaEpisodes(slug);
       return results.slice(0, limit);
-    } catch (error) {
+    } catch (error: any) {
       console.error('[KuryanaMetadataAdapter] GetEpisodes failed:', error);
       return [];
     }
@@ -418,7 +417,7 @@ export class KuryanaMetadataAdapter {
       return results.slice(0, limit).map((item: KuryanaDrama) =>
         this.mapKuryanaDrama(item)
       );
-    } catch (error) {
+    } catch (error: any) {
       console.error('[KuryanaMetadataAdapter] GetSeasonal failed:', error);
       return [];
     }

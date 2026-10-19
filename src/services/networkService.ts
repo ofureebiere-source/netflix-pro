@@ -58,6 +58,7 @@ export enum NetworkStatus {
 }
 
 export class NetworkService extends EventEmitter {
+  emit: any;
   private static instance: NetworkService;
   private isConnected = false;
   private isWifi = false;
@@ -81,7 +82,7 @@ export class NetworkService extends EventEmitter {
       this.unsubscribe = NetInfo.addEventListener(this.handleNetworkChange.bind(this));
       this.isInitialized = true;
       console.log('[Network] ✅ Initialized');
-    } catch (error) {
+    } catch (error: any) {
       console.warn('[Network] Failed to initialize:', error);
       this.isInitialized = true;
     }

@@ -32,7 +32,7 @@ const checkJsUpdate = async () => {
       return true;
     }
     return false;
-  } catch (error) {
+  } catch (error: any) {
     console.error('expo-updates check failed:', error);
     return false;
   }
@@ -62,7 +62,7 @@ const checkNativeUpdate = async () => {
       };
     }
     return null;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Native update check failed:', error);
     return null;
   }
@@ -184,7 +184,7 @@ export const getCheckForUpdatesSetting = async () => {
 export const setCheckForUpdatesSetting = async (isEnabled: boolean) => {
   try {
     await AsyncStorage.setItem(CHECK_FOR_UPDATES_KEY, JSON.stringify(isEnabled));
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error setting check for updates:', error);
   }
 };

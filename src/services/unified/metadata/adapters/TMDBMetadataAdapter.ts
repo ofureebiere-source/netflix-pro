@@ -25,7 +25,6 @@ import tmdbApi from '../TMDBMetadata';
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p';
 const TMDB_POSTER_SIZE = 'w500';
 const TMDB_BACKDROP_SIZE = 'w1280';
-const TMDB_PROFILE_SIZE = 'w185';
 
 // Language mapping for fallback detection
 const LANGUAGE_MAP: Record<string, string[]> = {
@@ -118,10 +117,6 @@ const GENRE_NAME_TO_ID: Record<string, number> = {
 };
 
 // ─── FIX: TMDB genre ID to name mapping (reverse lookup) ───
-const GENRE_ID_TO_NAME: Record<number, string> = Object.entries(GENRE_NAME_TO_ID).reduce(
-  (acc, [name, id]) => ({ ...acc, [id]: name }),
-  {}
-);
 
 export class TMDBMetadataAdapter {
   readonly name = 'TMDB';
@@ -165,7 +160,7 @@ export class TMDBMetadataAdapter {
     withCompanies?: string[];
     withoutGenres?: string[];
     includeAdult?: boolean;
-    sortBy?: string;
+    sortBy?: DiscoverFilters['sortBy'];
     language?: string;
     watchRegion?: string;
     extended?: string;
@@ -194,7 +189,6 @@ export class TMDBMetadataAdapter {
       withoutGenres,
       includeAdult = false,
       sortBy = 'popularity.desc',
-      language,
       watchRegion,
     } = options;
 
@@ -316,7 +310,7 @@ export class TMDBMetadataAdapter {
       processed = this.sortResults(processed, sortBy);
 
       return processed.slice(0, limit);
-    } catch (error) {
+    } catch (error: any) {
       console.error('[TMDBMetadataAdapter] Search failed:', error);
       return [];
     }
@@ -367,7 +361,7 @@ export class TMDBMetadataAdapter {
           try {
             const movieResults = await this.fetchDiscoverMovies(pageParams);
             results.push(...movieResults);
-          } catch (error) {
+          } catch (error: any) {
             console.error('[TMDBMetadataAdapter] Discover movies failed:', error);
           }
         }
@@ -377,7 +371,7 @@ export class TMDBMetadataAdapter {
           try {
             const showResults = await this.fetchDiscoverShows(pageParams);
             results.push(...showResults);
-          } catch (error) {
+          } catch (error: any) {
             console.error('[TMDBMetadataAdapter] Discover shows failed:', error);
           }
         }
@@ -400,7 +394,7 @@ export class TMDBMetadataAdapter {
             try {
               const movieResults = await this.fetchDiscoverMovies(fallbackParams);
               results.push(...movieResults);
-            } catch (error) {
+            } catch (error: any) {
               console.error('[TMDBMetadataAdapter] Fallback discover movies failed:', error);
             }
           }
@@ -409,7 +403,7 @@ export class TMDBMetadataAdapter {
             try {
               const showResults = await this.fetchDiscoverShows(fallbackParams);
               results.push(...showResults);
-            } catch (error) {
+            } catch (error: any) {
               console.error('[TMDBMetadataAdapter] Fallback discover shows failed:', error);
             }
           }
@@ -445,7 +439,7 @@ export class TMDBMetadataAdapter {
 
       console.log(`[TMDBMetadataAdapter] Discover returning ${Math.min(sorted.length, limit)} results`);
       return sorted.slice(0, limit);
-    } catch (error) {
+    } catch (error: any) {
       console.error('[TMDBMetadataAdapter] Discover failed:', error);
       return [];
     }
@@ -477,7 +471,7 @@ export class TMDBMetadataAdapter {
       if (!item) return null;
 
       return this.mapDetailedResult(item, type);
-    } catch (error) {
+    } catch (error: any) {
       console.error(`[TMDBMetadataAdapter] Get by ID ${id} failed:`, error);
       return null;
     }
@@ -493,7 +487,7 @@ export class TMDBMetadataAdapter {
       const results = await tmdbApi.fetchTrending('day', 'all');
       const mapped = this.mapSearchResults(results, 'tmdb');
       return mapped.slice(0, limit);
-    } catch (error) {
+    } catch (error: any) {
       console.error('[TMDBMetadataAdapter] GetTrending failed:', error);
       return [];
     }
@@ -549,7 +543,7 @@ export class TMDBMetadataAdapter {
       }
 
       return [];
-    } catch (error) {
+    } catch (error: any) {
       console.error('[TMDBMetadataAdapter] GetTrendingByCategory failed:', error);
       return [];
     }
@@ -568,7 +562,7 @@ export class TMDBMetadataAdapter {
       const url = `https://api.themoviedb.org/3/discover/movie`;
       const response = await this.fetchFromTMDB(url, params);
       return this.mapSearchResults(response.results || [], 'tmdb');
-    } catch (error) {
+    } catch (error: any) {
       console.error('[TMDBMetadataAdapter] Fetch discover movies failed:', error);
       return [];
     }
@@ -583,7 +577,7 @@ export class TMDBMetadataAdapter {
       const url = `https://api.themoviedb.org/3/discover/tv`;
       const response = await this.fetchFromTMDB(url, params);
       return this.mapSearchResults(response.results || [], 'tmdb');
-    } catch (error) {
+    } catch (error: any) {
       console.error('[TMDBMetadataAdapter] Fetch discover shows failed:', error);
       return [];
     }
@@ -729,7 +723,7 @@ export class TMDBMetadataAdapter {
   private resolveGenreNames(genreNames: string[]): number[] {
     try {
       return genreNames.map(name => GENRE_NAME_TO_ID[name] || 0).filter(id => id > 0);
-    } catch (error) {
+    } catch (error: any) {
       console.warn('[TMDBMetadataAdapter] Failed to resolve genre names:', error);
       return [];
     }

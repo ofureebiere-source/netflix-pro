@@ -13,7 +13,7 @@ const DownloadedMediaCard = ({
   onPlay,
   onDelete,
   onLongPress,
-}) => {
+}: any) => {
   const {
     id,
     title,
@@ -69,7 +69,7 @@ const DownloadedMediaCard = ({
       <View style={styles.imageContainer}>
         {posterPath ? (
           <Image
-            source={{ uri: getImageUrl(posterPath) }}
+            source={{ uri: getImageUrl(posterPath) ?? undefined }}
             style={styles.image}
             resizeMode="cover"
           />

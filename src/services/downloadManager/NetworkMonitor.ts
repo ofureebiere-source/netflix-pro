@@ -1,6 +1,10 @@
 import NetInfo from '@react-native-community/netinfo';
 
 class NetworkMonitor {
+  state: any;
+  subscribers: any;
+  unsubscribe: any;
+  isStarted: any;
   constructor() {
     this.state = {
       isConnected: false,
@@ -34,7 +38,7 @@ class NetworkMonitor {
     this.isStarted = false;
   }
 
-  updateState(netInfoState) {
+  updateState(netInfoState: any) {
     const previousState = { ...this.state };
 
     this.state = {
@@ -79,7 +83,7 @@ class NetworkMonitor {
     return true;
   }
 
-  subscribe(callback) {
+  subscribe(callback: any) {
     this.subscribers.add(callback);
     callback(this.state);
     return () => {
@@ -88,10 +92,10 @@ class NetworkMonitor {
   }
 
   notifySubscribers() {
-    this.subscribers.forEach(callback => {
+    this.subscribers.forEach((callback: any) => {
       try {
         callback(this.state);
-      } catch (error) {
+      } catch (error: any) {
         // Subscriber error, ignore
       }
     });
@@ -102,7 +106,7 @@ class NetworkMonitor {
       const state = await NetInfo.fetch();
       this.updateState(state);
       return this.state;
-    } catch (error) {
+    } catch (error: any) {
       return this.state;
     }
   }

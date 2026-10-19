@@ -20,7 +20,6 @@ export const parseDeepLink = (url: string) => {
   try {
     const parsed = new URL(url);
     const path = parsed.pathname;
-    const params = Object.fromEntries(parsed.searchParams);
 
     if (path.startsWith('/details/')) {
       const [, mediaType, mediaId] = path.split('/');

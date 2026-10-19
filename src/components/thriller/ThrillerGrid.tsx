@@ -1,5 +1,5 @@
 // src/components/thriller/ThrillerGrid.tsx
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -61,7 +61,7 @@ const ThrillerCell: React.FC<{
   index: number;
   isVisible: boolean;
   onPress: (item: any) => void;
-}> = ({ item, index, isVisible, onPress }) => {
+}> = ({ item, index, onPress }) => {
   const { colors } = useTheme();
   const isLastInRow = index % GRID_COLUMNS === GRID_COLUMNS - 1;
 

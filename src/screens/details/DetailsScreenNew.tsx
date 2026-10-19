@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions,
-  Animated, Easing, Platform, RefreshControl, Linking, FlatList, LayoutAnimation, UIManager,
+  Animated, Easing, Platform, RefreshControl, FlatList, UIManager,
 } from 'react-native';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -30,7 +30,7 @@ import {
 } from '../../services/unified/metadata/TMDBMetadata';
 import { getDownloadSettings } from '../../utils/downloadStorage';
 import { buildFFmpegHeaders } from '../../utils/streamHeaders';
-import { getPlaybackSources, groupSourcesByQuality, NoSourceAvailableError } from '../../services/licensedPlayback/LicensedPlaybackService';
+import { getPlaybackSources, groupSourcesByQuality, NoSourceAvailableError, type LicensedPlaybackSource } from '../../services/licensedPlayback/LicensedPlaybackService';
 import { GlassButton } from '../../components/glass';
 import { SPACING, RADIUS } from '../../theme/tokens';
 
@@ -154,28 +154,12 @@ const DetailsScreenNew: React.FC = () => {
     year: routeYear, overview: routeOverview, genres: routeGenres, backdrop: routeBackdrop,
     vote_count: routeVoteCount, runtime: routeRuntime, certification: routeCertification,
     tagline: routeTagline, status: routeStatus, release_date: routeReleaseDate,
-    popularity: routePopularity, original_language: routeOriginalLanguage,
-    origin_country: routeOriginCountry, number_of_seasons: routeNumberOfSeasons,
-    number_of_episodes: routeNumberOfEpisodes, last_air_date: routeLastAirDate,
-    in_production: routeInProduction, networks: routeNetworks, budget: routeBudget,
-    revenue: routeRevenue, production_companies: routeProductionCompanies,
-    production_countries: routeProductionCountries, spoken_languages: routeSpokenLanguages,
-    watch_providers: routeWatchProviders, keywords: routeKeywords,
-    belongs_to_collection: routeBelongsToCollection, cast: routeCast,
-    display_seasons: routeDisplaySeasons,
+    popularity: routePopularity, number_of_seasons: routeNumberOfSeasons,
+    number_of_episodes: routeNumberOfEpisodes, display_seasons: routeDisplaySeasons,
   } = params;
 
   const parsedGenresRaw = routeGenres ? JSON.parse(String(routeGenres)) : [];
   const parsedGenres = mapGenreIdsToNames(parsedGenresRaw);
-  const parsedOriginCountry = routeOriginCountry ? JSON.parse(String(routeOriginCountry)) : [];
-  const parsedNetworks = routeNetworks ? JSON.parse(String(routeNetworks)) : [];
-  const parsedProductionCompanies = routeProductionCompanies ? JSON.parse(String(routeProductionCompanies)) : [];
-  const parsedProductionCountries = routeProductionCountries ? JSON.parse(String(routeProductionCountries)) : [];
-  const parsedSpokenLanguages = routeSpokenLanguages ? JSON.parse(String(routeSpokenLanguages)) : [];
-  const parsedWatchProviders = routeWatchProviders ? JSON.parse(String(routeWatchProviders)) : [];
-  const parsedKeywords = routeKeywords ? JSON.parse(String(routeKeywords)) : [];
-  const parsedBelongsToCollection = routeBelongsToCollection ? JSON.parse(String(routeBelongsToCollection)) : null;
-  const parsedCast = routeCast ? JSON.parse(String(routeCast)) : [];
   const parsedDisplaySeasons = routeDisplaySeasons ? JSON.parse(String(routeDisplaySeasons)) : [];
 
   const displayTitle = String(routeTitle || 'Untitled');
@@ -191,34 +175,28 @@ const DetailsScreenNew: React.FC = () => {
   const displayStatus = String(routeStatus || '');
   const displayReleaseDate = String(routeReleaseDate || '');
   const displayPopularity = parseFloat(String(routePopularity || '0'));
-  const displayOriginalLanguage = String(routeOriginalLanguage || '');
   const displayNumberOfSeasons = parseInt(String(routeNumberOfSeasons || '0'));
   const displayNumberOfEpisodes = parseInt(String(routeNumberOfEpisodes || '0'));
-  const displayLastAirDate = String(routeLastAirDate || '');
-  const displayInProduction = routeInProduction === 'true';
-  const displayBudget = parseInt(String(routeBudget || '0'));
-  const displayRevenue = parseInt(String(routeRevenue || '0'));
   const isTVShow = mediaType === 'tv';
   const tmdbId = parseInt(String(mediaId || '0'));
 
-  const { getItemById } = usePreloadedMediaStore();
-  const preloadedItem = useMemo(() => { return mediaId ? getItemById(String(mediaId)) : undefined; }, [mediaId, getItemById]);
+  const { getItemById: _getItemById } = usePreloadedMediaStore();
 
   const handleGoBack = useCallback(() => {
     if (router.canGoBack()) router.back(); else router.replace('/');
   }, []);
 
   const [selectedSeason, setSelectedSeason] = useState<number>(1);
-  const [seasonDetails, setSeasonDetails] = useState<any>(null);
+  const [_seasonDetails, setSeasonDetails] = useState<any>(null);
   const [downloadQualities, setDownloadQualities] = useState<DownloadQuality[]>([]);
   const [isLoadingSources, setIsLoadingSources] = useState(false);
-  const [selectedStreamUrl, setSelectedStreamUrl] = useState<string | null>(null);
-  const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
+  const [_selectedStreamUrl, setSelectedStreamUrl] = useState<string | null>(null);
+  const [_selectedProvider, setSelectedProvider] = useState<string | null>(null);
   const [isInWatchlist, setIsInWatchlist] = useState(false);
   const [episodePages, setEpisodePages] = useState<any[][]>([]);
   const [currentEpisodePage, setCurrentEpisodePage] = useState(0);
   const [isDownloadDropdownOpen, setIsDownloadDropdownOpen] = useState(false);
-  const [selectedQuality, setSelectedQuality] = useState<DownloadQuality | null>(null);
+  const [_selectedQuality, setSelectedQuality] = useState<DownloadQuality | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const ffmpegSessionIdRef = useRef<number | null>(null);
@@ -228,7 +206,7 @@ const DetailsScreenNew: React.FC = () => {
   const [selectedAllEpisodes, setSelectedAllEpisodes] = useState(false);
   const [selectedEpisodesForDownload, setSelectedEpisodesForDownload] = useState<EpisodeSelection[]>([]);
   const [episodeViewMode, setEpisodeViewMode] = useState<EpisodeViewMode>('grid');
-  const [qualityViewMode, setQualityViewMode] = useState<EpisodeViewMode>('grid');
+  const [_qualityViewMode, _setQualityViewMode] = useState<EpisodeViewMode>('grid');
   const [pendingQuality, setPendingQuality] = useState<DownloadQuality | null>(null);
   const [allComments, setAllComments] = useState<Comment[]>([]);
   const commentScrollY = useRef(new Animated.Value(0)).current;
@@ -241,7 +219,7 @@ const DetailsScreenNew: React.FC = () => {
   const [watcherCount, setWatcherCount] = useState(0);
   const [likeCount, setLikeCount] = useState(0);
   const [watchlistAdds, setWatchlistAdds] = useState(0);
-  const [saveCount, setSaveCount] = useState(0);
+  const [_saveCount, setSaveCount] = useState(0);
   const episodePagerRef = useRef<FlatList<any>>(null);
   const skeletonPulse = useRef(new Animated.Value(0.45)).current;
   const [streamData, setStreamData] = useState<{ url: string; quality: string; isTorrent: boolean; allSources: any[]; provider: string; } | null>(null);
@@ -460,7 +438,7 @@ const DetailsScreenNew: React.FC = () => {
       if (!isTVShow) setPendingQuality(best);
       setIsExtractingStream(false);
       return result;
-    } catch (error) {
+    } catch (error: any) {
       console.warn('[Details] Licensed playback source unavailable:', error);
       setIsExtractingStream(false);
       return null;
@@ -476,7 +454,7 @@ const DetailsScreenNew: React.FC = () => {
     try {
       const result = await extractStreamFromAPI();
       if (!result) showToast('No stream available for download');
-    } catch (error) {
+    } catch (error: any) {
       console.error('[Details] Failed to load streams:', error);
       showToast('Failed to load download sources');
     } finally { setIsLoadingSources(false); }
@@ -490,21 +468,32 @@ const DetailsScreenNew: React.FC = () => {
     addToContinueWatching({
       id: `${mediaType}_${mediaId}`, title: displayTitle, mediaType: mediaType as 'movie' | 'tv',
       tmdbId: String(mediaId), posterPath: posterPath, progress: 0, currentTime: 0, duration: 0,
+      // Stored so a later resume can still reach the title-based providers.
+      year: Number(String(displayReleaseDate).slice(0, 4)) || Number(displayYear) || undefined,
+      releaseDate: displayReleaseDate || undefined,
     });
     const torrentFlag = isTorrentUrl(url) ? 'true' : 'false';
+    // The player re-resolves the stream when it has no direct URL, and that
+    // resolve needs the title and year to reach the title-based providers.
+    const yearHint =
+      Number(String(displayReleaseDate).slice(0, 4)) || Number(displayYear) || undefined;
     if (isTVShow && seasonNum) {
       router.push({ pathname: '/player', params: {
         mediaId: String(mediaId), mediaType: 'tv', title: displayTitle, poster_path: posterPath,
         season: seasonNum, episode: episodeNum || 1, episodeTitle: epTitle || `Episode ${episodeNum || 1}`,
         streamUrl: url, isTorrent: torrentFlag,
+        year: yearHint ? String(yearHint) : undefined,
+        release_date: displayReleaseDate || undefined,
       }});
     } else {
       router.push({ pathname: '/player', params: {
         mediaId: String(mediaId), mediaType: 'movie', title: displayTitle, poster_path: posterPath,
         streamUrl: url, isTorrent: torrentFlag,
+        year: yearHint ? String(yearHint) : undefined,
+        release_date: displayReleaseDate || undefined,
       }});
     }
-  }, [displayTitle, mediaId, mediaType, displayPoster, addToContinueWatching, isTVShow]);
+  }, [displayTitle, mediaId, mediaType, displayPoster, addToContinueWatching, isTVShow, displayYear, displayReleaseDate]);
 
   // ─── Play a specific episode ───
   const handlePlayEpisode = useCallback(async (seasonNum: number, episodeNum: number, epTitle?: string) => {
@@ -519,7 +508,7 @@ const DetailsScreenNew: React.FC = () => {
       const result = await extractStreamFromAPI(seasonNum, episodeNum);
       if (result?.url) navigateToPlayer(result.url, seasonNum, episodeNum, epTitle);
       else showToast('No stream available for this episode');
-    } catch (err) {
+    } catch (err: any) {
       console.error('[Details] Episode stream error:', err);
       showToast('Failed to load episode stream');
     } finally { setIsExtractingStream(false); }
@@ -573,7 +562,7 @@ const DetailsScreenNew: React.FC = () => {
       const durationVal = mediaInfo ? mediaInfo.getDuration() : NaN;
       const durationSec = typeof durationVal === 'number' ? durationVal : parseFloat(String(durationVal));
       if (!Number.isNaN(durationSec) && durationSec > 0) totalDurationMs = durationSec * 1000;
-    } catch (probeError) {
+    } catch (probeError: any) {
       console.warn('[Download] Could not probe duration, falling back to indeterminate progress:', probeError);
     }
     try { FFmpegKitConfig.setLogLevel(Level.AV_LOG_INFO); } catch {}
@@ -630,17 +619,22 @@ const DetailsScreenNew: React.FC = () => {
             let epStreamUrl = streamData.url;
             let epReferer: string | undefined;
             try {
-              const epSource = await getPlaybackSource({
+              const [epSource] = await getPlaybackSources({
                 tmdbId,
                 mediaType: 'tv',
                 season: ep.seasonNumber,
                 episode: ep.episodeNumber,
+                title: displayTitle || undefined,
+                year:
+                  Number(String(displayReleaseDate).slice(0, 4)) ||
+                  Number(displayYear) ||
+                  undefined,
               });
               if (epSource.url) {
                 epStreamUrl = epSource.url;
                 epReferer = epSource.headers?.Referer;
               }
-            } catch (extractError) {
+            } catch (extractError: any) {
               console.warn(`[Download] Per-episode licensed source lookup failed for S${ep.seasonNumber}E${ep.episodeNumber}:`, extractError);
               throw new Error('Failed to fetch episode stream');
             }
@@ -693,7 +687,7 @@ const DetailsScreenNew: React.FC = () => {
         addNotification({ id: `download_fail_${Date.now()}`, title: 'Download Failed', message: `Failed to download ${displayTitle}`, type: 'error' });
         showToast('Download failed');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('[Download] Error:', error);
       setIsDownloading(false); setDownloadStatusText('Download Failed');
       addNotification({ id: `download_fail_${Date.now()}`, title: 'Download Failed', message: `Failed to download ${displayTitle}`, type: 'error' });

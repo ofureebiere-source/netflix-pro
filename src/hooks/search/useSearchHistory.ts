@@ -48,7 +48,7 @@ export function useSearchHistory(): UseSearchHistoryReturn {
       const data = await AsyncStorage.getItem(SEARCH_HISTORY_KEY);
       if (!data) return [];
       return JSON.parse(data);
-    } catch (err) {
+    } catch (err: any) {
       console.error('[useSearchHistory] Load error:', err);
       return [];
     }
@@ -58,7 +58,7 @@ export function useSearchHistory(): UseSearchHistoryReturn {
   const saveHistory = useCallback(async (items: SearchHistoryItem[]): Promise<void> => {
     try {
       await AsyncStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(items));
-    } catch (err) {
+    } catch (err: any) {
       console.error('[useSearchHistory] Save error:', err);
     }
   }, []);
@@ -70,7 +70,7 @@ export function useSearchHistory(): UseSearchHistoryReturn {
       setError(null);
       const items = await loadHistory();
       setHistory(items);
-    } catch (err) {
+    } catch (err: any) {
       setError(err instanceof Error ? err.message : 'Failed to load history');
       console.error('[useSearchHistory] Refresh error:', err);
     } finally {
@@ -105,7 +105,7 @@ export function useSearchHistory(): UseSearchHistoryReturn {
       
       await saveHistory(updated);
       setHistory(updated);
-    } catch (err) {
+    } catch (err: any) {
       setError(err instanceof Error ? err.message : 'Failed to add history item');
       console.error('[useSearchHistory] Add error:', err);
     }
@@ -118,7 +118,7 @@ export function useSearchHistory(): UseSearchHistoryReturn {
       const updated = currentHistory.filter(item => item.query !== query);
       await saveHistory(updated);
       setHistory(updated);
-    } catch (err) {
+    } catch (err: any) {
       setError(err instanceof Error ? err.message : 'Failed to remove history item');
       console.error('[useSearchHistory] Remove error:', err);
     }
@@ -129,7 +129,7 @@ export function useSearchHistory(): UseSearchHistoryReturn {
     try {
       await saveHistory([]);
       setHistory([]);
-    } catch (err) {
+    } catch (err: any) {
       setError(err instanceof Error ? err.message : 'Failed to clear history');
       console.error('[useSearchHistory] Clear error:', err);
     }
@@ -140,7 +140,7 @@ export function useSearchHistory(): UseSearchHistoryReturn {
     try {
       const items = await loadHistory();
       return items.slice(0, limit);
-    } catch (err) {
+    } catch (err: any) {
       console.error('[useSearchHistory] Get recent error:', err);
       return [];
     }

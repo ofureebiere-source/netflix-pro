@@ -9,7 +9,7 @@ const BrightnessSlider = ({
   brightnessSliderRef,
   brightnessPanResponder,
   showControls,
-}) => {
+}: any) => {
   if (!hasBrightnessPermission) return null;
 
   return (

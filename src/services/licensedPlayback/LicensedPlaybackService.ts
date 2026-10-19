@@ -203,7 +203,7 @@ async function getJson<T>(path: string, query: string): Promise<T> {
   let response: Response;
   try {
     response = await fetchWithTimeout(url, FAST_TIMEOUT_MS);
-  } catch (error) {
+  } catch (error: any) {
     if (!isAbortError(error)) throw error;
     // Likely a Render cold start — retry once with a much longer timeout.
     console.warn(
@@ -402,7 +402,7 @@ export async function getSubtitles(
 export async function checkBackendHealth(): Promise<LicensedHealth | null> {
   try {
     return await getJson<LicensedHealth>('/health', '');
-  } catch (error) {
+  } catch (error: any) {
     console.warn('[LicensedPlayback] Backend health check failed:', error);
     return null;
   }

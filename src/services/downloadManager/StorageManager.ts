@@ -1,12 +1,15 @@
 import * as LegacyFileSystem from 'expo-file-system/legacy';
 import {
-  getDownloadsDirectory,
-  getContentDirectory,
   ensureDirectoryExists,
   initializeDownloadsDirectory,
 } from '../../utils/downloadStorage';
+import {
+  getDownloadsDirectory,
+  getContentDirectory,
+} from '../../utils/storage';
 
 class StorageManager {
+  initialized: any;
   constructor() {
     this.initialized = false;
   }
@@ -17,7 +20,7 @@ class StorageManager {
     this.initialized = true;
   }
 
-  async downloadFile(url, destPath, options = {}) {
+  async downloadFile(url: any, destPath: any, options: { headers?: Record<string, string>; onProgress?: (p: any) => void } = {}) {
     const { headers = {}, onProgress } = options;
 
     try {
@@ -43,10 +46,10 @@ class StorageManager {
       const result = await downloadResumable.downloadAsync();
       return {
         success: true,
-        uri: result.uri,
-        status: result.status,
+        uri: result?.uri,
+        status: result?.status,
       };
-    } catch (error) {
+    } catch (error: any) {
       return {
         success: false,
         error: error.message,
@@ -54,7 +57,7 @@ class StorageManager {
     }
   }
 
-  async downloadFileSimple(url, destPath, headers = {}) {
+  async downloadFileSimple(url: any, destPath: any, headers = {}) {
     try {
       const dirPath = destPath.substring(0, destPath.lastIndexOf('/'));
       await ensureDirectoryExists(dirPath);
@@ -65,7 +68,7 @@ class StorageManager {
         uri: result.uri,
         status: result.status,
       };
-    } catch (error) {
+    } catch (error: any) {
       return {
         success: false,
         error: error.message,
@@ -73,63 +76,63 @@ class StorageManager {
     }
   }
 
-  async writeFile(filePath, content) {
+  async writeFile(filePath: any, content: any) {
     try {
       const dirPath = filePath.substring(0, filePath.lastIndexOf('/'));
       await ensureDirectoryExists(dirPath);
       await LegacyFileSystem.writeAsStringAsync(filePath, content);
       return true;
-    } catch (error) {
+    } catch (error: any) {
       return false;
     }
   }
 
-  async readFile(filePath) {
+  async readFile(filePath: any) {
     try {
       const info = await LegacyFileSystem.getInfoAsync(filePath);
       if (!info.exists) return null;
       return await LegacyFileSystem.readAsStringAsync(filePath);
-    } catch (error) {
+    } catch (error: any) {
       return null;
     }
   }
 
-  async deleteFile(filePath) {
+  async deleteFile(filePath: any) {
     try {
       const info = await LegacyFileSystem.getInfoAsync(filePath);
       if (info.exists) {
         await LegacyFileSystem.deleteAsync(filePath, { idempotent: true });
       }
       return true;
-    } catch (error) {
+    } catch (error: any) {
       return false;
     }
   }
 
-  async deleteDirectory(dirPath) {
+  async deleteDirectory(dirPath: any) {
     try {
       const info = await LegacyFileSystem.getInfoAsync(dirPath);
       if (info.exists) {
         await LegacyFileSystem.deleteAsync(dirPath, { idempotent: true });
       }
       return true;
-    } catch (error) {
+    } catch (error: any) {
       return false;
     }
   }
 
-  async fileExists(filePath) {
+  async fileExists(filePath: any) {
     try {
       const info = await LegacyFileSystem.getInfoAsync(filePath);
       return info.exists;
-    } catch (error) {
+    } catch (error: any) {
       return false;
     }
   }
 
-  async getFileInfo(filePath) {
+  async getFileInfo(filePath: any) {
     try {
-      const info = await LegacyFileSystem.getInfoAsync(filePath, { size: true });
+      const info = await LegacyFileSystem.getInfoAsync(filePath, { size: true } as any);
       if (!info.exists) return null;
       return {
         exists: info.exists,
@@ -137,22 +140,22 @@ class StorageManager {
         uri: info.uri,
         isDirectory: false,
       };
-    } catch (error) {
+    } catch (error: any) {
       return null;
     }
   }
 
-  async getDirectoryContents(dirPath) {
+  async getDirectoryContents(dirPath: any) {
     try {
       const info = await LegacyFileSystem.getInfoAsync(dirPath);
       if (!info.exists) return [];
       return await LegacyFileSystem.readDirectoryAsync(dirPath);
-    } catch (error) {
+    } catch (error: any) {
       return [];
     }
   }
 
-  async getDirectorySize(dirPath) {
+  async getDirectorySize(dirPath: any) {
     try {
       let totalSize = 0;
       const contents = await this.getDirectoryContents(dirPath);
@@ -160,19 +163,19 @@ class StorageManager {
       for (const item of contents) {
         const itemPath = `${dirPath}/${item}`;
         try {
-          const info = await LegacyFileSystem.getInfoAsync(itemPath, { size: true });
+          const info = await LegacyFileSystem.getInfoAsync(itemPath, { size: true } as any);
           if (info.isDirectory) {
             totalSize += await this.getDirectorySize(itemPath);
           } else if (info.exists) {
             totalSize += info.size || 0;
           }
-        } catch (e) {
+        } catch (e: any) {
           // Skip items that can't be read
         }
       }
 
       return totalSize;
-    } catch (error) {
+    } catch (error: any) {
       return 0;
     }
   }
@@ -181,7 +184,7 @@ class StorageManager {
     try {
       const freeSpace = await LegacyFileSystem.getFreeDiskStorageAsync();
       return freeSpace;
-    } catch (error) {
+    } catch (error: any) {
       return 0;
     }
   }
@@ -190,34 +193,34 @@ class StorageManager {
     try {
       const totalSpace = await LegacyFileSystem.getTotalDiskCapacityAsync();
       return totalSpace;
-    } catch (error) {
+    } catch (error: any) {
       return 0;
     }
   }
 
-  async copyFile(sourcePath, destPath) {
+  async copyFile(sourcePath: any, destPath: any) {
     try {
       const dirPath = destPath.substring(0, destPath.lastIndexOf('/'));
       await ensureDirectoryExists(dirPath);
       await LegacyFileSystem.copyAsync({ from: sourcePath, to: destPath });
       return true;
-    } catch (error) {
+    } catch (error: any) {
       return false;
     }
   }
 
-  async moveFile(sourcePath, destPath) {
+  async moveFile(sourcePath: any, destPath: any) {
     try {
       const dirPath = destPath.substring(0, destPath.lastIndexOf('/'));
       await ensureDirectoryExists(dirPath);
       await LegacyFileSystem.moveAsync({ from: sourcePath, to: destPath });
       return true;
-    } catch (error) {
+    } catch (error: any) {
       return false;
     }
   }
 
-  getContentDirectory(mediaType, tmdbId, season = null, episode = null) {
+  getContentDirectory(mediaType: any, tmdbId: any, season = null, episode = null) {
     return getContentDirectory(mediaType, tmdbId, season, episode);
   }
 

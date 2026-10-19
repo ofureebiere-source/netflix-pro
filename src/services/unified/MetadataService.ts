@@ -129,7 +129,7 @@ export class MetadataService {
     this.ensureInitialized();
     try {
       return await this.metadataAggregator.getById(id, type);
-    } catch (error) {
+    } catch (error: any) {
       console.error('[MetadataService] ❌ getById failed:', error);
       return null;
     }

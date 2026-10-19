@@ -1,6 +1,5 @@
 import {
   getDownloadsIndex,
-  saveDownloadsIndex,
   saveDownloadEntry,
   updateDownloadEntry,
   removeDownloadEntry,
@@ -9,6 +8,9 @@ import {
 } from '../../utils/downloadStorage';
 
 class DownloadQueue {
+  items: any;
+  listeners: any;
+  initialized: any;
   constructor() {
     this.items = [];
     this.listeners = new Set();
@@ -25,20 +27,20 @@ class DownloadQueue {
     try {
       const index = await getDownloadsIndex();
       this.items = Object.values(index.downloads).filter(
-        item =>
+        (item: any) =>
           item.status === DOWNLOAD_STATUS.QUEUED ||
           item.status === DOWNLOAD_STATUS.DOWNLOADING ||
           item.status === DOWNLOAD_STATUS.PAUSED
       );
-      this.items.sort((a, b) => new Date(a.queuedAt) - new Date(b.queuedAt));
+      this.items.sort((a: any, b: any) => new Date(a.queuedAt).getTime() - new Date(b.queuedAt).getTime());
       this.notifyListeners();
-    } catch (error) {
+    } catch (error: any) {
       this.items = [];
     }
   }
 
-  async enqueue(mediaInfo) {
-    const existingItem = this.items.find(item => item.id === mediaInfo.id);
+  async enqueue(mediaInfo: any) {
+    const existingItem = this.items.find((item: any) => item.id === mediaInfo.id);
     if (existingItem) {
       if (existingItem.status === DOWNLOAD_STATUS.FAILED) {
         await this.remove(existingItem.id);
@@ -63,13 +65,13 @@ class DownloadQueue {
     return entry;
   }
 
-  async enqueueBatch(mediaInfoArray) {
+  async enqueueBatch(mediaInfoArray: any) {
     const entries = [];
     for (const mediaInfo of mediaInfoArray) {
       try {
         const entry = await this.enqueue(mediaInfo);
         entries.push(entry);
-      } catch (error) {
+      } catch (error: any) {
         // Skip items that fail to enqueue
       }
     }
@@ -77,32 +79,32 @@ class DownloadQueue {
   }
 
   getNext() {
-    return this.items.find(item => item.status === DOWNLOAD_STATUS.QUEUED) || null;
+    return this.items.find((item: any) => item.status === DOWNLOAD_STATUS.QUEUED) || null;
   }
 
   getAll() {
     return [...this.items];
   }
 
-  getById(id) {
-    return this.items.find(item => item.id === id) || null;
+  getById(id: any) {
+    return this.items.find((item: any) => item.id === id) || null;
   }
 
   getQueuedItems() {
-    return this.items.filter(item => item.status === DOWNLOAD_STATUS.QUEUED);
+    return this.items.filter((item: any) => item.status === DOWNLOAD_STATUS.QUEUED);
   }
 
   getDownloadingItems() {
-    return this.items.filter(item => item.status === DOWNLOAD_STATUS.DOWNLOADING);
+    return this.items.filter((item: any) => item.status === DOWNLOAD_STATUS.DOWNLOADING);
   }
 
   getPausedItems() {
-    return this.items.filter(item => item.status === DOWNLOAD_STATUS.PAUSED);
+    return this.items.filter((item: any) => item.status === DOWNLOAD_STATUS.PAUSED);
   }
 
-  async updateStatus(id, status, additionalData = {}) {
+  async updateStatus(id: any, status: any, additionalData = {}) {
     try {
-      const item = this.items.find(i => i.id === id);
+      const item = this.items.find((i: any) => i.id === id);
       if (item) {
         item.status = status;
         Object.assign(item, additionalData);
@@ -120,14 +122,14 @@ class DownloadQueue {
         return true;
       }
       return false;
-    } catch (error) {
+    } catch (error: any) {
       return false;
     }
   }
 
-  async updateProgress(id, progress, downloadedBytes = 0, totalBytes = 0) {
+  async updateProgress(id: any, progress: any, downloadedBytes = 0, totalBytes = 0) {
     try {
-      const item = this.items.find(i => i.id === id);
+      const item = this.items.find((i: any) => i.id === id);
       if (item) {
         item.progress = progress;
         item.downloadedBytes = downloadedBytes;
@@ -138,14 +140,14 @@ class DownloadQueue {
         return true;
       }
       return false;
-    } catch (error) {
+    } catch (error: any) {
       return false;
     }
   }
 
-  async markCompleted(id, fileSize = 0, filePath = null) {
+  async markCompleted(id: any, fileSize = 0, filePath = null) {
     try {
-      const updates = {
+      const updates: { status: string; completedAt: string; progress: number; fileSize: any; filePath?: string } = {
         status: DOWNLOAD_STATUS.COMPLETED,
         completedAt: new Date().toISOString(),
         progress: 100,
@@ -155,23 +157,23 @@ class DownloadQueue {
         updates.filePath = filePath;
       }
 
-      const item = this.items.find(i => i.id === id);
+      const item = this.items.find((i: any) => i.id === id);
       if (item) {
         Object.assign(item, updates);
         await updateDownloadEntry(id, updates);
-        this.items = this.items.filter(i => i.id !== id);
+        this.items = this.items.filter((i: any) => i.id !== id);
         this.notifyListeners();
         return true;
       }
       return false;
-    } catch (error) {
+    } catch (error: any) {
       return false;
     }
   }
 
-  async markFailed(id, errorMessage = 'Unknown error') {
+  async markFailed(id: any, errorMessage = 'Unknown error') {
     try {
-      const item = this.items.find(i => i.id === id);
+      const item = this.items.find((i: any) => i.id === id);
       if (item) {
         item.status = DOWNLOAD_STATUS.FAILED;
         item.errorMessage = errorMessage;
@@ -183,31 +185,31 @@ class DownloadQueue {
           retryCount: item.retryCount,
         });
 
-        this.items = this.items.filter(i => i.id !== id);
+        this.items = this.items.filter((i: any) => i.id !== id);
         this.notifyListeners();
         return true;
       }
       return false;
-    } catch (error) {
+    } catch (error: any) {
       return false;
     }
   }
 
-  async pause(id) {
+  async pause(id: any) {
     return this.updateStatus(id, DOWNLOAD_STATUS.PAUSED);
   }
 
-  async resume(id) {
+  async resume(id: any) {
     return this.updateStatus(id, DOWNLOAD_STATUS.QUEUED);
   }
 
-  async remove(id) {
+  async remove(id: any) {
     try {
       await removeDownloadEntry(id);
-      this.items = this.items.filter(item => item.id !== id);
+      this.items = this.items.filter((item: any) => item.id !== id);
       this.notifyListeners();
       return true;
-    } catch (error) {
+    } catch (error: any) {
       return false;
     }
   }
@@ -220,7 +222,7 @@ class DownloadQueue {
       this.items = [];
       this.notifyListeners();
       return true;
-    } catch (error) {
+    } catch (error: any) {
       return false;
     }
   }
@@ -233,11 +235,11 @@ class DownloadQueue {
     return this.getQueuedItems().length;
   }
 
-  isInQueue(id) {
-    return this.items.some(item => item.id === id);
+  isInQueue(id: any) {
+    return this.items.some((item: any) => item.id === id);
   }
 
-  subscribe(callback) {
+  subscribe(callback: any) {
     this.listeners.add(callback);
     return () => {
       this.listeners.delete(callback);
@@ -246,10 +248,10 @@ class DownloadQueue {
 
   notifyListeners() {
     const items = this.getAll();
-    this.listeners.forEach(callback => {
+    this.listeners.forEach((callback: any) => {
       try {
         callback(items);
-      } catch (error) {
+      } catch (error: any) {
         // Listener error, ignore
       }
     });

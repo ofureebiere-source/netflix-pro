@@ -11,14 +11,12 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Dimensions,
   ActivityIndicator,
   Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export interface SearchSuggestion {
   id: string;

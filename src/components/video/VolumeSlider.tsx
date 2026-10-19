@@ -9,7 +9,7 @@ const VolumeSlider = ({
   volumeSliderRef,
   volumePanResponder,
   showControls,
-}) => {
+}: any) => {
   if (!hasVolumePermission) return null;
 
   const icon = volumeLevel === 0 ? 'volume-mute' : volumeLevel < 0.5 ? 'volume-low' : 'volume-high';

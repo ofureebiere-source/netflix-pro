@@ -1,15 +1,15 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Animated, Easing } from 'react-native';
 
-export const useVideoControls = (player, isLiveStream = false) => {
+export const useVideoControls = (player: any, _isLiveStream = false) => {
   const [showControls, setShowControls] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
-  const controlsTimerRef = useRef(null);
+  const controlsTimerRef = useRef<any>(null);
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const isSeekingRef = useRef(false);
 
-  const setIsSeeking = useCallback((seeking) => {
+  const setIsSeeking = useCallback((seeking: any) => {
     isSeekingRef.current = seeking;
   }, []);
 
@@ -69,7 +69,7 @@ export const useVideoControls = (player, isLiveStream = false) => {
         }
       }
       setShowControls(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error toggling play/pause:', error);
     }
   }, [player, isPlaying]);
@@ -82,7 +82,7 @@ export const useVideoControls = (player, isLiveStream = false) => {
         setIsMuted(newMutedState);
       }
       setShowControls(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error toggling mute:', error);
     }
   }, [player, isMuted]);
@@ -93,7 +93,7 @@ export const useVideoControls = (player, isLiveStream = false) => {
         player.seekBy(-10);
       }
       setShowControls(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error seeking backward:', error);
     }
   }, [player]);
@@ -104,7 +104,7 @@ export const useVideoControls = (player, isLiveStream = false) => {
         player.seekBy(10);
       }
       setShowControls(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error seeking forward:', error);
     }
   }, [player]);

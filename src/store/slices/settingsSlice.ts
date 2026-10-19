@@ -1,6 +1,5 @@
 // src/store/slices/settingsSlice.ts
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface SettingsState {
   wifiOnlyDownload: boolean;

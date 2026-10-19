@@ -36,10 +36,10 @@ export async function getContinueWatching(): Promise<ContinueWatchingItem[]> {
     if (!data) return [];
     const items = JSON.parse(data);
     // Sort by last watched (newest first)
-    return items.sort((a: ContinueWatchingItem, b: ContinueWatchingItem) => 
+    return items.sort((a: ContinueWatchingItem, b: ContinueWatchingItem) =>
       b.lastWatchedAt - a.lastWatchedAt
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error('[ContinueWatching] Failed to load:', error);
     return [];
   }
@@ -54,7 +54,7 @@ export async function saveContinueWatching(
   try {
     const items = await getContinueWatching();
     const existingIndex = items.findIndex(i => i.id === item.id && i.type === item.type);
-    
+
     const newItem: ContinueWatchingItem = {
       ...item,
       lastWatchedAt: Date.now(),
@@ -74,9 +74,9 @@ export async function saveContinueWatching(
 
     // Limit to MAX_ITEMS
     const trimmed = items.slice(0, MAX_ITEMS);
-    
+
     await AsyncStorage.setItem(CONTINUE_WATCHING_KEY, JSON.stringify(trimmed));
-  } catch (error) {
+  } catch (error: any) {
     console.error('[ContinueWatching] Failed to save:', error);
   }
 }
@@ -93,7 +93,7 @@ export async function updateContinueWatchingProgress(
   try {
     const items = await getContinueWatching();
     const existingIndex = items.findIndex(i => i.id === id && i.type === type);
-    
+
     if (existingIndex >= 0) {
       const item = items[existingIndex];
       // If progress is >= 0.95, remove the item (considered completed)
@@ -101,21 +101,21 @@ export async function updateContinueWatchingProgress(
         await removeFromContinueWatching(id, type);
         return;
       }
-      
+
       items[existingIndex] = {
         ...item,
         progress: Math.min(progress, 0.99), // Cap at 99% to keep it visible
         duration: duration || item.duration,
         lastWatchedAt: Date.now(),
       };
-      
+
       // Move to top
       const [updated] = items.splice(existingIndex, 1);
       items.unshift(updated);
-      
+
       await AsyncStorage.setItem(CONTINUE_WATCHING_KEY, JSON.stringify(items));
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('[ContinueWatching] Failed to update progress:', error);
   }
 }
@@ -123,18 +123,51 @@ export async function updateContinueWatchingProgress(
 /**
  * Remove an item from continue watching
  */
+/** Match a stored item, narrowing by season/episode when supplied. */
+function matchesItem(
+  item: ContinueWatchingItem,
+  id: string,
+  type?: 'movie' | 'tv',
+  season?: number,
+  episode?: number
+): boolean {
+  if (item.id !== id) return false;
+  if (type && item.type !== type) return false;
+  if (season != null && item.season !== season) return false;
+  if (episode != null && item.episode !== episode) return false;
+  return true;
+}
+
+/**
+ * Get a single continue watching entry.
+ */
+export async function getContinueWatchingItem(
+  id: string,
+  type?: 'movie' | 'tv',
+  season?: number,
+  episode?: number
+): Promise<ContinueWatchingItem | null> {
+  try {
+    const items = await getContinueWatching();
+    return items.find(i => matchesItem(i, id, type, season, episode)) ?? null;
+  } catch (error: any) {
+    console.error('[ContinueWatching] Failed to get item:', error);
+    return null;
+  }
+}
+
 export async function removeFromContinueWatching(
   id: string,
-  type?: 'movie' | 'tv'
+  type?: 'movie' | 'tv',
+  season?: number,
+  episode?: number
 ): Promise<void> {
   try {
     const items = await getContinueWatching();
-    const filtered = type 
-      ? items.filter(i => !(i.id === id && i.type === type))
-      : items.filter(i => i.id !== id);
-    
+    const filtered = items.filter(i => !matchesItem(i, id, type, season, episode));
+
     await AsyncStorage.setItem(CONTINUE_WATCHING_KEY, JSON.stringify(filtered));
-  } catch (error) {
+  } catch (error: any) {
     console.error('[ContinueWatching] Failed to remove:', error);
   }
 }
@@ -145,7 +178,7 @@ export async function removeFromContinueWatching(
 export async function clearContinueWatching(): Promise<void> {
   try {
     await AsyncStorage.removeItem(CONTINUE_WATCHING_KEY);
-  } catch (error) {
+  } catch (error: any) {
     console.error('[ContinueWatching] Failed to clear:', error);
   }
 }
@@ -155,12 +188,14 @@ export async function clearContinueWatching(): Promise<void> {
  */
 export async function isInContinueWatching(
   id: string,
-  type: 'movie' | 'tv'
+  type: 'movie' | 'tv',
+  season?: number,
+  episode?: number
 ): Promise<boolean> {
   try {
     const items = await getContinueWatching();
-    return items.some(i => i.id === id && i.type === type);
-  } catch (error) {
+    return items.some(i => matchesItem(i, id, type, season, episode));
+  } catch (error: any) {
     console.error('[ContinueWatching] Failed to check:', error);
     return false;
   }
@@ -171,13 +206,15 @@ export async function isInContinueWatching(
  */
 export async function getContinueWatchingProgress(
   id: string,
-  type: 'movie' | 'tv'
+  type: 'movie' | 'tv',
+  season?: number,
+  episode?: number
 ): Promise<number | null> {
   try {
     const items = await getContinueWatching();
-    const item = items.find(i => i.id === id && i.type === type);
+    const item = items.find(i => matchesItem(i, id, type, season, episode));
     return item ? item.progress : null;
-  } catch (error) {
+  } catch (error: any) {
     console.error('[ContinueWatching] Failed to get progress:', error);
     return null;
   }
@@ -191,11 +228,11 @@ export async function cleanupContinueWatching(days: number = 30): Promise<void> 
     const items = await getContinueWatching();
     const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);
     const filtered = items.filter(i => i.lastWatchedAt > cutoff);
-    
+
     if (filtered.length !== items.length) {
       await AsyncStorage.setItem(CONTINUE_WATCHING_KEY, JSON.stringify(filtered));
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('[ContinueWatching] Failed to cleanup:', error);
   }
 }

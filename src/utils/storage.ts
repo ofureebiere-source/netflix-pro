@@ -9,7 +9,7 @@ const AUTO_PLAY_KEY = 'autoPlayEnabled';
 const SEARCH_HISTORY_KEY = 'searchHistory';
 const MAX_SEARCH_HISTORY_ITEMS = 15;
 const LAST_SUBTITLE_LANG_KEY = 'lastSubtitleLanguage';
-const SUBTITLES_ENABLED_KEY = 'subtitlesEnabled'; // New key for enabled state
+ // New key for enabled state
 
 export const STORAGE_KEYS = {
   DOWNLOADS_INDEX: 'downloads_index',
@@ -80,7 +80,7 @@ export const saveWatchProgress = async (mediaId: string, data: any) => {
       });
     }
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error saving watch progress:', error);
     return false;
   }
@@ -91,7 +91,7 @@ export const getWatchProgress = async (mediaId: string) => {
     const watchDataString = await AsyncStorage.getItem(CONTINUE_WATCHING_KEY);
     const watchData = watchDataString ? JSON.parse(watchDataString) : {};
     return watchData[mediaId] || null;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error getting watch progress for continue watching:', error);
     return null;
   }
@@ -110,7 +110,7 @@ export const saveEpisodeWatchProgress = async (mediaId: string, seasonNumber: nu
     };
     await AsyncStorage.setItem(key, JSON.stringify(dataToSave));
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error(`Error saving episode watch progress for S${seasonNumber}E${episodeNumber}:`, error);
     return false;
   }
@@ -121,7 +121,7 @@ export const getEpisodeWatchProgress = async (mediaId: string, seasonNumber: num
     const key = getEpisodeProgressKey(mediaId, seasonNumber, episodeNumber);
     const progressString = await AsyncStorage.getItem(key);
     return progressString ? JSON.parse(progressString) : null;
-  } catch (error) {
+  } catch (error: any) {
     console.error(`Error getting episode watch progress for S${seasonNumber}E${episodeNumber}:`, error);
     return null;
   }
@@ -146,7 +146,7 @@ export const getShowWatchProgress = async (mediaId: string) => {
       }
     });
     return showProgress;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error getting show watch progress:', error);
     return {};
   }
@@ -166,7 +166,7 @@ export const getContinueWatchingList = async () => {
       .sort((a, b) => {
         return new Date(b.lastWatched).getTime() - new Date(a.lastWatched).getTime();
       });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error getting continue watching list:', error);
     return [];
   }
@@ -181,7 +181,7 @@ export const removeFromContinueWatching = async (mediaId: string) => {
     delete watchData[mediaId];
     await AsyncStorage.setItem(CONTINUE_WATCHING_KEY, JSON.stringify(watchData));
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error removing from continue watching:', error);
     return false;
   }
@@ -203,7 +203,7 @@ export const saveStreamUrl = async (contentId: string, url: string, referer: str
     };
     await AsyncStorage.setItem(STREAM_CACHE_KEY, JSON.stringify(cache));
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error saving stream URL to cache:', error);
     return false;
   }
@@ -233,7 +233,7 @@ export const getCachedStreamUrl = async (contentId: string) => {
       }
     }
     return null; // Return null if no valid entry
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error getting cached stream URL:', error);
     return null;
   }
@@ -252,7 +252,7 @@ export const clearSpecificStreamFromCache = async (contentId: string) => {
       delete cache[contentId];
       await AsyncStorage.setItem(STREAM_CACHE_KEY, JSON.stringify(cache));
     }
-  } catch (e) {
+  } catch (e: any) {
     console.error(`Failed to clear cached stream URL for ${contentId} from main cache object.`, e);
   }
 };
@@ -260,7 +260,7 @@ export const clearSpecificStreamFromCache = async (contentId: string) => {
 export const clearStreamCache = async () => { // This clears the ENTIRE cache
   try {
     await AsyncStorage.removeItem(STREAM_CACHE_KEY);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error clearing stream cache:', error);
   }
 };
@@ -272,7 +272,7 @@ export const saveAutoPlaySetting = async (isEnabled: boolean) => {
   try {
     await AsyncStorage.setItem(AUTO_PLAY_KEY, JSON.stringify(isEnabled));
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error saving auto-play setting:', error);
     return false;
   }
@@ -283,7 +283,7 @@ export const getAutoPlaySetting = async () => {
   try {
     const settingString = await AsyncStorage.getItem(AUTO_PLAY_KEY);
     return settingString ? JSON.parse(settingString) : true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error getting auto-play setting:', error);
     return true;
   }
@@ -308,7 +308,7 @@ export const saveSearchQuery = async (query: string) => {
     }
     await AsyncStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(history));
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error saving search query:', error);
     return false;
   }
@@ -319,7 +319,7 @@ export const getSearchHistory = async () => {
   try {
     const historyString = await AsyncStorage.getItem(SEARCH_HISTORY_KEY);
     return historyString ? JSON.parse(historyString) : [];
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error getting search history:', error);
     return [];
   }
@@ -335,7 +335,7 @@ export const removeSearchQuery = async (queryToRemove: string) => {
     history = history.filter((item: string) => item !== trimmedQuery);
     await AsyncStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(history));
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error removing search query:', error);
     return false;
   }
@@ -346,7 +346,7 @@ export const clearSearchHistory = async () => {
   try {
     await AsyncStorage.removeItem(SEARCH_HISTORY_KEY);
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error clearing search history:', error);
     return false;
   }
@@ -363,7 +363,7 @@ export const saveSubtitleLanguagePreference = async (languageCode: string | null
       await AsyncStorage.setItem(LAST_SUBTITLE_LANG_KEY, languageCode);
     }
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error saving subtitle language preference:', error);
     return false;
   }
@@ -376,7 +376,7 @@ export const getSubtitleLanguagePreference = async () => {
       return null; // Convert 'none' back to null (subtitles disabled)
     }
     return languageCode; // Returns the code string or null if not set
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error getting subtitle language preference:', error);
     return null; // Default to null on error
   }
@@ -407,7 +407,7 @@ export const saveSubtitleStylePrefs = async (prefs: SubtitleStylePrefs) => {
   try {
     await AsyncStorage.setItem(SUBTITLE_STYLE_KEY, JSON.stringify(prefs));
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error saving subtitle style prefs:', error);
     return false;
   }
@@ -419,7 +419,7 @@ export const getSubtitleStylePrefs = async (): Promise<SubtitleStylePrefs> => {
     if (!raw) return { ...DEFAULT_SUBTITLE_STYLE };
     const parsed = JSON.parse(raw);
     return { ...DEFAULT_SUBTITLE_STYLE, ...parsed };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error getting subtitle style prefs:', error);
     return { ...DEFAULT_SUBTITLE_STYLE };
   }
@@ -433,7 +433,7 @@ export const savePlaybackSpeedPreference = async (speed: number) => {
   try {
     await AsyncStorage.setItem(PLAYBACK_SPEED_KEY, String(speed));
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error saving playback speed preference:', error);
     return false;
   }
@@ -444,7 +444,7 @@ export const getPlaybackSpeedPreference = async (): Promise<number> => {
     const raw = await AsyncStorage.getItem(PLAYBACK_SPEED_KEY);
     const parsed = raw ? parseFloat(raw) : 1.0;
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 1.0;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error getting playback speed preference:', error);
     return 1.0;
   }

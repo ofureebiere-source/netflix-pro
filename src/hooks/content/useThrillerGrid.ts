@@ -36,7 +36,7 @@ export const useThrillerGrid = (movies: any[]) => {
       thrillerPreloader.checkAndRefreshWeeklyBatch(movies).catch((e) => {
         console.warn('[useThrillerGrid] Background weekly refresh failed:', e);
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('[useThrillerGrid] Error:', error);
       setError('Failed to load thriller content');
       setLoading(false);

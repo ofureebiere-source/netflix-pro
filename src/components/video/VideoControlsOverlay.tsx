@@ -45,10 +45,7 @@ const VideoControlsOverlay = ({
   onToggleSubtitles,
   subtitlesEnabled,
   selectedLanguage,
-  isChangingSource,
-  isInitialLoading,
-  videoUrl,
-  player,
+  player: _player,
   brightnessLevel,
   hasBrightnessPermission,
   brightnessSliderRef,
@@ -59,11 +56,10 @@ const VideoControlsOverlay = ({
   volumePanResponder,
   playbackSpeed,
   onCycleSpeed,
-  aspectRatioLabel,
   onCycleAspectRatio,
   onOpenSubtitleSettings,
   onLock,
-}) => {
+}: any) => {
   const displayPosition = isSeeking && seekPreviewPosition !== null ? seekPreviewPosition : position;
   const actualPosition = position;
   const progressPercent = (displayPosition / Math.max(duration, 1)) * 100;
@@ -133,7 +129,6 @@ const VideoControlsOverlay = ({
             {Platform.OS === 'ios' && (
               <View style={styles.airPlayButtonContainer}>
                 <VideoAirPlayButton
-                  player={player}
                   tint="white"
                   prioritizeVideoDevices={true}
                   style={styles.airPlayButton}

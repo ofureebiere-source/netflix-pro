@@ -79,7 +79,7 @@ const ShimmerBlock: React.FC<{ style: any; isDark: boolean }> = ({ style, isDark
   </View>
 );
 
-export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({ type, count = 1, showIcon = true, width, height }) => {
+export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({ type, width, height }) => {
   const { isDark } = useTheme();
 
   if (type === 'trending') {

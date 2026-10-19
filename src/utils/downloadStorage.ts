@@ -122,7 +122,7 @@ export const saveContentMetadata = async (
       metadataPath,
       JSON.stringify(metadata, null, 2)
     );
-  } catch (error) {
+  } catch (error: any) {
     console.warn('[downloadStorage] Save metadata error:', error);
   }
 };
@@ -134,7 +134,7 @@ export const loadContentMetadata = async (contentDir: string): Promise<any> => {
     if (!info.exists) return null;
     const content = await LegacyFileSystem.readAsStringAsync(metadataPath);
     return JSON.parse(content);
-  } catch (error) {
+  } catch (error: any) {
     console.warn('[downloadStorage] Load metadata error:', error);
     return null;
   }
@@ -161,7 +161,7 @@ export const saveDownloadInfo = async (
       infoPath,
       JSON.stringify(info, null, 2)
     );
-  } catch (error) {
+  } catch (error: any) {
     console.warn('[downloadStorage] Save info error:', error);
   }
 };
@@ -173,7 +173,7 @@ export const loadDownloadInfo = async (contentDir: string): Promise<any> => {
     if (!info.exists) return null;
     const content = await LegacyFileSystem.readAsStringAsync(infoPath);
     return JSON.parse(content);
-  } catch (error) {
+  } catch (error: any) {
     console.warn('[downloadStorage] Load info error:', error);
     return null;
   }
@@ -190,7 +190,7 @@ export const saveSubtitle = async (
     await ensureDirectoryExists(subDir);
     const subPath = getSubtitlePath(contentDir, language);
     await LegacyFileSystem.writeAsStringAsync(subPath, content);
-  } catch (error) {
+  } catch (error: any) {
     console.warn('[downloadStorage] Save subtitle error:', error);
   }
 };
@@ -204,7 +204,7 @@ export const getAvailableSubtitles = async (contentDir: string): Promise<string[
     return files
       .filter(f => f.endsWith('.srt'))
       .map(f => f.replace('.srt', ''));
-  } catch (error) {
+  } catch (error: any) {
     return [];
   }
 };
@@ -226,7 +226,7 @@ export const deleteContentDirectory = async (contentDir: string): Promise<void> 
     if (info.exists) {
       await LegacyFileSystem.deleteAsync(contentDir, { idempotent: true });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.warn('[downloadStorage] Delete content error:', error);
   }
 };
@@ -256,7 +256,7 @@ export const hideFileFromMediaScanner = async (dirPath: string): Promise<void> =
     if (!info.exists) {
       await LegacyFileSystem.writeAsStringAsync(nomediaPath, '');
     }
-  } catch (error) {
+  } catch (error: any) {
     // Ignore errors
   }
 };
@@ -302,13 +302,13 @@ export const encryptFile = async (sourcePath: string, destPath: string): Promise
     await LegacyFileSystem.writeAsStringAsync(destPath, encryptedBase64, {
       encoding: LegacyFileSystem.EncodingType.Base64,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('[Encrypt] Error:', error);
     await LegacyFileSystem.copyAsync({ from: sourcePath, to: destPath });
   }
 };
 
-export const decryptFile = async (sourcePath: string): Promise<string> => {
+export const decryptFile = async (sourcePath: string): Promise<string | null> => {
   try {
     const key = await getEncryptionKey();
     const encryptedContent = await LegacyFileSystem.readAsStringAsync(sourcePath, {
@@ -339,7 +339,7 @@ export const decryptFile = async (sourcePath: string): Promise<string> => {
       binary += String.fromCharCode(decryptedBytes[i]);
     }
     return btoa(binary);
-  } catch (error) {
+  } catch (error: any) {
     console.error('[Decrypt] Error:', error);
     return null;
   }
@@ -356,7 +356,7 @@ export const decryptFileToTemp = async (encryptedPath: string): Promise<string |
     });
     
     return tempPath;
-  } catch (error) {
+  } catch (error: any) {
     console.error('[Decrypt] Temp error:', error);
     return null;
   }
@@ -368,7 +368,7 @@ export const cleanupTempFile = async (tempPath: string): Promise<void> => {
     if (info.exists) {
       await LegacyFileSystem.deleteAsync(tempPath, { idempotent: true });
     }
-  } catch (error) {
+  } catch (error: any) {
     // Ignore cleanup errors
   }
 };
@@ -381,7 +381,7 @@ export const ensureDirectoryExists = async (dirPath: string): Promise<boolean> =
       await LegacyFileSystem.makeDirectoryAsync(dirPath, { intermediates: true });
     }
     return true;
-  } catch (error) {
+  } catch (error: any) {
     return false;
   }
 };
@@ -395,7 +395,7 @@ export const initializeDownloadsDirectory = async (): Promise<void> => {
       await LegacyFileSystem.makeDirectoryAsync(baseDir, { intermediates: true });
       await hideFileFromMediaScanner(baseDir);
     }
-  } catch (error) {
+  } catch (error: any) {
     console.warn('[downloadStorage] Init error:', error);
   }
 };
@@ -431,7 +431,7 @@ export const saveDownloadSettings = async (settings: any) => {
     const newSettings = { ...currentSettings, ...settings };
     await AsyncStorage.setItem(DOWNLOAD_SETTINGS_KEY, JSON.stringify(newSettings));
     return true;
-  } catch (error) {
+  } catch (error: any) {
     return false;
   }
 };
@@ -443,7 +443,7 @@ export const getDownloadSettings = async () => {
       return { ...DEFAULT_DOWNLOAD_SETTINGS, ...JSON.parse(settingsString) };
     }
     return DEFAULT_DOWNLOAD_SETTINGS;
-  } catch (error) {
+  } catch (error: any) {
     return DEFAULT_DOWNLOAD_SETTINGS;
   }
 };
@@ -455,7 +455,7 @@ export const getDownloadsIndex = async () => {
       return JSON.parse(indexString);
     }
     return { version: 1, lastUpdated: new Date().toISOString(), downloads: {} };
-  } catch (error) {
+  } catch (error: any) {
     return { version: 1, lastUpdated: new Date().toISOString(), downloads: {} };
   }
 };
@@ -465,7 +465,7 @@ export const saveDownloadsIndex = async (index: any) => {
     index.lastUpdated = new Date().toISOString();
     await AsyncStorage.setItem(DOWNLOADS_INDEX_KEY, JSON.stringify(index));
     return true;
-  } catch (error) {
+  } catch (error: any) {
     return false;
   }
 };
@@ -474,7 +474,7 @@ export const getDownloadEntry = async (downloadId: string) => {
   try {
     const index = await getDownloadsIndex();
     return index.downloads[downloadId] || null;
-  } catch (error) {
+  } catch (error: any) {
     return null;
   }
 };
@@ -485,7 +485,7 @@ export const saveDownloadEntry = async (entry: any) => {
     index.downloads[entry.id] = entry;
     await saveDownloadsIndex(index);
     return true;
-  } catch (error) {
+  } catch (error: any) {
     return false;
   }
 };
@@ -499,7 +499,7 @@ export const updateDownloadEntry = async (downloadId: string, updates: any) => {
       return true;
     }
     return false;
-  } catch (error) {
+  } catch (error: any) {
     return false;
   }
 };
@@ -513,7 +513,7 @@ export const removeDownloadEntry = async (downloadId: string) => {
       return true;
     }
     return false;
-  } catch (error) {
+  } catch (error: any) {
     return false;
   }
 };
@@ -522,7 +522,7 @@ export const getAllDownloads = async () => {
   try {
     const index = await getDownloadsIndex();
     return Object.values(index.downloads);
-  } catch (error) {
+  } catch (error: any) {
     return [];
   }
 };
@@ -530,8 +530,8 @@ export const getAllDownloads = async () => {
 export const getDownloadsByStatus = async (status: string) => {
   try {
     const downloads = await getAllDownloads();
-    return downloads.filter(d => d.status === status);
-  } catch (error) {
+    return downloads.filter((d: any) => d.status === status);
+  } catch (error: any) {
     return [];
   }
 };
@@ -542,13 +542,13 @@ export const getCompletedDownloads = async () => {
 
 export const getActiveDownloads = async () => {
   try {
-    const downloads = await getAllDownloads();
+    const downloads = (await getAllDownloads()) as any[];
     return downloads.filter(d =>
       d.status === DOWNLOAD_STATUS.QUEUED ||
       d.status === DOWNLOAD_STATUS.DOWNLOADING ||
       d.status === DOWNLOAD_STATUS.PAUSED
     );
-  } catch (error) {
+  } catch (error: any) {
     return [];
   }
 };
@@ -558,7 +558,7 @@ export const isDownloaded = async (mediaType: string, tmdbId: string, season: nu
     const downloadId = generateDownloadId(mediaType, tmdbId, season, episode);
     const entry = await getDownloadEntry(downloadId);
     return entry?.status === DOWNLOAD_STATUS.COMPLETED;
-  } catch (error) {
+  } catch (error: any) {
     return false;
   }
 };
@@ -568,7 +568,7 @@ export const getDownloadStatus = async (mediaType: string, tmdbId: string, seaso
     const downloadId = generateDownloadId(mediaType, tmdbId, season, episode);
     const entry = await getDownloadEntry(downloadId);
     return entry?.status || null;
-  } catch (error) {
+  } catch (error: any) {
     return null;
   }
 };
@@ -612,7 +612,7 @@ export const markAsWatched = async (downloadId: string) => {
   try {
     await updateDownloadEntry(downloadId, { lastWatchedAt: new Date().toISOString() });
     return true;
-  } catch (error) {
+  } catch (error: any) {
     return false;
   }
 };
@@ -622,13 +622,13 @@ export const getDownloadStorageUsage = async () => {
     const index = await getDownloadsIndex();
     const downloads = Object.values(index.downloads);
     let totalSize = 0;
-    for (const download of downloads) {
+    for (const download of downloads as any[]) {
       if (download.status === DOWNLOAD_STATUS.COMPLETED && download.fileSize) {
         totalSize += download.fileSize;
       }
     }
     return totalSize;
-  } catch (error) {
+  } catch (error: any) {
     return 0;
   }
 };
@@ -644,7 +644,7 @@ export const deleteDownloadFiles = async (downloadId: string) => {
       }
     }
     return true;
-  } catch (error) {
+  } catch (error: any) {
     return false;
   }
 };
@@ -654,7 +654,7 @@ export const deleteDownload = async (downloadId: string) => {
     await deleteDownloadFiles(downloadId);
     await removeDownloadEntry(downloadId);
     return true;
-  } catch (error) {
+  } catch (error: any) {
     return false;
   }
 };
@@ -674,7 +674,7 @@ export const clearAllDownloads = async () => {
     }));
     await AsyncStorage.removeItem(DOWNLOAD_QUEUE_KEY);
     return true;
-  } catch (error) {
+  } catch (error: any) {
     return false;
   }
 };

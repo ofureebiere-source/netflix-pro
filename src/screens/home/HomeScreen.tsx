@@ -76,7 +76,7 @@ import { sortByBadgeTier, BADGE_SORTABLE_ROW_IDS } from '../../utils/badgeHelper
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // Animated wrapper for FlatList
-const AnimatedFlatList = Animated.createAnimatedComponent(FlatList);
+const AnimatedFlatList = Animated.createAnimatedComponent(FlatList) as unknown as typeof FlatList;
 
 const HEADER_HEIGHT = Platform.OS === 'android' ? 64 : 72;
 
@@ -504,7 +504,7 @@ const HomeScreen = () => {
       };
       await cacheManager.set(CACHE_KEYS.HOME_DATA, cacheData);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('[Home] Fetch error:', error);
       if (rows.length === 0) {
         setIsOffline(true);
@@ -559,6 +559,14 @@ const HomeScreen = () => {
             episode: item.episode,
             episodeTitle: item.episodeTitle,
             progress: item.progress,
+            // Without a year the backend cannot reach the title-based
+            // providers and resolves nothing for this title.
+            year:
+              item.year ||
+              item.release_date?.split('-')[0] ||
+              item.first_air_date?.split('-')[0] ||
+              '',
+            release_date: item.releaseDate || item.release_date || item.first_air_date || '',
           }),
         });
       } else {
@@ -595,29 +603,7 @@ const HomeScreen = () => {
   );
 
   // ─── Continue Watching Handlers ───
-  const handleInfoPress = useCallback(
-    (item: any) => {
-      const mediaId = item.mediaId;
-      router.push({
-        pathname: `/movie/${mediaId}`,
-        params: cleanParams({
-          mediaId: item.mediaId,
-          mediaType: item.mediaType,
-          title: item.title,
-          poster_path: item.posterPath || item.poster_path,
-        }),
-      });
-    },
-    [router]
-  );
 
-  const handleRemovePress = useCallback(
-    (item: any) => {
-      removeContinueWatching(item.mediaId);
-      showToast('Removed from Continue Watching');
-    },
-    [removeContinueWatching, showToast]
-  );
 
   // ─── Panel Controls ───
   const openContinuePanel = useCallback(() => {

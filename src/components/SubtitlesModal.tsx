@@ -13,11 +13,11 @@ const SubtitlesModal = ({
   selectedLanguage,   // e.g., 'en' or null
   onSelectLanguage,
   loading,
-}) => {
+}: any) => {
   const { colors, isDark } = useTheme();
   const glass = getGlassTokens(colors, isDark);
 
-  const renderLanguageItem = ({ item }) => {
+  const renderLanguageItem = ({ item }: any) => {
     const isSelected = item.code === selectedLanguage || (item.code === 'none' && selectedLanguage === null);
     const isImportAction = item.code === '__import_local__';
     const displayName = item.name; // item.name should already be 'None' or the language name
@@ -53,7 +53,7 @@ const SubtitlesModal = ({
   // Add "None" option to the beginning of the list
   const languagesWithOptions = [
     { code: 'none', name: 'None' }, // Ensure 'None' is always an option
-    ...(availableLanguages || []).filter(lang => lang && lang.code), // Filter out invalid entries
+    ...(availableLanguages || []).filter((lang: any) => lang && lang.code), // Filter out invalid entries
   ];
 
   return (

@@ -4,19 +4,15 @@ import {
   View,
   Text,
   StyleSheet,
-  Image,
   TouchableOpacity,
-  Dimensions,
-} from 'react-native';
+  } from 'react-native';
 import Animated, { useAnimatedStyle, interpolate, Extrapolation, SharedValue } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { getImageUrl } from '../services/unified/metadata/TMDBMetadata';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const BANNER_HEIGHT = 200; // Compact height (reduced from 300-400px)
-const BANNER_ASPECT_RATIO = 16 / 9;
 
 interface FeaturedContentProps {
   item: {

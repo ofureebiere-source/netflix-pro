@@ -1,12 +1,10 @@
 // src/screens/downloads/DownloadsScreen.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
-  RefreshControl,
   Alert,
   ActivityIndicator,
 } from 'react-native';
@@ -28,10 +26,10 @@ import { RefreshableScrollView } from '../../components/RefreshableScrollView';
 import downloadManager from '../../services/downloadManager';
 import { getDownloadStorageUsage, formatFileSize } from '../../utils/downloadStorage';
 
-const DownloadsScreen = ({ navigation }) => {
+const DownloadsScreen = ({ navigation }: any) => {
   const { colors } = useTheme();
   const { showToast } = useAlert();
-  const { networkStatus } = useAppStore();
+  const { networkStatus: _networkStatus } = useAppStore();
 
   const [activeDownloads, setActiveDownloads] = useState<any[]>([]);
   const [completedDownloads, setCompletedDownloads] = useState<any[]>([]);
@@ -55,7 +53,7 @@ const DownloadsScreen = ({ navigation }) => {
       setCompletedDownloads(completed);
       setStorageUsed(used);
       setAvailableStorage(available);
-    } catch (error) {
+    } catch (error: any) {
       console.error('[Downloads] Load error:', error);
     } finally {
       setLoading(false);
@@ -175,7 +173,7 @@ const DownloadsScreen = ({ navigation }) => {
       const offlinePath = basePath.startsWith('file://') ? basePath : `file://${cleanPath}`;
 
       router.push(`/player?mediaId=${item.tmdbId}&mediaType=${item.mediaType}&title=${item.title}&season=${item.season}&episode=${item.episode}&episodeTitle=${item.episodeTitle}&poster_path=${item.posterPath}&isOffline=true&offlineFilePath=${offlinePath}`);
-    } catch (error) {
+    } catch (error: any) {
       Alert.alert('Error', 'Failed to access downloaded file');
     }
   }, [navigation, loadData]);
