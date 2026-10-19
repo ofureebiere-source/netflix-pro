@@ -574,7 +574,7 @@ export const getDownloadStatus = async (mediaType: string, tmdbId: string, seaso
 };
 
 export const createDownloadEntry = (mediaInfo: any) => {
-  const { mediaType, tmdbId, title, posterPath, season, episode, episodeTitle, streamUrl, streamReferer } = mediaInfo;
+  const { mediaType, tmdbId, title, posterPath, season, episode, episodeTitle, streamUrl, streamReferer, streamHeaders } = mediaInfo;
   const downloadId = generateDownloadId(mediaType, tmdbId, season, episode);
   const contentDir = `${LegacyFileSystem.documentDirectory}downloads/${mediaType}/${tmdbId}/`;
 
@@ -598,7 +598,11 @@ export const createDownloadEntry = (mediaInfo: any) => {
     filePath: contentDir,
     fileSize: 0,
     streamUrl,
+    // Providers usually require their own User-Agent/Referer/Origin and
+    // sometimes a Cookie; a request carrying only Referer is rejected. The
+    // whole set is kept so every segment request can replay it.
     streamReferer: streamReferer || null,
+    streamHeaders: streamHeaders || null,
     errorMessage: null,
     retryCount: 0,
   };

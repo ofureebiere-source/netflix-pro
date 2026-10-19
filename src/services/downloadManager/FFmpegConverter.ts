@@ -2,6 +2,7 @@
 import { FFmpegKit, FFmpegKitConfig, ReturnCode, Level } from 'palash-ffmpeg-kit-react-native-sf';
 import { AppState, Platform } from 'react-native';
 import * as LegacyFileSystem from 'expo-file-system/legacy';
+import { buildProviderRequestHeaders } from '../../utils/streamHeaders';
 
 // ─── MODULE-LEVEL INITIALIZATION ───
 let isFFmpegInitialized = false;
@@ -67,6 +68,8 @@ class FFmpegConverter {
     segmentsDir: string;
     outputPath: string;
     onProgress: ((data: any) => void) | undefined;
+    headers: Record<string, string> | null;
+    referer: string | null;
     resolve: (value: any) => void;
     reject: (error: Error) => void;
   }> = [];
@@ -119,7 +122,12 @@ class FFmpegConverter {
     this.appState = nextAppState;
   };
 
-  async convertHLSToMP4(segmentsDir: string, outputPath: string, onProgress?: (data: any) => void) {
+  async convertHLSToMP4(
+    segmentsDir: string,
+    outputPath: string,
+    onProgress?: (data: any) => void,
+    options?: { headers?: Record<string, string> | null; referer?: string | null }
+  ) {
     if (!this.isInitialized) {
       await this.initialize();
     }
@@ -129,6 +137,8 @@ class FFmpegConverter {
         segmentsDir,
         outputPath,
         onProgress: onProgress || undefined,
+        headers: options?.headers ?? null,
+        referer: options?.referer ?? null,
         resolve,
         reject
       });
@@ -147,7 +157,10 @@ class FFmpegConverter {
       const job = this.conversionQueue.shift();
       if (!job) continue;
       try {
-        const result = await this.executeConversion(job.segmentsDir, job.outputPath, job.onProgress);
+        const result = await this.executeConversion(job.segmentsDir, job.outputPath, job.onProgress, {
+          headers: job.headers,
+          referer: job.referer,
+        });
         job.resolve(result);
       } catch (error) {
         job.reject(error instanceof Error ? error : new Error(String(error)));
@@ -157,7 +170,12 @@ class FFmpegConverter {
     this.isProcessingQueue = false;
   }
 
-  async executeConversion(segmentsDir: string, outputPath: string, onProgress?: (data: any) => void) {
+  async executeConversion(
+    segmentsDir: string,
+    outputPath: string,
+    onProgress?: (data: any) => void,
+    options?: { headers?: Record<string, string> | null; referer?: string | null }
+  ) {
     if (!this.isInitialized) {
       await this.initialize();
     }
@@ -177,6 +195,21 @@ class FFmpegConverter {
 
       const hasInit = await this.hasInitSegment(segmentsDirClean);
       const isFragmentedMp4 = segmentFiles[0]?.endsWith('.m4s') || hasInit;
+
+      // The playlist is the only thing ffmpeg reads: the segments are already
+      // on disk. Headers still have to be supplied for the init segment when
+      // the playlist references it over the network, so the provider's set is
+      // carried through here too.
+      const requestHeaders = buildProviderRequestHeaders(
+        options?.headers,
+        undefined,
+        options?.referer
+      );
+      const headerArgs: string[] = [];
+      for (const [key, value] of Object.entries(requestHeaders)) {
+        if (key.toLowerCase() === 'accept-encoding') continue;
+        headerArgs.push('-headers', `${key}: ${value}\r\n`);
+      }
 
       const playlistPath = `${segmentsDirClean}ffmpeg_playlist.m3u8`;
       let playlistContent = '#EXTM3U\n';
@@ -208,14 +241,18 @@ class FFmpegConverter {
       playlistContent += '#EXT-X-ENDLIST\n';
       await LegacyFileSystem.writeAsStringAsync(playlistPath, playlistContent);
 
-      const command = [
+      // Built as an argument array and run via executeWithArguments: header
+      // values contain spaces, commas and colons, and joining them into one
+      // shell string made ffmpeg split them into separate (invalid) options.
+      const commandArgs = [
         '-allowed_extensions', 'ALL',
+        ...headerArgs,
         '-i', playlistPath,
         '-c', 'copy',
         '-movflags', '+faststart',
         '-y',
         outputPathClean
-      ].join(' ');
+      ];
 
       if (onProgress) {
         try {
@@ -232,7 +269,7 @@ class FFmpegConverter {
         }
       }
 
-      const session = await FFmpegKit.execute(command);
+      const session = await FFmpegKit.executeWithArguments(commandArgs);
       this.currentSessionId = session.getSessionId();
       const returnCode = await session.getReturnCode();
 

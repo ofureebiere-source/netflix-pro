@@ -5,6 +5,7 @@ import storageManager from './StorageManager';
 import { ensureDirectoryExists } from '../../utils/downloadStorage';
 import ffmpegConverter from './FFmpegConverter';
 import { resolveUrl, selectBestVariantByHeight } from '../../utils/m3u8QualitySelector';
+import { buildProviderRequestHeaders } from '../../utils/streamHeaders';
 
 class HLSDownloader {
   constructor(entry, onProgress, onComplete, onError) {
@@ -124,6 +125,10 @@ class HLSDownloader {
           mp4Path,
           (progressData) => {
             this.reportProgress(95, 'converting');
+          },
+          {
+            headers: this.entry.streamHeaders,
+            referer: this.entry.streamReferer,
           }
         );
 
@@ -183,10 +188,11 @@ class HLSDownloader {
 
   async fetchPlaylist(url) {
     try {
-      const headers = {};
-      if (this.entry.streamReferer) {
-        headers['Referer'] = this.entry.streamReferer;
-      }
+      const headers = buildProviderRequestHeaders(
+        this.entry.streamHeaders,
+        url,
+        this.entry.streamReferer
+      );
 
       const response = await fetch(url, { headers });
       if (!response.ok) {
@@ -354,10 +360,11 @@ class HLSDownloader {
       await this.deleteFileIfExists(filePath);
 
       try {
-        const headers = {};
-        if (this.entry.streamReferer) {
-          headers['Referer'] = this.entry.streamReferer;
-        }
+        const headers = buildProviderRequestHeaders(
+          this.entry.streamHeaders,
+          this.initSegment.url,
+          this.entry.streamReferer
+        );
         if (this.initSegment.byteRange) {
           const range = this.parseByteRange(this.initSegment.byteRange);
           if (range) {
@@ -528,10 +535,11 @@ class HLSDownloader {
       const timeoutMs = baseTimeoutMs + (attempt * 5000);
 
       try {
-        const headers = {};
-        if (this.entry.streamReferer) {
-          headers['Referer'] = this.entry.streamReferer;
-        }
+        const headers = buildProviderRequestHeaders(
+          this.entry.streamHeaders,
+          segment.url,
+          this.entry.streamReferer
+        );
         if (segment.byteRange) {
           const start = segment.byteRange.offset;
           const end = start + segment.byteRange.length - 1;

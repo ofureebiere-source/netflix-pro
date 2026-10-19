@@ -284,9 +284,46 @@ export const HEADER_PRESETS = {
   },
 };
 
+/**
+ * Headers for a provider-issued media URL.
+ *
+ * The backend hands back the exact header set the provider expects. Those
+ * headers are the difference between a 200 and a 403: a provider that issued
+ * a URL against a particular User-Agent will reject the same URL from
+ * anything else. Callers must therefore pass the provider's set through
+ * verbatim, and only fall back to a synthetic browser fingerprint when the
+ * backend supplied none.
+ */
+export const buildProviderRequestHeaders = (
+  providerHeaders?: Record<string, string> | null,
+  fallbackUrl?: string,
+  fallbackReferer?: string | null
+): Record<string, string> => {
+  const supplied = providerHeaders && Object.keys(providerHeaders).length > 0 ? providerHeaders : null;
+
+  if (supplied) {
+    // Provider headers win, but a Range header belongs to the individual
+    // segment request and must never be inherited from the playlist call.
+    const headers: Record<string, string> = {};
+    for (const [key, value] of Object.entries(supplied)) {
+      if (value === undefined || value === null) continue;
+      if (key.toLowerCase() === 'range') continue;
+      headers[key] = String(value);
+    }
+    return headers;
+  }
+
+  if (fallbackUrl) {
+    return buildStreamHeaders(fallbackUrl, fallbackReferer || undefined);
+  }
+
+  return {};
+};
+
 // ─── Default export for backward compatibility ───
 export default {
   buildStreamHeaders,
+  buildProviderRequestHeaders,
   buildHeadersForDomain,
   buildFFmpegHeaders,
   buildStreamingHeaders,

@@ -197,7 +197,18 @@ class DownloadManager {
         episode: entry.episode,
       });
 
-      await this.setStreamUrlForDownload(entry.id, result.url, result.headers?.Referer);
+      // Keep the provider's complete header set. Reducing it to `Referer`
+      // alone is what broke downloads: most providers reject a request whose
+      // User-Agent does not match the one they issued the URL to.
+      const providerHeaders: Record<string, string> | null =
+        result.headers && Object.keys(result.headers).length > 0 ? { ...result.headers } : null;
+
+      await this.setStreamUrlForDownload(
+        entry.id,
+        result.url,
+        providerHeaders?.Referer ?? providerHeaders?.referer ?? null,
+        providerHeaders
+      );
 
       this.pendingFetches.delete(entry.id);
 
@@ -530,13 +541,19 @@ class DownloadManager {
     return null;
   }
 
-  async setStreamUrlForDownload(downloadId: string, streamUrl: string, streamReferer: string | null = null) {
-    await updateDownloadEntry(downloadId, { streamUrl, streamReferer });
+  async setStreamUrlForDownload(
+    downloadId: string,
+    streamUrl: string,
+    streamReferer: string | null = null,
+    streamHeaders: Record<string, string> | null = null
+  ) {
+    await updateDownloadEntry(downloadId, { streamUrl, streamReferer, streamHeaders });
 
     const queueItem = downloadQueue.getById(downloadId);
     if (queueItem) {
       queueItem.streamUrl = streamUrl;
       queueItem.streamReferer = streamReferer;
+      queueItem.streamHeaders = streamHeaders;
     }
   }
 

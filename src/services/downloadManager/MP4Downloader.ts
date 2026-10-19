@@ -1,5 +1,6 @@
 import * as LegacyFileSystem from 'expo-file-system/legacy';
 import { ensureDirectoryExists } from '../../utils/downloadStorage';
+import { buildProviderRequestHeaders } from '../../utils/streamHeaders';
 
 const STALL_TIMEOUT_MS = 30000;
 
@@ -28,10 +29,11 @@ class MP4Downloader {
 
       const videoPath = `${this.contentDir}video.mp4`;
 
-      const headers = {};
-      if (this.entry.streamReferer) {
-        headers['Referer'] = this.entry.streamReferer;
-      }
+      const headers = buildProviderRequestHeaders(
+        this.entry.streamHeaders,
+        this.entry.streamUrl,
+        this.entry.streamReferer
+      );
 
       this.reportProgress(0, 'downloading');
 
