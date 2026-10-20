@@ -36,8 +36,14 @@ android {
         // fields, so the manifest and the JS bundle can never disagree about
         // the version (the in-app updater compares them).
         def pkg = new groovy.json.JsonSlurper().parseText(file("../../package.json").text)
-        versionCode (pkg["version-iteration"] ?: 1) as int
-        versionName (pkg.version ?: "1.0.0")
+        // The `= ` matters: written as `versionCode (expr) as int`, Groovy
+        // parses it as `versionCode(expr) as int` — a call to the void setter,
+        // whose null result is then cast to int, throwing
+        // "Cannot invoke Integer.intValue() because <local> is null" while the
+        // :app project is being evaluated. Assigning first avoids the cast
+        // binding to the setter's return value.
+        versionCode = (pkg["version-iteration"] ?: 1) as int
+        versionName = (pkg.version ?: "1.0.0") as String
     }
 
     // ─── SIMPLIFIED SIGNING ───
