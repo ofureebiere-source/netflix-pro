@@ -71,9 +71,16 @@ export function parseVersion(release: GitHubRelease, assetName?: string): string
   return '';
 }
 
-/** The first `.apk` asset in a release, if there is one. */
+/** The APK asset in a release, preferring the versioned name. */
 export function findApkAsset(release: GitHubRelease) {
-  return (release.assets || []).find((asset) => asset?.name?.toLowerCase().endsWith('.apk'));
+  const apks = (release.assets || []).filter((asset) =>
+    asset?.name?.toLowerCase().endsWith('.apk')
+  );
+  // The workflow publishes two names for the same bytes: `netflix-pro-1.2.3.apk`
+  // and the stable `netflix-pro.apk` alias. Prefer the versioned one, since the
+  // version it carries is what the updater compares against the installed app;
+  // asset order in the API response is not guaranteed.
+  return apks.find((asset) => /\d+\.\d+\.\d+/.test(asset.name || '')) || apks[0];
 }
 
 /**

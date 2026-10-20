@@ -31,6 +31,7 @@ const VideoControlsOverlay = ({
   episode,
   position,
   duration,
+  bufferedPosition = 0,
   isSeeking,
   seekPreviewPosition,
   isAtLiveEdge,
@@ -58,12 +59,18 @@ const VideoControlsOverlay = ({
   onCycleSpeed,
   onCycleAspectRatio,
   onOpenSubtitleSettings,
+  onOpenServers,
+  serverCount = 0,
+  activeServerLabel,
   onLock,
 }: any) => {
   const displayPosition = isSeeking && seekPreviewPosition !== null ? seekPreviewPosition : position;
   const actualPosition = position;
   const progressPercent = (displayPosition / Math.max(duration, 1)) * 100;
   const timeRemaining = duration - actualPosition;
+  // How far ahead the stream has loaded. Clamped so the buffer never paints
+  // past the end of the track or behind the played fill.
+  const bufferedPercent = Math.min(Math.max((bufferedPosition / Math.max(duration, 1)) * 100, 0), 100);
 
   return (
     <>
@@ -92,6 +99,14 @@ const VideoControlsOverlay = ({
             </Text>
           </View>
           <View style={styles.topRightButtons}>
+            {!isLiveStream && onOpenServers && serverCount > 1 && (
+              <TouchableOpacity onPress={onOpenServers} style={styles.serverGlassButton} activeOpacity={0.7}>
+                <Ionicons name="server-outline" size={14} color="white" />
+                <Text style={styles.serverGlassButtonText} numberOfLines={1}>
+                  {activeServerLabel || 'Servers'}
+                </Text>
+              </TouchableOpacity>
+            )}
             {onLock && (
               <TouchableOpacity onPress={onLock} style={styles.iconGlassButton} activeOpacity={0.7}>
                 <Ionicons name="lock-open-outline" size={18} color="white" />
@@ -193,6 +208,10 @@ const VideoControlsOverlay = ({
           ) : (
             <>
               <View style={styles.progressBar} ref={progressBarRef}>
+                {/* Buffered ("loaded") range, painted white behind the played
+                    fill — the same layered look as the website's seek bar, so
+                    the viewer can see how far ahead the stream has cached. */}
+                <View style={[styles.progressBuffer, { width: `${bufferedPercent}%` }]} />
                 <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
                 <View style={[styles.progressThumb, { left: `${progressPercent}%` }]} />
                 <View style={styles.progressTouchArea} {...(showControls ? progressPanResponder.panHandlers : {})} />
@@ -347,7 +366,32 @@ const styles = StyleSheet.create({
     height: 5,
     backgroundColor: 'rgba(255, 255, 255, 0.25)',
     borderRadius: 3,
+    // Visible, not hidden: the thumb sits at top:-7 and would be clipped.
+    // The buffer and fill carry their own radius, so nothing needs clipping.
     overflow: 'visible',
+  },
+  serverGlassButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    maxWidth: 150,
+  },
+  serverGlassButtonText: {
+    color: 'white',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  progressBuffer: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
+    borderRadius: 3,
   },
   progressFill: {
     height: '100%',

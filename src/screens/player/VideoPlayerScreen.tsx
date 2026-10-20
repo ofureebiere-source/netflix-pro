@@ -36,7 +36,7 @@ import SubtitleSettingsModal from '../../components/video/SubtitleSettingsModal'
 import LockScreenOverlay from '../../components/video/LockScreenOverlay';
 import {
   SubtitleOverlay, SeekIndicators, LoadingOverlay, ErrorOverlay,
-  BufferingAlertModal, NextEpisodeButton, EpisodesModal, VideoControlsOverlay,
+  BufferingAlertModal, NextEpisodeButton, EpisodesModal, VideoControlsOverlay, ServerSheet,
 } from '../../components/video';
 
 const LOG_TAG = '[VideoPlayerScreen]';
@@ -239,6 +239,16 @@ const VideoPlayerScreen = () => {
   // listeners must NOT surface an error screen mid-loop, or the user sees
   // a failure flash while the loop is still trying strategies 1, 2, 3.
   const isStrategyLoopActiveRef = useRef(false);
+  // How many sources an automatic failover has already hopped through, and
+  // whether one is in flight. Reset whenever the source list changes, so a new
+  // title or a manual pick gets the full budget back.
+  const providerFailoverCountRef = useRef(0);
+  const isFailoverActiveRef = useRef(false);
+  // The latest source list and selector, held in refs so the long-lived player
+  // listeners read current values without being re-subscribed.
+  const sourcesRef = useRef<any[]>([]);
+  const activeSourceIndexRef = useRef(0);
+  const selectSourceRef = useRef<(index: number) => void>(() => {});
 
   useEffect(() => { playerModeRef.current = playerMode; }, [playerMode]);
 
@@ -265,6 +275,15 @@ const VideoPlayerScreen = () => {
   const [isLoadingStream, setIsLoadingStream] = useState(false);
   const [subtitleTracks, setSubtitleTracks] = useState<any[]>([]);
   const [selectedSubtitleTrack, setSelectedSubtitleTrack] = useState<any>(null);
+  // How far ahead the player has buffered, in seconds — painted as the white
+  // range behind the played fill in the seek bar.
+  const [bufferedPosition, setBufferedPosition] = useState(0);
+  // Which resolved source is playing. Mirrors the hook's own activeIndex so
+  // the server sheet can tick the active row.
+  const [activeSourceIndex, setActiveSourceIndex] = useState(0);
+  const [showServerSheet, setShowServerSheet] = useState(false);
+  // Transient notice shown while an automatic provider failover is in flight.
+  const [providerFailoverNotice, setProviderFailoverNotice] = useState<string | null>(null);
 
   useEffect(() => {
     const lockLandscape = async () => {
@@ -470,9 +489,45 @@ const VideoPlayerScreen = () => {
     isOffline: isOffline === 'true', offlineFilePath: String(offlineFilePath || ''),
     directStreamUrl: isNativeMode ? directStreamUrl : null,
   });
-  const { videoUrl, isResolved: streamExtractionComplete, isLoading: isChangingSource, error: playbackError } = playback;
+  const { videoUrl, isResolved: streamExtractionComplete, isLoading: isChangingSource, error: playbackError, sources: playbackSources, activeIndex: playbackActiveIndex, selectSource: selectPlaybackSource } = playback;
   const currentPlayingSourceName = 'licensed';
   const isLiveStream = false;
+
+  // Keep the refs the player listeners read in step with the resolved sources.
+  useEffect(() => {
+    sourcesRef.current = playbackSources;
+    // A fresh list is a fresh start: new title, or a manual provider pick.
+    providerFailoverCountRef.current = 0;
+    isFailoverActiveRef.current = false;
+  }, [playbackSources]);
+  useEffect(() => { activeSourceIndexRef.current = playbackActiveIndex; }, [playbackActiveIndex]);
+  useEffect(() => { selectSourceRef.current = selectPlaybackSource; }, [selectPlaybackSource]);
+  // Keep the sheet's ticked row in step with the hook's own selection, so a
+  // resolution or an automatic failover is reflected in the UI.
+  useEffect(() => { setActiveSourceIndex(playbackActiveIndex); }, [playbackActiveIndex]);
+
+  /**
+   * Move to another resolved source after the current one fails.
+   *
+   * A provider that resolves but then cannot actually play should not become
+   * the viewer's problem: instead of an error card telling them to try another
+   * server, the player hops to the next source on its own and only reports a
+   * failure once every source has been tried. Returns true when it hopped.
+   */
+  const autoFailoverToNextSource = useCallback((): boolean => {
+    const list = sourcesRef.current;
+    if (list.length < 2) return false;
+    if (providerFailoverCountRef.current >= list.length - 1) return false;
+    if (isFailoverActiveRef.current) return true;
+    providerFailoverCountRef.current += 1;
+    isFailoverActiveRef.current = true;
+    const next = (activeSourceIndexRef.current + 1) % list.length;
+    logWarn(`Auto-failover: switching to source ${next + 1}/${list.length}`);
+    setError(null);
+    setProviderFailoverNotice(`Switching to another server… (${next + 1}/${list.length})`);
+    selectSourceRef.current(next);
+    return true;
+  }, []);
 
   useEffect(() => {
     if (playbackError) setError({ message: playbackError });
@@ -521,6 +576,11 @@ const VideoPlayerScreen = () => {
         if (status === 'readyToPlay') {
           setPlayerReady(true); playerReadyRef.current = true;
           setLoading(false); setIsInitialLoading(false);
+          // A source that reached ready-to-play is genuinely working: restore
+          // the failover budget and drop the switching notice.
+          isFailoverActiveRef.current = false;
+          providerFailoverCountRef.current = 0;
+          setProviderFailoverNotice(null);
           logInfo('🎬 Player ready - decoding movie');
         } else if (status === 'error') {
           // If the strategy loop is running, let IT handle this — it will
@@ -531,6 +591,9 @@ const VideoPlayerScreen = () => {
           }
           const errorMsg = error?.message || '';
           logError('Player error', errorMsg);
+          // Try another resolved source before troubling the viewer. Only when
+          // every source has failed does the error card appear.
+          if (autoFailoverToNextSource()) return;
           if (errorMsg.includes('#EXTM3U') || errorMsg.includes('Source error') || errorMsg.includes('does not start with')) {
             logError('HLS stream invalid - server returned HTML or binary instead of playlist');
             setError({
@@ -683,6 +746,10 @@ const VideoPlayerScreen = () => {
           const dur = activePlayer.duration || 0;
           setPosition(pos);
           if (dur > 0) setDuration(dur);
+          // expo-video exposes the buffered edge directly; it is 0 until the
+          // player has buffered up to the current time.
+          const buffered = activePlayer.bufferedPosition || 0;
+          if (buffered > 0) setBufferedPosition(buffered);
           updateCurrentSubtitle(pos);
         } catch {}
       }, 250);
@@ -789,6 +856,11 @@ const VideoPlayerScreen = () => {
 
     const errorMsg = playerError?.message || 'Unknown error';
     logError('❌ Video playback error event', null, { message: errorMsg, platform: Platform.OS });
+
+    // Prefer another resolved source over an error card. This covers the
+    // container/network/generic cases below in one hop; the specific messages
+    // are only reached once every source has been tried.
+    if (autoFailoverToNextSource()) return;
 
     const isMkvError = errorMsg.toLowerCase().includes('mkv') || errorMsg.toLowerCase().includes('matroska') ||
                        errorMsg.toLowerCase().includes('container') || errorMsg.toLowerCase().includes('unsupported format');
@@ -907,7 +979,7 @@ const VideoPlayerScreen = () => {
               isMuted={isMuted} isLiveStream={isLiveStream} title={String(title || '')}
               episodeTitle={String(episodeTitle || '')} mediaType={String(mediaType || 'movie')}
               season={season ? Number(season) : undefined} episode={episode ? Number(episode) : undefined}
-              position={position} duration={duration} isSeeking={isSeeking}
+              position={position} duration={duration} bufferedPosition={bufferedPosition} isSeeking={isSeeking}
               seekPreviewPosition={seekPreviewPosition} isAtLiveEdge={isAtLiveEdge}
               progressBarRef={progressBarRef} progressPanResponder={progressPanResponder}
               onGoBack={() => handleGoBack()}
@@ -924,7 +996,27 @@ const VideoPlayerScreen = () => {
               playbackSpeed={playbackSpeed} onCycleSpeed={openSpeedModal}
               aspectRatioLabel={aspectRatioLabel} onCycleAspectRatio={cycleAspectRatio}
               onOpenSubtitleSettings={() => setSubtitleSettingsVisible(true)}
+              onOpenServers={() => setShowServerSheet(true)}
+              serverCount={playbackSources.length}
+              activeServerLabel={playbackSources[activeSourceIndex]?.providerLabel || playbackSources[activeSourceIndex]?.provider || ''}
               onLock={toggleLock}
+            />
+            {providerFailoverNotice && !error && (
+              <View style={styles.failoverNotice} pointerEvents="none">
+                <ActivityIndicator size="small" color="#FFF" />
+                <Text style={styles.failoverNoticeText}>{providerFailoverNotice}</Text>
+              </View>
+            )}
+            <ServerSheet
+              visible={showServerSheet}
+              onClose={() => setShowServerSheet(false)}
+              sources={playbackSources}
+              activeIndex={activeSourceIndex}
+              onSelect={(index) => {
+                setActiveSourceIndex(index);
+                selectPlaybackSource(index);
+              }}
+              loading={isChangingSource}
             />
             <LockScreenOverlay
               visible={isLocked}
@@ -1049,6 +1141,16 @@ const styles = StyleSheet.create({
   bufferingIndicatorContainer: {
     position: 'absolute', top: '50%', left: '50%',
     transform: [{ translateX: -18 }, { translateY: -18 }], zIndex: 4,
+  },
+  // Transient "switching servers" pill shown during an automatic failover.
+  failoverNotice: {
+    position: 'absolute', top: 12, alignSelf: 'center',
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)', zIndex: 20,
+  },
+  failoverNoticeText: {
+    color: '#E4E4E7', fontSize: 11, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
   seekPreviewBox: {
     position: 'absolute', bottom: 70, backgroundColor: 'rgba(0, 0, 0, 0.85)',

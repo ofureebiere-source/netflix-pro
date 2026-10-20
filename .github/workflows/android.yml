@@ -166,9 +166,14 @@ jobs:
             exit 1
           fi
           mkdir -p dist
+          # Two names for the same bytes: the versioned one is what the in-app
+          # updater matches on, and the unversioned alias is a stable target
+          # that never 404s when the version is bumped, so the website's
+          # fallback link stays valid even with the release API unreachable.
           OUT="dist/netflix-pro-${VERSION}.apk"
           cp "$SRC" "$OUT"
-          ls -lh "$OUT"
+          cp "$SRC" "dist/netflix-pro.apk"
+          ls -lh dist
           echo "apk=$OUT" >> $GITHUB_OUTPUT
 
       - name: Upload workflow artifact

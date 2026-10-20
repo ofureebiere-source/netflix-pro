@@ -46,6 +46,8 @@ export interface UseLicensedPlaybackSourceResult {
   sources: LicensedPlaybackSource[];
   /** The source currently selected from `sources`. */
   activeSource: LicensedPlaybackSource | null;
+  /** Index of `activeSource` within `sources`. */
+  activeIndex: number;
   /** Select a different source by index, for a quality or audio-track picker. */
   selectSource: (index: number) => void;
   isResolved: boolean;
@@ -139,6 +141,7 @@ export function useLicensedPlaybackSource(
     streamHeaders: activeSource?.headers,
     sources,
     activeSource,
+    activeIndex,
     selectSource,
     isResolved,
     isLoading,
