@@ -64,7 +64,11 @@ android {
                 storePassword keystoreProperties['storePassword']
                 keyAlias keystoreProperties['keyAlias']
                 keyPassword keystoreProperties['keyPassword']
-            } else if (System.getenv("KEYSTORE_PASSWORD") != null) {
+            } else if (System.getenv("KEYSTORE_PASSWORD")) {
+                // Truthiness, not `!= null`: an unset GitHub secret expands to
+                // an empty string in the workflow's env block, so a null check
+                // passes and Gradle then demands a release.keystore that the
+                // keystore step never wrote, failing :app:validateSigningRelease.
                 storeFile file('release.keystore')
                 storePassword System.getenv("KEYSTORE_PASSWORD")
                 keyAlias System.getenv("KEY_ALIAS") ?: 'netflixpro'
