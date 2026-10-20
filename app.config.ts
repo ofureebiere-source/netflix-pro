@@ -51,7 +51,7 @@ export default {
       "expo-background-task"
     ],
     assetBundlePatterns: ["**/*"],
-    owner: "Zapier-codes",
+    owner: "King-Fisher000",
     extra: {
       buildDate: new Date().toISOString()
     }

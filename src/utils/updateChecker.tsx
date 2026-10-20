@@ -11,11 +11,7 @@ import * as IntentLauncher from 'expo-intent-launcher';
 // expo-constants or a duplicated process.env value.
 // Adjust the relative path if updateChecker.tsx doesn't live at src/utils/.
 import packageJson from '../../package.json';
-
-const GITHUB_OWNER = 'Zapier-codes';
-const GITHUB_REPO = 'Netflix-Pro';
-const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/tags/android-apk-latest`;
-const APK_RELEASE_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/tag/android-apk-latest`;
+import { isNewerVersion, resolveLatestApk } from '../services/releases/releaseResolver';
 
 const CURRENT_VERSION: string = packageJson.version;
 const CHECK_FOR_UPDATES_KEY = '@check_for_updates_enabled';
@@ -39,26 +35,22 @@ const checkJsUpdate = async () => {
 };
 
 // ─── TIER 2: Check native APK update via GitHub Release ───
+// The download target comes from releaseResolver, so the app and the release
+// workflow agree on one tag and one asset naming scheme. The previous version
+// of this function read a hardcoded `Zapier-codes/Netflix-Pro` tag that does
+// not exist, so the check silently never fired.
 const checkNativeUpdate = async () => {
   try {
-    const response = await fetch(GITHUB_API_URL);
-    const release = await response.json();
-    
-    if (!release.tag_name) return null;
-    
-    // Extract version from release body or tag
-    const body = release.body || '';
-    const versionMatch = body.match(/version[:\s]*([0-9.]+)/i) || release.tag_name.match(/([0-9.]+)/);
-    const latestVersion = versionMatch ? versionMatch[1] : release.tag_name;
-    
-    // Compare with current native version (stored in AsyncStorage or app config)
+    const release = await resolveLatestApk(CURRENT_VERSION);
+    if (!release.version) return null;
+
     const currentNativeVersion = await AsyncStorage.getItem('@native_version') || CURRENT_VERSION;
-    
-    if (latestVersion !== currentNativeVersion) {
+
+    if (isNewerVersion(release.version, currentNativeVersion)) {
       return {
-        version: latestVersion,
-        apkUrl: release.assets?.find((a: any) => a.name.endsWith('.apk'))?.browser_download_url,
-        releaseUrl: APK_RELEASE_URL
+        version: release.version,
+        apkUrl: release.apkUrl,
+        releaseUrl: release.releaseUrl,
       };
     }
     return null;

@@ -1,0 +1,198 @@
+name: Android Release APK
+
+# Builds a signed *release* APK (not a debug build) and publishes it to the
+# rolling `android-latest` release as `netflix-pro-<version>.apk`, which is the
+# asset name the in-app updater looks for (src/services/releases/releaseResolver.ts).
+#
+# Signing: if the `ANDROID_KEYSTORE_BASE64` secret is present the release is
+# signed with it; otherwise Gradle falls back to the debug keystore so a build
+# still succeeds on a fork or before the secret is configured. Set the secret
+# (plus ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_ALIAS / ANDROID_KEY_PASSWORD)
+# to ship an installable, upgradeable production build.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'app/**'
+      - 'assets/**'
+      - 'android/**'
+      - 'package.json'
+      - 'app.config.ts'
+      - 'App.tsx'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+    inputs:
+      fresh_build:
+        description: 'Force a fresh build (clear Gradle and npm caches)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: android-release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-release-apk:
+    name: Build Release APK
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+
+      - name: Clear caches for a fresh build
+        if: github.event.inputs.fresh_build == 'true'
+        run: |
+          rm -rf ~/.gradle/caches ~/.gradle/wrapper node_modules .expo ~/.npm/_cacache
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('android/**/*.gradle*', 'android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Decode .env file
+        run: |
+          if [ -n "${{ secrets.ENV_FILE }}" ]; then
+            echo "${{ secrets.ENV_FILE }}" | base64 -d > .env
+          else
+            echo "No ENV_FILE secret set; building without a local .env."
+          fi
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Cache Android SDK components
+        id: android-sdk-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.ANDROID_SDK_ROOT }}/platforms
+            ${{ env.ANDROID_SDK_ROOT }}/build-tools
+            ${{ env.ANDROID_SDK_ROOT }}/ndk
+          key: android-sdk-${{ runner.os }}-platform36-buildtools36.0.0-ndk27.1.12297006
+
+      - name: Install SDK components
+        if: steps.android-sdk-cache.outputs.cache-hit != 'true'
+        run: |
+          sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;27.1.12297006"
+
+      - name: Set NDK env vars
+        run: |
+          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.1.12297006" >> $GITHUB_ENV
+          echo "ANDROID_NDK=$ANDROID_SDK_ROOT/ndk/27.1.12297006" >> $GITHUB_ENV
+
+      - name: Create local.properties
+        run: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
+          echo "ndk.dir=$ANDROID_SDK_ROOT/ndk/27.1.12297006" >> android/local.properties
+
+      - name: Restore release keystore
+        id: keystore
+        run: |
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
+            echo "signed=true" >> $GITHUB_OUTPUT
+            echo "Using the configured release keystore."
+          else
+            echo "signed=false" >> $GITHUB_OUTPUT
+            echo "::warning::ANDROID_KEYSTORE_BASE64 is not set — the release APK will be signed with the debug key and is not suitable for distribution."
+          fi
+
+      - name: Generate debug keystore (fallback signing)
+        if: steps.keystore.outputs.signed == 'false'
+        run: |
+          keytool -genkeypair -v \
+            -keystore android/app/debug.keystore \
+            -storepass android -alias androiddebugkey -keypass android \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
+      - name: Get app version
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building netflix-pro-$VERSION.apk"
+
+      - name: Build Release APK
+        run: |
+          cd android
+          chmod +x gradlew
+          [ "${{ github.event.inputs.fresh_build }}" = 'true' ] && ./gradlew clean
+          ./gradlew assembleRelease \
+            --no-daemon --build-cache --stacktrace \
+            -PreactNativeArchitectures=arm64-v8a,x86_64
+        env:
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx6g -Dorg.gradle.daemon=false"
+          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+      - name: Rename APK to its release name
+        id: rename
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          SRC=$(find android/app/build/outputs/apk/release -name '*.apk' | head -n 1)
+          if [ -z "$SRC" ]; then
+            echo "::error::No release APK was produced."
+            exit 1
+          fi
+          mkdir -p dist
+          OUT="dist/netflix-pro-${VERSION}.apk"
+          cp "$SRC" "$OUT"
+          ls -lh "$OUT"
+          echo "apk=$OUT" >> $GITHUB_OUTPUT
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: netflix-pro-${{ steps.version.outputs.version }}
+          path: dist/*.apk
+          retention-days: 30
+
+      - name: Publish to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-latest
+          name: Netflix Pro (Android)
+          files: dist/*.apk
+          make_latest: 'true'
+          body: |
+            Latest Android release build of Netflix Pro.
+
+            **Version:** ${{ steps.version.outputs.version }}
+            **Commit:** ${{ github.sha }}
+            **Signed:** ${{ steps.keystore.outputs.signed == 'true' && 'release keystore' || 'debug keystore (not for distribution)' }}
+
+            Download `netflix-pro-${{ steps.version.outputs.version }}.apk` and install it
+            directly. The in-app updater reads this release.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

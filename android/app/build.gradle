@@ -32,8 +32,12 @@ android {
         applicationId 'com.netflixpro.app'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 12
-        versionName "1.2.3"
+        // Single source of truth: package.json. app.config.ts reads the same
+        // fields, so the manifest and the JS bundle can never disagree about
+        // the version (the in-app updater compares them).
+        def pkg = new groovy.json.JsonSlurper().parseText(file("../../package.json").text)
+        versionCode (pkg["version-iteration"] ?: 1) as int
+        versionName (pkg.version ?: "1.0.0")
     }
 
     // ─── SIMPLIFIED SIGNING ───
@@ -87,6 +91,17 @@ android {
     packagingOptions {
         jniLibs {
             useLegacyPackaging true
+        }
+    }
+
+    // Name the release APK the same way CI does, so a local `assembleRelease`
+    // and the workflow produce identical filenames. The in-app updater and the
+    // release asset name both key off `netflix-pro-<version>.apk`.
+    applicationVariants.all { variant ->
+        if (variant.buildType.name == 'release') {
+            variant.outputs.all { output ->
+                outputFileName = "netflix-pro-${variant.versionName}.apk"
+            }
         }
     }
 }
