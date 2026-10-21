@@ -617,6 +617,49 @@ export const markAsWatched = async (downloadId: string) => {
   }
 };
 
+/**
+ * Record a download that finished outside the queue.
+ *
+ * The details screen converts straight to its final file with FFmpegKit rather
+ * than going through `downloadQueue`, so nothing wrote an index entry and the
+ * Downloads screen — which reads the index — never saw the save. This writes the
+ * same shape `createDownloadEntry` does, already `completed`, so the two paths
+ * produce entries the screen and the cards can treat identically.
+ */
+export const recordCompletedDownload = async (mediaInfo: any) => {
+  const {
+    id, mediaType, tmdbId, title, posterPath, quality, filePath, fileSize,
+    season = null, episode = null, episodeTitle = null,
+  } = mediaInfo;
+  if (!id || !filePath) return false;
+
+  try {
+    const now = new Date().toISOString();
+    const entry = {
+      ...createDownloadEntry({
+        mediaType, tmdbId, title, posterPath, season, episode, episodeTitle,
+      }),
+      id,
+      status: DOWNLOAD_STATUS.COMPLETED,
+      progress: 100,
+      downloadedBytes: fileSize || 0,
+      totalBytes: fileSize || 0,
+      completedAt: now,
+      filePath,
+      fileSize: fileSize || 0,
+      quality: quality || null,
+    };
+    // The file is already on disk; a stale queued entry for the same id would
+    // otherwise survive alongside it and show up twice.
+    await removeDownloadEntry(id);
+    await saveDownloadEntry(entry);
+    return true;
+  } catch (error: any) {
+    console.warn('[downloadStorage] Could not record completed download:', error);
+    return false;
+  }
+};
+
 export const getDownloadStorageUsage = async () => {
   try {
     const index = await getDownloadsIndex();
@@ -637,6 +680,16 @@ export const deleteDownloadFiles = async (downloadId: string) => {
   try {
     const entry = await getDownloadEntry(downloadId);
     if (entry) {
+      // A queued download keeps its files under a per-title directory; one
+      // saved straight by the details screen is a single file whose path is
+      // recorded in the entry. Deleting the directory of the latter would
+      // remove nothing and leave the file on disk, so the recorded path is
+      // tried first and the directory is only a fallback.
+      const recorded = entry.filePath ? String(entry.filePath) : '';
+      if (recorded && /\.(mp4|mkv|webm|m3u8)$/i.test(recorded)) {
+        const info = await LegacyFileSystem.getInfoAsync(recorded);
+        if (info.exists) await LegacyFileSystem.deleteAsync(recorded, { idempotent: true });
+      }
       const contentDir = `${LegacyFileSystem.documentDirectory}downloads/${entry.mediaType}/${entry.tmdbId}/`;
       const contentDirInfo = await LegacyFileSystem.getInfoAsync(contentDir);
       if (contentDirInfo.exists) {

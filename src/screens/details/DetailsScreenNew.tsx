@@ -28,7 +28,7 @@ import {
   fetchSeasonDetails, getImageUrl, fetchMovieRecommendations,
   fetchTVShowRecommendations, fetchMovieReviews, fetchTVShowReviews,
 } from '../../services/unified/metadata/TMDBMetadata';
-import { getDownloadSettings } from '../../utils/downloadStorage';
+import { getDownloadSettings, recordCompletedDownload } from '../../utils/downloadStorage';
 import { buildFFmpegHeaders } from '../../utils/streamHeaders';
 import { getPlaybackSources, groupSourcesByQuality, NoSourceAvailableError, type LicensedPlaybackSource } from '../../services/licensedPlayback/LicensedPlaybackService';
 import { GlassButton } from '../../components/glass';
@@ -139,6 +139,16 @@ const isTorrentUrl = (url: string): boolean => {
   if (!url) return false;
   const lower = url.toLowerCase();
   return lower.includes('webtor.io') || lower.includes('.torrent') || lower.startsWith('magnet:');
+};
+
+/** Byte size of a saved file, or 0 when it cannot be read. */
+const getFileSize = async (filePath: string): Promise<number> => {
+  try {
+    const info = await FileSystem.getInfoAsync(filePath);
+    return info.exists && !info.isDirectory ? (info.size ?? 0) : 0;
+  } catch {
+    return 0;
+  }
 };
 
 const DetailsScreenNew: React.FC = () => {
@@ -649,6 +659,15 @@ const DetailsScreenNew: React.FC = () => {
             const outcome = await result;
             episodeFfmpegSessionIdsRef.current.delete(id);
             if (!outcome.success && !outcome.cancelled) throw new Error(outcome.failLog || 'FFmpeg conversion failed');
+            // The file is on disk; record it where the Downloads screen reads.
+            const epSize = await getFileSize(outputPath);
+            await recordCompletedDownload({
+              id, mediaType: 'tv', tmdbId: String(mediaId), title,
+              posterPath: displayPoster, quality: quality.label,
+              filePath: outputPath, fileSize: epSize,
+              season: ep.seasonNumber, episode: ep.episodeNumber,
+              episodeTitle: ep.title,
+            });
           } catch (error: any) {
             addNotification({ id: `download_fail_${Date.now()}_${ep.seasonNumber}_${ep.episodeNumber}`, title: 'Download Failed', message: `Failed to download ${title}: ${error?.message || 'Unknown error'}`, type: 'error' });
           } finally {
@@ -680,6 +699,13 @@ const DetailsScreenNew: React.FC = () => {
       if (outcome.success) {
         setIsDownloading(false); setDownloadProgress(0); setDownloadStatusText('Download Now'); setPendingQuality(null); setIsDownloadDropdownOpen(false);
         addDownload({ id: `${mediaType}_${mediaId}`, title: displayTitle, mediaType: mediaType as 'movie' | 'tv', tmdbId: String(mediaId), posterPath: displayPoster, quality: quality.label, size: quality.size, sizeBytes: quality.sizeBytes, provider: quality.provider || 'licensed', filePath: outputPath });
+        // The file is on disk; record it where the Downloads screen reads.
+        const movieSize = await getFileSize(outputPath);
+        await recordCompletedDownload({
+          id: `${mediaType}_${mediaId}`, mediaType, tmdbId: String(mediaId),
+          title: displayTitle, posterPath: displayPoster, quality: quality.label,
+          filePath: outputPath, fileSize: movieSize,
+        });
       } else if (outcome.cancelled) {
         setIsDownloading(false); setDownloadProgress(0); setDownloadStatusText('Download Now');
       } else {
