@@ -457,7 +457,12 @@ function AppContent() {
         >
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="movie/[id]" options={{ headerShown: false }} />
-          <Stack.Screen name="player/[id]" options={{ headerShown: false }} />
+          {/* The player route is `app/player/index.tsx`, reached as `/player`.
+              It was registered as `player/[id]`, which matches no file, so the
+              real route was unregistered while a phantom one was declared. */}
+          <Stack.Screen name="player/index" options={{ headerShown: false }} />
+          <Stack.Screen name="downloads" options={{ headerShown: false }} />
+          <Stack.Screen name="notifications" options={{ headerShown: false }} />
           {/* search route is handled by app/search/index.tsx - no need to define here */}
         </Stack>
       </View>

@@ -1625,7 +1625,7 @@ export interface RankingCriteria {
 // STREAMING BACKEND TYPES
 // ============================================================================
 
-export type StreamProviderId = 'consumet' | 'moviebox' | 'vidsrc' | 'xyra';
+export type StreamProviderId = 'consumet' | 'moviebox' | 'xyra';
 
 // ─── FIXED: Removed duplicate nested interface properties ───
 export interface IStreamProvider {
@@ -1819,7 +1819,6 @@ export default {
   StreamProviderId: {
     CONSUMET: 'consumet',
     MOVIEBOX: 'moviebox',
-    VIDSRC: 'vidsrc',
     XYRA: 'xyra',
   },
   

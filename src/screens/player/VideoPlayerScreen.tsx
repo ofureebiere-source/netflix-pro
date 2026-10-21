@@ -29,15 +29,18 @@ import { useLicensedPlaybackSource } from '../../hooks/useLicensedPlaybackSource
 import { usePlaybackSpeed } from '../../hooks/usePlaybackSpeed';
 import { useAspectRatio } from '../../hooks/useAspectRatio';
 import { useScreenLock } from '../../hooks/useScreenLock';
+import { usePlayerTracks } from '../../hooks/usePlayerTracks';
 
 import SubtitlesModal from '../../components/SubtitlesModal';
 import PlaybackSpeedModal from '../../components/video/PlaybackSpeedModal';
+import TrackSelectionModal from '../../components/video/TrackSelectionModal';
 import SubtitleSettingsModal from '../../components/video/SubtitleSettingsModal';
 import LockScreenOverlay from '../../components/video/LockScreenOverlay';
 import {
   SubtitleOverlay, SeekIndicators, LoadingOverlay, ErrorOverlay,
   BufferingAlertModal, NextEpisodeButton, EpisodesModal, VideoControlsOverlay, ServerSheet,
 } from '../../components/video';
+import { useAppStore } from '../../store/zustand';
 
 const LOG_TAG = '[VideoPlayerScreen]';
 
@@ -282,6 +285,7 @@ const VideoPlayerScreen = () => {
   // the server sheet can tick the active row.
   const [activeSourceIndex, setActiveSourceIndex] = useState(0);
   const [showServerSheet, setShowServerSheet] = useState(false);
+  const [showTrackModal, setShowTrackModal] = useState(false);
   // Transient notice shown while an automatic provider failover is in flight.
   const [providerFailoverNotice, setProviderFailoverNotice] = useState<string | null>(null);
 
@@ -491,7 +495,24 @@ const VideoPlayerScreen = () => {
   });
   const { videoUrl, isResolved: streamExtractionComplete, isLoading: isChangingSource, error: playbackError, sources: playbackSources, activeIndex: playbackActiveIndex, selectSource: selectPlaybackSource } = playback;
   const currentPlayingSourceName = 'licensed';
-  const isLiveStream = false;
+  // Derived from the nav param rather than hardcoded. The param was already
+  // read (see `isLive` above) but only used for back-navigation, so
+  // `LiveIndicator` never rendered and the live-only seek suppression was dead.
+  const isLiveStream = isLive === 'true';
+
+  // Quality and audio come from the tracks the native player reports, seeded
+  // from the viewer's saved preferences.
+  const { defaultPlayerQuality, dataSaver } = useAppStore();
+  const playerTracks = usePlayerTracks({
+    player: activePlayer,
+    defaultQuality: defaultPlayerQuality,
+    dataSaver,
+    disabled: isLiveStream,
+  });
+  const {
+    videoTracks, audioTracks, selectedVideoId, selectedAudioId,
+    selectVideoTrack, selectAudioTrack, qualityLabel, trackCount,
+  } = playerTracks;
 
   // Keep the refs the player listeners read in step with the resolved sources.
   useEffect(() => {
@@ -1000,6 +1021,9 @@ const VideoPlayerScreen = () => {
               serverCount={playbackSources.length}
               activeServerLabel={playbackSources[activeSourceIndex]?.providerLabel || playbackSources[activeSourceIndex]?.provider || ''}
               onLock={toggleLock}
+              onOpenQuality={() => setShowTrackModal(true)}
+              qualityLabel={qualityLabel}
+              trackCount={trackCount}
             />
             {providerFailoverNotice && !error && (
               <View style={styles.failoverNotice} pointerEvents="none">
@@ -1030,6 +1054,16 @@ const VideoPlayerScreen = () => {
               onClose={closeSpeedModal}
               currentSpeed={playbackSpeed}
               onSelectSpeed={setPlaybackSpeed}
+            />
+            <TrackSelectionModal
+              visible={showTrackModal}
+              onClose={() => setShowTrackModal(false)}
+              videoTracks={videoTracks}
+              audioTracks={audioTracks}
+              selectedVideoId={selectedVideoId}
+              selectedAudioId={selectedAudioId}
+              onSelectVideo={selectVideoTrack}
+              onSelectAudio={selectAudioTrack}
             />
             <SubtitleSettingsModal
               visible={subtitleSettingsVisible}

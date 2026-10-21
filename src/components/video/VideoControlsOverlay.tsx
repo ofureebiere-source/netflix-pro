@@ -63,6 +63,9 @@ const VideoControlsOverlay = ({
   serverCount = 0,
   activeServerLabel,
   onLock,
+  onOpenQuality,
+  qualityLabel,
+  trackCount = 0,
 }: any) => {
   const displayPosition = isSeeking && seekPreviewPosition !== null ? seekPreviewPosition : position;
   const actualPosition = position;
@@ -110,6 +113,14 @@ const VideoControlsOverlay = ({
             {onLock && (
               <TouchableOpacity onPress={onLock} style={styles.iconGlassButton} activeOpacity={0.7}>
                 <Ionicons name="lock-open-outline" size={18} color="white" />
+              </TouchableOpacity>
+            )}
+            {/* Quality and audio tracks. Only shown once the source has loaded
+                and reported more than one option — a single track is not a
+                choice, so the button would be a dead end. */}
+            {!isLiveStream && onOpenQuality && trackCount > 1 && (
+              <TouchableOpacity onPress={onOpenQuality} style={styles.speedGlassButton} activeOpacity={0.7}>
+                <Text style={styles.speedGlassButtonText}>{qualityLabel || 'Auto'}</Text>
               </TouchableOpacity>
             )}
             {!isLiveStream && onCycleAspectRatio && (

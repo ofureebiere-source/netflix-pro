@@ -22,6 +22,33 @@ import { useAlert } from '../../contexts/AlertContext';
 // Services
 import { getDownloadStorageUsage, formatFileSize, getAllDownloads, clearAllDownloads } from '../../utils/downloadStorage';
 import downloadManager from '../../services/downloadManager';
+import OptionPickerModal, { PickerOption } from '../../components/OptionPickerModal';
+import { getSubtitleStylePrefs, saveSubtitleStylePrefs, saveSubtitleLanguagePreference } from '../../utils/storage';
+
+// The ladder the player can actually offer. `auto` is the default because the
+// native player adapts to bandwidth, which is what a viewer wants unless they
+// say otherwise. Kept in sync with the heights usePlayerTracks matches on.
+const QUALITY_OPTIONS: PickerOption[] = [
+  { value: 'auto', label: 'Auto' },
+  { value: '2160', label: '4K' },
+  { value: '1080', label: '1080p' },
+  { value: '720', label: '720p' },
+  { value: '480', label: '480p' },
+];
+
+const SUBTITLE_LANGUAGE_OPTIONS: PickerOption[] = [
+  { value: 'en', label: 'English' },
+  { value: 'es', label: 'Spanish' },
+  { value: 'pt', label: 'Portuguese' },
+  { value: 'fr', label: 'French' },
+  { value: 'de', label: 'German' },
+  { value: 'it', label: 'Italian' },
+  { value: 'ja', label: 'Japanese' },
+  { value: 'ko', label: 'Korean' },
+  { value: 'zh', label: 'Chinese' },
+];
+
+type PickerKind = 'quality' | 'language' | null;
 
 const SettingsScreen = () => {
   const { colors, isDark } = useTheme();
@@ -39,18 +66,23 @@ const SettingsScreen = () => {
     skipIntro,
     skipCredits,
     autoPlayNext,
+    dataSaver,
     setWifiOnlyDownload,
     setMaxConcurrentDownloads,
     setAutoDeleteWatchedDays,
     setAutoDeleteUnwatchedDays,
+    setDefaultPlayerQuality,
+    setSubtitleLanguage,
     setSubtitleSize,
     setSkipIntro,
     setSkipCredits,
     setAutoPlayNext,
+    setDataSaver,
     resetSettings,
   } = useAppStore();
 
   const [loading, setLoading] = useState(true);
+  const [picker, setPicker] = useState<PickerKind>(null);
   const [downloadStorageUsed, setDownloadStorageUsed] = useState(0);
   const [totalDownloadsCount, setTotalDownloadsCount] = useState(0);
   const [storageUsageValue, setStorageUsageValue] = useState('0');
@@ -143,6 +175,23 @@ const SettingsScreen = () => {
     );
   }, [resetSettings, showToast, showDestructiveAlert]);
 
+  // Subtitle Size drives the subtitle style prefs the overlay actually renders
+  // (fontScale). Before this, the control wrote a store field that nothing read,
+  // so changing the size had no visible effect.
+  const handleSubtitleSizeChange = useCallback((size: number) => {
+    setSubtitleSize(size);
+    getSubtitleStylePrefs()
+      .then((prefs) => saveSubtitleStylePrefs({ ...prefs, fontScale: size / 100 }))
+      .catch(() => { /* Non-fatal: the store still records the choice. */ });
+  }, [setSubtitleSize]);
+
+  // Same idea for language: the store field was written but `useSubtitles`
+  // reads its own persisted preference, so the pick never reached playback.
+  const handleSubtitleLanguageChange = useCallback((code: string) => {
+    setSubtitleLanguage(code);
+    saveSubtitleLanguagePreference(code).catch(() => { /* Non-fatal. */ });
+  }, [setSubtitleLanguage]);
+
   const renderSetting = (icon: string, title: string, rightElement: React.ReactNode, description?: string) => (
     <View style={[styles.settingItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <View style={styles.settingLeft}>
@@ -209,18 +258,20 @@ const SettingsScreen = () => {
           {renderSetting(
             'videocam',
             'Default Quality',
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => setPicker('quality')} activeOpacity={0.7}>
               <Text style={[styles.qualityText, { color: colors.text }]}>
-                {defaultPlayerQuality || 'Auto'}
+                {QUALITY_OPTIONS.find(o => o.value === defaultPlayerQuality)?.label
+                  || defaultPlayerQuality || 'Auto'}
               </Text>
             </TouchableOpacity>
           )}
           {renderSetting(
             'text',
             'Subtitle Language',
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => setPicker('language')} activeOpacity={0.7}>
               <Text style={[styles.qualityText, { color: colors.text }]}>
-                {subtitleLanguage || 'English'}
+                {SUBTITLE_LANGUAGE_OPTIONS.find(o => o.value === subtitleLanguage)?.label
+                  || subtitleLanguage || 'English'}
               </Text>
             </TouchableOpacity>
           )}
@@ -236,7 +287,7 @@ const SettingsScreen = () => {
                     subtitleSize === size && { backgroundColor: colors.accent },
                     { borderColor: colors.border }
                   ]}
-                  onPress={() => setSubtitleSize(size)}
+                  onPress={() => handleSubtitleSizeChange(size)}
                 >
                   <Text style={[styles.qualityButtonText, subtitleSize === size && { color: '#000' }, { color: colors.text }]}>
                     {size}%
@@ -253,7 +304,8 @@ const SettingsScreen = () => {
               onValueChange={setSkipIntro}
               trackColor={{ false: '#444', true: colors.accent }}
               thumbColor="#fff"
-            />
+            />,
+            'Not active yet — needs intro markers, which the backend does not supply.'
           )}
           {renderSetting(
             'flag',
@@ -263,7 +315,19 @@ const SettingsScreen = () => {
               onValueChange={setSkipCredits}
               trackColor={{ false: '#444', true: colors.accent }}
               thumbColor="#fff"
-            />
+            />,
+            'Not active yet — needs credit markers, which the backend does not supply.'
+          )}
+          {renderSetting(
+            'cellular',
+            'Data Saver',
+            <Switch
+              value={dataSaver}
+              onValueChange={setDataSaver}
+              trackColor={{ false: '#444', true: colors.accent }}
+              thumbColor="#fff"
+            />,
+            'Caps playback at 480p unless you pick a quality yourself.'
           )}
         </View>
 
@@ -361,6 +425,23 @@ const SettingsScreen = () => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <OptionPickerModal
+        visible={picker === 'quality'}
+        title="Default Quality"
+        options={QUALITY_OPTIONS}
+        selected={defaultPlayerQuality}
+        onSelect={setDefaultPlayerQuality}
+        onClose={() => setPicker(null)}
+      />
+      <OptionPickerModal
+        visible={picker === 'language'}
+        title="Subtitle Language"
+        options={SUBTITLE_LANGUAGE_OPTIONS}
+        selected={subtitleLanguage}
+        onSelect={handleSubtitleLanguageChange}
+        onClose={() => setPicker(null)}
+      />
     </SafeAreaView>
   );
 };

@@ -45,7 +45,7 @@ export interface StreamSource {
   url: string;
   quality: string;
   format: 'hls' | 'dash' | 'mp4';
-  provider: 'consumet' | 'xyra' | 'vidsrc';
+  provider: 'consumet' | 'xyra';
   referer?: string;
   subtitles?: Subtitle[];
 }
