@@ -198,7 +198,7 @@ const VideoPlayerScreen = () => {
   const {
     mediaId, mediaType, title, episodeTitle, poster_path, season, episode,
     isLive, isOffline, offlineFilePath, streamUrl, year, releaseDate,
-    subtitles: subtitlesParam,
+    subtitles: subtitlesParam, streamHeaders: streamHeadersParam,
   } = params;
 
   // Derived from the nav param rather than hardcoded. Declared here because the
@@ -227,6 +227,29 @@ const VideoPlayerScreen = () => {
     const url = String(streamUrl).trim();
     return url || null;
   }, [streamUrl]);
+
+  /**
+   * Headers for a direct stream, JSON-encoded in the nav param.
+   *
+   * Navigation params are strings, and a channel's playlist entry can specify
+   * both a User-Agent and a Referer. A malformed value is ignored rather than
+   * thrown: it must not take down playback of an otherwise valid stream.
+   */
+  const directStreamHeaders = useMemo<Record<string, string> | null>(() => {
+    const raw = Array.isArray(streamHeadersParam) ? streamHeadersParam[0] : streamHeadersParam;
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(String(raw));
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+      const entries = Object.entries(parsed).filter(
+        ([key, value]) => typeof key === 'string' && typeof value === 'string'
+      ) as [string, string][];
+      return entries.length > 0 ? Object.fromEntries(entries) : null;
+    } catch (e: any) {
+      logWarn('Ignoring malformed streamHeaders param', e?.message);
+      return null;
+    }
+  }, [streamHeadersParam]);
 
   const playerMode = useMemo(() => {
     const mode = classifyPlayerMode(String(isOffline || 'false'), String(offlineFilePath || ''));
@@ -483,7 +506,10 @@ const VideoPlayerScreen = () => {
           if (!r) return;
           setTimeout(() => {
             try {
-              if (isLive === 'true') r.replace('/(tabs)');
+              // A live channel belongs to the Live TV tab, so returning there
+              // keeps the viewer where they were rather than dumping them on
+              // Home. VOD keeps its existing detail-page return.
+              if (isLive === 'true') r.replace('/(tabs)/live');
               else r.replace({ pathname: `/movie/${mediaId}`, params: { mediaType: String(mediaType || 'movie'), title: String(title || ''), poster_path: String(poster_path || '') } });
             } catch (e: any) {
               logError('Navigation error', e);
@@ -515,6 +541,7 @@ const VideoPlayerScreen = () => {
     title: playbackTitle, year: playbackYear,
     isOffline: isOffline === 'true', offlineFilePath: String(offlineFilePath || ''),
     directStreamUrl: isNativeMode ? directStreamUrl : null,
+    directStreamHeaders,
   });
   const { videoUrl, isResolved: streamExtractionComplete, isLoading: isChangingSource, error: playbackError, sources: playbackSources, activeIndex: playbackActiveIndex, selectSource: selectPlaybackSource } = playback;
   const currentPlayingSourceName = 'licensed';

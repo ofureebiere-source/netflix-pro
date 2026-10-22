@@ -85,6 +85,8 @@ export default function TabsLayout() {
           const iconSize = focused ? size + 2 : size;
           if (route.name === 'index') {
             iconName = focused ? 'home' : 'home-outline';
+          } else if (route.name === 'live') {
+            iconName = focused ? 'tv' : 'tv-outline';
           } else if (route.name === 'library') {
             iconName = focused ? 'library' : 'library-outline';
           } else if (route.name === 'settings') {
@@ -99,6 +101,12 @@ export default function TabsLayout() {
         options={{ 
           title: t('tabs.home'),
         }} 
+      />
+      <Tabs.Screen
+        name="live"
+        options={{
+          title: t('tabs.live'),
+        }}
       />
       <Tabs.Screen 
         name="library" 

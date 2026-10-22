@@ -95,3 +95,42 @@ Two things that are easy to get wrong here:
 - `expo-video` has no audio-session hook, so the equaliser attaches to the
   device's *global* output mix. It is therefore applied once near the root, not
   per player instance, or navigating between screens would rebuild it each time.
+
+## Live TV (iptv-org)
+
+Live channels come from the public iptv-org index. There is no backend for this:
+the playlists are already-final stream URLs, not titles to resolve.
+
+| Area | Entry point |
+|------|-------------|
+| M3U parsing, de-dup, quality/status markers | `src/services/iptv/m3uParser.ts` |
+| Category taxonomy | `src/services/iptv/categories.ts` |
+| Fetch, disk cache, country list, preload | `src/services/iptv/iptvCatalog.ts` |
+| React Query loader + derived lists | `src/hooks/useLiveTv.ts` |
+| Favourites/recents (persisted) | `src/store/liveTvStore.ts` |
+| Screen + grid cards | `src/screens/livetv/LiveTvScreen.tsx`, `src/components/livetv/` |
+| Route / tab | `app/(tabs)/live.tsx`, `app/(tabs)/_layout.tsx` |
+
+Things that are easy to get wrong here:
+
+- Only `index.m3u` is fetched. Its `group-title` is the genre list (exactly the
+  30 names in the taxonomy) and its `tvg-id` gives the country, so one download
+  serves both the category and country axes. `index.country.m3u` is grouped by
+  country instead and is *not* a substitute — it was deliberately not fetched.
+- `group-title` is free text mixing genres with country names, so categories are
+  derived by intersecting groups with the taxonomy, never by trusting the field.
+  A channel naming no genre lands in `general` rather than disappearing.
+- The index repeats channels up to 16x with identical URLs; `parseM3U`
+  de-duplicates on id. Removing that would show the same channel repeatedly.
+- A live channel is a *direct* stream, so it never reaches the backend resolver
+  that normally supplies per-source headers. `LiveTvScreen` therefore passes the
+  playlist's headers through the `streamHeaders` nav param, and
+  `useLicensedPlaybackSource` returns them for a direct stream. Dropping this is
+  invisible in a build and 403s on the first segment for channels that need a
+  matching User-Agent. `src/__wiring__/wiring.test.ts` guards it.
+- `isLive: 'true'` must be passed, or the player records a live channel as a
+  resumable VOD title and it appears in Continue Watching.
+- Country codes in `tvg-id` are ISO 3166-1 alpha-2 as iptv-org spells them: it is
+  `uk`, not `gb`, in both the playlist and `countries.json`.
+- Live streams are warmed on view (`preloadChannels`), skipping geo-blocked
+  channels. The preload set is capped; warming the whole grid would flood.

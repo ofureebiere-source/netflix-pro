@@ -36,6 +36,16 @@ export interface UseLicensedPlaybackSourceParams {
   isOffline?: boolean;
   offlineFilePath?: string;
   directStreamUrl?: string | null; // pre-resolved URL passed in via navigation params, if any
+  /**
+   * Headers for `directStreamUrl`, when the caller already knows them.
+   *
+   * A direct stream never goes through the backend, so there is no resolved
+   * source to carry headers. But a playlist-supplied stream usually needs its
+   * own User-Agent/Referer — hundreds of public channels 403 without them — so
+   * the caller passes what the source specified. Without this, a direct stream
+   * would silently fall back to generic headers and fail to play.
+   */
+  directStreamHeaders?: Record<string, string> | null;
 }
 
 export interface UseLicensedPlaybackSourceResult {
@@ -60,7 +70,7 @@ export function useLicensedPlaybackSource(
 ): UseLicensedPlaybackSourceResult {
   const {
     mediaId, mediaType, season, episode, title, year,
-    isOffline, offlineFilePath, directStreamUrl,
+    isOffline, offlineFilePath, directStreamUrl, directStreamHeaders,
   } = params;
 
   const [sources, setSources] = useState<LicensedPlaybackSource[]>([]);
@@ -138,7 +148,9 @@ export function useLicensedPlaybackSource(
 
   return {
     videoUrl,
-    streamHeaders: activeSource?.headers,
+    // A direct stream has no resolved source, so its headers come from the
+    // caller; otherwise they come from whichever source is selected.
+    streamHeaders: directStreamUrl ? directStreamHeaders ?? undefined : activeSource?.headers,
     sources,
     activeSource,
     activeIndex,
