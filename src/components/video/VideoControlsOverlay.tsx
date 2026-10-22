@@ -67,6 +67,9 @@ const VideoControlsOverlay = ({
   onOpenQuality,
   qualityLabel,
   trackCount = 0,
+  onOpenAudioEffects,
+  onOpenAspectRatioPicker,
+  onOpenGestureSettings,
 }: any) => {
   const displayPosition = isSeeking && seekPreviewPosition !== null ? seekPreviewPosition : position;
   const actualPosition = position;
@@ -124,9 +127,38 @@ const VideoControlsOverlay = ({
                 <Text style={styles.speedGlassButtonText}>{qualityLabel || 'Auto'}</Text>
               </TouchableOpacity>
             )}
-            {!isLiveStream && onCycleAspectRatio && (
-              <TouchableOpacity onPress={onCycleAspectRatio} style={styles.iconGlassButton} activeOpacity={0.7}>
+            {!isLiveStream && (onOpenAspectRatioPicker || onCycleAspectRatio) && (
+              <TouchableOpacity
+                onPress={onOpenAspectRatioPicker ?? onCycleAspectRatio}
+                onLongPress={onOpenAspectRatioPicker ? onCycleAspectRatio : undefined}
+                style={styles.iconGlassButton}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Aspect ratio"
+              >
                 <MaterialIcons name="aspect-ratio" size={18} color="white" />
+              </TouchableOpacity>
+            )}
+            {onOpenAudioEffects && (
+              <TouchableOpacity
+                onPress={onOpenAudioEffects}
+                style={styles.iconGlassButton}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Audio settings"
+              >
+                <Ionicons name="options-outline" size={19} color="white" />
+              </TouchableOpacity>
+            )}
+            {onOpenGestureSettings && (
+              <TouchableOpacity
+                onPress={onOpenGestureSettings}
+                style={styles.iconGlassButton}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Gesture settings"
+              >
+                <Ionicons name="hand-left-outline" size={19} color="white" />
               </TouchableOpacity>
             )}
             {!isLiveStream && onCycleSpeed && (

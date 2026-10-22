@@ -2,6 +2,7 @@
 import React from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Slider from '@react-native-community/slider';
 import { useTheme } from '../../contexts/ThemeContext';
 import { SPACING, TYPOGRAPHY, getGlassTokens } from '../../theme/tokens';
 import { GlassPanel, GlassButton } from '../glass';
@@ -14,6 +15,16 @@ interface SubtitleSettingsModalProps {
   onChange: (prefs: SubtitleStylePrefs) => void;
   onReset: () => void;
 }
+
+// White and black cover the common cases; the yellows are the subtitle
+// convention for high contrast without the glare of pure white.
+const SUBTITLE_COLORS = [
+  { label: 'White', value: '#FFFFFF' },
+  { label: 'Yellow', value: '#FFE082' },
+  { label: 'Amber', value: '#FFC107' },
+  { label: 'Black', value: '#000000' },
+  { label: 'Cyan', value: '#80DEEA' },
+];
 
 const FONT_SCALE_STEPS = [0.8, 1.0, 1.2, 1.4, 1.6];
 const FONT_SCALE_LABELS: Record<number, string> = {
@@ -102,6 +113,65 @@ const SubtitleSettingsModal: React.FC<SubtitleSettingsModalProps> = ({
               <Text style={[TYPOGRAPHY.overline, { color: colors.textMuted, marginTop: SPACING.xl }]}>Background</Text>
               <GlassButton label={backgroundLabel()} onPress={cycleBackgroundOpacity} overrideTint="dark" style={styles.bgButton} />
 
+              <Text style={[TYPOGRAPHY.overline, { color: colors.textMuted, marginTop: SPACING.xl }]}>Text Style</Text>
+              <View style={styles.rowWrap}>
+                {(['normal', 'bold'] as const).map((weight) => (
+                  <GlassButton
+                    key={weight}
+                    label={weight === 'normal' ? 'Normal' : 'Bold'}
+                    onPress={() => onChange({ ...prefs, weight })}
+                    overrideTint="dark"
+                    style={prefs.weight === weight ? styles.selectedButton : undefined}
+                  />
+                ))}
+              </View>
+              <View style={styles.rowWrap}>
+                {SUBTITLE_COLORS.map((option) => (
+                  <TouchableOpacity
+                    key={option.value}
+                    onPress={() => onChange({ ...prefs, color: option.value })}
+                    accessibilityRole="button"
+                    accessibilityLabel={option.label}
+                    style={[
+                      styles.colorSwatch,
+                      { backgroundColor: option.value },
+                      prefs.color === option.value && styles.selectedSwatch,
+                    ]}
+                  />
+                ))}
+              </View>
+
+              <Text style={[TYPOGRAPHY.overline, { color: colors.textMuted, marginTop: SPACING.xl }]}>Outline</Text>
+              <View style={styles.rowWrap}>
+                {[0, 1, 2, 3, 4].map((width) => (
+                  <GlassButton
+                    key={width}
+                    label={width === 0 ? 'Off' : String(width)}
+                    onPress={() => onChange({ ...prefs, outlineWidth: width })}
+                    overrideTint="dark"
+                    style={prefs.outlineWidth === width ? styles.selectedButton : undefined}
+                  />
+                ))}
+              </View>
+
+              <Text style={[TYPOGRAPHY.overline, { color: colors.textMuted, marginTop: SPACING.xl }]}>
+                Vertical Position
+              </Text>
+              <Text style={[TYPOGRAPHY.caption, { color: colors.textMuted, textAlign: 'center' }]}>
+                {prefs.verticalPosition}% from the top
+              </Text>
+              <Slider
+                style={styles.slider}
+                minimumValue={50}
+                maximumValue={95}
+                step={1}
+                value={prefs.verticalPosition}
+                onValueChange={(value) => onChange({ ...prefs, verticalPosition: Math.round(value) })}
+                minimumTrackTintColor="#E50914"
+                maximumTrackTintColor={glass.surfaceBorder}
+                thumbTintColor="#E50914"
+              />
+
               <TouchableOpacity style={styles.resetButton} onPress={onReset}>
                 <Ionicons name="refresh" size={16} color="#E50914" />
                 <Text style={[TYPOGRAPHY.body, { color: '#E50914', marginLeft: SPACING.sm }]}>Reset to defaults</Text>
@@ -137,6 +207,16 @@ const styles = StyleSheet.create({
   rowWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm, marginTop: SPACING.sm },
   delayRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SPACING.xl, marginTop: SPACING.sm },
   bgButton: { alignSelf: 'flex-start', marginTop: SPACING.sm },
+  slider: { width: '100%', height: 36 },
+  colorSwatch: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+  },
+  selectedSwatch: { borderColor: '#E50914', borderWidth: 3 },
+  selectedButton: { borderColor: '#E50914' },
   resetButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: SPACING.xxl, padding: SPACING.sm },
 });
 

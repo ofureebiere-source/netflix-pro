@@ -1,0 +1,11 @@
+{
+  "name": "netflix-pro-audio",
+  "version": "1.0.0",
+  "description": "Android audio effects for Netflix Pro: a multi-band equaliser and a gain stage on the global output mix.",
+  "main": "src/index.ts",
+  "private": true,
+  "peerDependencies": {
+    "expo": "*",
+    "expo-modules-core": "*"
+  }
+}

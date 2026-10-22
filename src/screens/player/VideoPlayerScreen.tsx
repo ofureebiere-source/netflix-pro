@@ -27,7 +27,7 @@ import { useAutoPlay } from '../../hooks/useAutoPlay';
 import { useEpisodeNavigation } from '../../hooks/useEpisodeNavigation';
 import { useLicensedPlaybackSource } from '../../hooks/useLicensedPlaybackSource';
 import { usePlaybackSpeed } from '../../hooks/usePlaybackSpeed';
-import { useAspectRatio } from '../../hooks/useAspectRatio';
+import { resolveAspectRatio, useAspectRatio } from '../../hooks/useAspectRatio';
 import { useScreenLock } from '../../hooks/useScreenLock';
 import { usePlayerTracks } from '../../hooks/usePlayerTracks';
 import { useSkipMarkers } from '../../hooks/useSkipMarkers';
@@ -40,8 +40,11 @@ import LockScreenOverlay from '../../components/video/LockScreenOverlay';
 import {
   SubtitleOverlay, SeekIndicators, LoadingOverlay, ErrorOverlay,
   BufferingAlertModal, NextEpisodeButton, EpisodesModal, VideoControlsOverlay, ServerSheet,
+  NightModeOverlay, AspectRatioPickerModal, AudioEffectsModal, GestureSettingsModal,
 } from '../../components/video';
 import { useAppStore } from '../../store/zustand';
+import { useAudioEffects } from '../../hooks/useAudioEffects';
+import { usePlaybackSettings } from '../../store/playbackSettingsStore';
 
 const LOG_TAG = '[VideoPlayerScreen]';
 
@@ -412,11 +415,23 @@ const VideoPlayerScreen = () => {
   }, [loadLocalSubtitle]);
 
   const { playbackSpeed, speedModalVisible, openSpeedModal, closeSpeedModal, setPlaybackSpeed } = usePlaybackSpeed(activePlayer);
-  const { aspectRatioMode, cycleAspectRatio, aspectRatioLabel, labelVisible: aspectLabelVisible, labelOpacity: aspectLabelOpacity } = useAspectRatio();
+  const { aspectRatioMode, cycleAspectRatio, selectAspectRatio, aspectRatioLabel, labelVisible: aspectLabelVisible, labelOpacity: aspectLabelOpacity } = useAspectRatio();
+  // Resolved once per mode rather than inline in JSX, because the fixed-ratio
+  // presets need both a contentFit and a surface aspect ratio, and the latter
+  // also constrains the gesture area below.
+  const aspectRatio = useMemo(() => resolveAspectRatio(aspectRatioMode), [aspectRatioMode]);
   const { isLocked, toggleLock, showUnlockHint, hintOpacity: lockHintOpacity, handleLockedScreenTap, unlock } = useScreenLock(
     useCallback((locked: boolean) => { if (locked) setShowControls(false); }, [setShowControls])
   );
   const [subtitleSettingsVisible, setSubtitleSettingsVisible] = useState(false);
+  const [audioSettingsVisible, setAudioSettingsVisible] = useState(false);
+  const [aspectRatioPickerVisible, setAspectRatioPickerVisible] = useState(false);
+  const [gestureSettingsVisible, setGestureSettingsVisible] = useState(false);
+
+  const audioEffects = useAudioEffects();
+  const nightMode = usePlaybackSettings((state) => state.nightMode);
+  const leftVerticalGesture = usePlaybackSettings((state) => state.leftVerticalGesture);
+  const rightVerticalGesture = usePlaybackSettings((state) => state.rightVerticalGesture);
 
   const handleReload = useCallback(async () => {
     logInfo('handleReload called', { retryAttempts: retryAttempts + 1 });
@@ -605,6 +620,7 @@ const VideoPlayerScreen = () => {
     beginExternalSeek, previewExternalSeek, commitExternalSeek, cancelExternalSeek,
     handleBrightnessChange, brightnessLevel,
     handleVolumeChange, volumeLevel,
+    leftVerticalGesture, rightVerticalGesture,
   });
   const {
     isZoomed, screenDimensions, animatedScale, leftSeekAmount, rightSeekAmount,
@@ -971,13 +987,23 @@ const VideoPlayerScreen = () => {
     return (
       <>
         <GestureDetector gesture={videoAreaGestures}>
-          <Animated.View style={[styles.video, { transform: [{ scale: animatedScale }] }]}>
+          <Animated.View
+            style={[
+              styles.video,
+              aspectRatio.aspectRatio !== undefined && { aspectRatio: aspectRatio.aspectRatio },
+              { transform: [{ scale: animatedScale }] },
+            ]}
+          >
             <VideoView
               ref={videoViewRef}
               player={activePlayer} style={StyleSheet.absoluteFill}
               nativeControls={false} allowsPictureInPicture={true}
               startsPictureInPictureAutomatically={true}
-              contentFit={aspectRatioMode !== 'auto' ? aspectRatioMode : (isZoomed ? 'cover' : 'contain')}
+              contentFit={
+                aspectRatioMode !== 'auto'
+                  ? aspectRatio.contentFit
+                  : (isZoomed ? 'cover' : 'contain')
+              }
               pointerEvents="none"
             />
           </Animated.View>
@@ -1020,11 +1046,17 @@ const VideoPlayerScreen = () => {
               leftSeekOpacity={leftSeekOpacity} rightSeekOpacity={rightSeekOpacity}
               leftArrowTranslate={leftArrowTranslate} rightArrowTranslate={rightArrowTranslate}
             />
+            <NightModeOverlay level={nightMode} />
             <SubtitleOverlay
               subtitlesEnabled={subtitlesEnabled}
               currentSubtitleText={hookSubtitleText}
               fontScale={subtitleStylePrefs.fontScale}
               backgroundOpacity={subtitleStylePrefs.backgroundOpacity}
+              weight={subtitleStylePrefs.weight}
+              color={subtitleStylePrefs.color}
+              outlineWidth={subtitleStylePrefs.outlineWidth}
+              verticalPosition={subtitleStylePrefs.verticalPosition}
+              fontFamily={subtitleStylePrefs.fontFamily}
             />
             {isBufferingVideo && !isInitialLoading && (
               <View style={styles.bufferingIndicatorContainer}>
@@ -1053,6 +1085,9 @@ const VideoPlayerScreen = () => {
               volumeSliderRef={volumeSliderRef} volumePanResponder={volumePanResponder}
               playbackSpeed={playbackSpeed} onCycleSpeed={openSpeedModal}
               aspectRatioLabel={aspectRatioLabel} onCycleAspectRatio={cycleAspectRatio}
+              onOpenAspectRatioPicker={() => setAspectRatioPickerVisible(true)}
+              onOpenAudioEffects={() => setAudioSettingsVisible(true)}
+              onOpenGestureSettings={() => setGestureSettingsVisible(true)}
               onOpenSubtitleSettings={() => setSubtitleSettingsVisible(true)}
               onOpenServers={() => setShowServerSheet(true)}
               serverCount={playbackSources.length}
@@ -1108,6 +1143,21 @@ const VideoPlayerScreen = () => {
               prefs={subtitleStylePrefs}
               onChange={updateSubtitleStylePrefs}
               onReset={resetSubtitleStylePrefs}
+            />
+            <AudioEffectsModal
+              visible={audioSettingsVisible}
+              onClose={() => setAudioSettingsVisible(false)}
+              controller={audioEffects}
+            />
+            <AspectRatioPickerModal
+              visible={aspectRatioPickerVisible}
+              onClose={() => setAspectRatioPickerVisible(false)}
+              current={aspectRatioMode}
+              onSelect={selectAspectRatio}
+            />
+            <GestureSettingsModal
+              visible={gestureSettingsVisible}
+              onClose={() => setGestureSettingsVisible(false)}
             />
             {aspectLabelVisible && (
               <Animated.View style={[styles.aspectRatioLabelBox, { opacity: aspectLabelOpacity }]} pointerEvents="none">

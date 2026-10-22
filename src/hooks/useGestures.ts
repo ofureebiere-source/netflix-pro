@@ -19,7 +19,22 @@ export const useGestures = ({
   brightnessLevel,
   handleVolumeChange,
   volumeLevel,
+  leftVerticalGesture = 'brightness',
+  rightVerticalGesture = 'volume',
 }: any) => {
+  const gestureMapRef = useRef({ leftVerticalGesture, rightVerticalGesture });
+  gestureMapRef.current = { leftVerticalGesture, rightVerticalGesture };
+
+  // Which vertical action a touch starting at `x` should drive. Read from the
+  // ref rather than the props so the memoised handlers stay stable.
+  const resolveVerticalAction = useCallback(
+    (x: number, screenWidth: number): 'brightness' | 'volume' =>
+      x < screenWidth / 2
+        ? gestureMapRef.current.leftVerticalGesture
+        : gestureMapRef.current.rightVerticalGesture,
+    []
+  );
+
   const [isZoomed, setIsZoomed] = useState(false);
   const [screenDimensions, setScreenDimensions] = useState(Dimensions.get('window'));
   const animatedScale = useRef(new Animated.Value(1)).current;
@@ -235,17 +250,18 @@ export const useGestures = ({
   const handleDragBegin = useCallback((x: any, screenWidth: any) => {
     dragModeRef.current = null;
     dragStartPositionRef.current = position || 0;
-    // Snapshot whichever side of the screen the touch started on, since
-    // brightness/volume are picked by starting x, not current x.
-    dragStartLevelRef.current = x < screenWidth / 2 ? brightnessLevel : volumeLevel;
-  }, [position, brightnessLevel, volumeLevel]);
+    // Snapshot whichever side of the screen the touch started on, since the
+    // vertical action is picked by starting x, not current x.
+    dragStartLevelRef.current =
+      resolveVerticalAction(x, screenWidth) === 'brightness' ? brightnessLevel : volumeLevel;
+  }, [position, brightnessLevel, volumeLevel, resolveVerticalAction]);
 
   const handleDragUpdate = useCallback((x: any, screenWidth: any, translationX: any, translationY: any) => {
     if (dragModeRef.current === null) {
       const absX = Math.abs(translationX);
       const absY = Math.abs(translationY);
       if (Math.max(absX, absY) < 12) return; // ignore jitter before a direction is clear
-      dragModeRef.current = absX > absY ? 'seek' : (x < screenWidth / 2 ? 'brightness' : 'volume');
+      dragModeRef.current = absX > absY ? 'seek' : resolveVerticalAction(x, screenWidth);
       if (dragModeRef.current === 'seek' && !isLiveStream) {
         beginExternalSeek();
       }
@@ -264,7 +280,7 @@ export const useGestures = ({
       const delta = -translationY / 200;
       handleVolumeChange(Math.max(0, Math.min(1, dragStartLevelRef.current + delta)));
     }
-  }, [isLiveStream, duration, beginExternalSeek, previewExternalSeek, handleBrightnessChange, handleVolumeChange]);
+  }, [isLiveStream, duration, beginExternalSeek, previewExternalSeek, handleBrightnessChange, handleVolumeChange, resolveVerticalAction]);
 
   const handleDragEnd = useCallback(() => {
     if (dragModeRef.current === 'seek') {

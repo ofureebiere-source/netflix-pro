@@ -1,4 +1,8 @@
 export { default as SubtitleOverlay } from './SubtitleOverlay';
+export { default as NightModeOverlay } from './NightModeOverlay';
+export { default as AspectRatioPickerModal } from './AspectRatioPickerModal';
+export { default as AudioEffectsModal } from './AudioEffectsModal';
+export { default as GestureSettingsModal } from './GestureSettingsModal';
 export { default as SeekIndicators } from './SeekIndicators';
 export { default as LiveIndicator } from './LiveIndicator';
 export { default as BrightnessSlider } from './BrightnessSlider';

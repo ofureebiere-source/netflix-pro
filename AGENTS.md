@@ -71,3 +71,27 @@ and are now wired. See `TODO.md` for the original audit.
 
 `jest.setup.js` registers the AsyncStorage/SecureStore/expo-localization mocks;
 native modules with no JS fallback need an entry there before a suite can import them.
+
+## Player features (MX-Player-style)
+
+Android-only. The equaliser needs a native module, so it does nothing in Expo Go
+and the audio panel hides itself there.
+
+| Area | Entry point |
+|------|-------------|
+| Equaliser + volume amplifier (native) | `modules/netflix-pro-audio/` |
+| JS bridge, degrades to a no-op | `src/services/audio/audioEffects.ts` |
+| Applies and persists the EQ/gain | `src/hooks/useAudioEffects.ts` |
+| EQ, gain, night mode, gesture sides | `src/store/playbackSettingsStore.ts` |
+| Aspect ratio presets | `src/hooks/useAspectRatio.ts` |
+| Night-mode tint | `src/components/video/NightModeOverlay.tsx` |
+| Subtitle styling | `src/components/video/SubtitleOverlay.tsx`, `SubtitleSettingsModal.tsx` |
+
+Two things that are easy to get wrong here:
+
+- Preset curves are authored for a nominal 5-band device and resampled onto the
+  real band count by `resolvePresetBands`. Do not index the curve directly — a
+  10-band device would then apply it to its first five bands only.
+- `expo-video` has no audio-session hook, so the equaliser attaches to the
+  device's *global* output mix. It is therefore applied once near the root, not
+  per player instance, or navigating between screens would rebuild it each time.

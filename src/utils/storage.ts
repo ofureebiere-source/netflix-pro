@@ -395,12 +395,25 @@ export interface SubtitleStylePrefs {
   fontScale: number; // multiplier applied to the base font size, e.g. 0.8-1.6
   delaySeconds: number; // positive = subtitles appear later, negative = earlier
   backgroundOpacity: number; // 0 (transparent) - 1 (solid)
+  weight: 'normal' | 'bold';
+  color: string; // hex, applied to the text
+  outlineWidth: number; // 0-4 points of dark text shadow
+  // Percentage from the top of the video. Stored as a distance-from-top rather
+  // than from-bottom so raising the value moves the text down, which is what
+  // the slider in the settings modal implies.
+  verticalPosition: number; // 0-100
+  fontFamily: string | null; // null keeps the platform default
 }
 
 export const DEFAULT_SUBTITLE_STYLE: SubtitleStylePrefs = {
   fontScale: 1.0,
   delaySeconds: 0,
   backgroundOpacity: 0.65,
+  weight: 'normal',
+  color: '#FFFFFF',
+  outlineWidth: 0,
+  verticalPosition: 90,
+  fontFamily: null,
 };
 
 export const saveSubtitleStylePrefs = async (prefs: SubtitleStylePrefs) => {
