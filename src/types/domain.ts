@@ -37,7 +37,8 @@ export interface Drama {
   year: number;
   totalEpisodes: number;
   status: 'Ongoing' | 'Completed';
-  source: 'xyra' | 'kuryana';
+  /** Metadata source. `kuryana` is the live adapter; `xyra` was removed. */
+  source: 'kuryana';
 }
 
 export interface StreamSource {
@@ -45,7 +46,12 @@ export interface StreamSource {
   url: string;
   quality: string;
   format: 'hls' | 'dash' | 'mp4';
-  provider: 'consumet' | 'xyra';
+  /**
+   * Where the stream came from. `licensed` is the app's own backend
+   * (Net-web); the rest are metadata sources that can also return streams.
+   * The old `consumet` / `xyra` members were the removed piracy layer.
+   */
+  provider: 'licensed' | 'moviebox' | 'kuryana';
   referer?: string;
   subtitles?: Subtitle[];
 }

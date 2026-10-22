@@ -1,3 +1,15 @@
+/**
+ * Expo config plugin for the retired `ffmpeg-kit-react-native` package.
+ *
+ * Not referenced from `app.config.ts`, and not needed: the app uses the
+ * maintained fork `palash-ffmpeg-kit-react-native-sf`, which ships its own
+ * Android sources and iOS podspec, so autolinking covers both platforms. This
+ * file also requires `iosUrl` / `androidUrl` options pointing at prebuilt
+ * framework archives that are no longer published.
+ *
+ * Kept as the reference for how the frameworks were wired, in case the fork
+ * ever needs the same treatment.
+ */
 const fs = require('fs');
 const path = require('path');
 const { withPlugins, withDangerousMod, withAppBuildGradle, withProjectBuildGradle } = require('@expo/config-plugins');

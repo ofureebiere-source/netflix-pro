@@ -1,7 +1,7 @@
 /**
  * useSearchPagination - Hook for managing infinite scroll pagination
  * Features: load more, page cursor, merge results, loading state
- * Works with MavinEngine's pageUrl cursor pattern
+ * Uses the TMDB page cursor: the API takes a page number, not an opaque token.
  */
 
 import { useState, useCallback, useRef } from 'react';

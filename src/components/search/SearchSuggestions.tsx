@@ -1,7 +1,7 @@
 /**
  * SearchSuggestions - Search autocomplete dropdown component
  * Features: suggestions list, recent searches, tap to fill search
- * Uses MavinEngine for autocomplete suggestions
+ * Suggestions come from TMDB search plus the locally stored search history.
  */
 
 import React, { useRef } from 'react';

@@ -1,61 +1,51 @@
-﻿# Netflix Pro - TypeScript Migration
+# TypeScript
 
-## 🚀 TypeScript Setup Complete
+The migration to TypeScript is complete: every source file under `src/` and
+`app/` is `.ts` or `.tsx`, and `tsc --noEmit` is part of the build.
 
-This project has been successfully migrated to TypeScript!
+## Toolchain
 
-### 📦 Tech Stack
-- **React Native** 0.83.2
-- **Expo** 55.0.8
-- **TypeScript** 5.0+
-- **Jest** for testing
-- **ESLint** + **Prettier** for code quality
-- **GitHub Actions** for CI/CD
+| Tool | Version |
+|------|---------|
+| React Native | 0.83.6 |
+| Expo | 55 |
+| TypeScript | 5.9 (`strict`) |
+| Jest | `jest-expo` preset |
 
-### 📁 Project Structure
-\\\
-├── src/
-│   └── components/
-│       └── Card.tsx
-├── __tests__/
-│   └── App.test.tsx
-├── .github/
-│   └── workflows/
-│       ├── ci.yml
-│       └── expo-build.yml
-├── App.tsx
-├── tsconfig.json
-├── .eslintrc.js
-├── .prettierrc
-├── jest.config.js
-└── package.json
-\\\
+## Layout
 
-### 🛠️ Available Scripts
-- \
-pm start\ - Start Expo
-- \
-pm run android\ - Run on Android
-- \
-pm run ios\ - Run on iOS
-- \
-pm run test\ - Run tests
-- \
-pm run lint\ - Check code quality
-- \
-pm run format\ - Format code
-- \
-pm run type-check\ - Check TypeScript types
-- \
-pm run build\ - Type check and export
+```
+app/                  expo-router routes ((tabs), player, downloads, notifications)
+src/
+  components/         presentational components, incl. Card.tsx
+  contexts/           theme, alert, ...
+  hooks/              usePlayerTracks, useSubtitles, useSkipMarkers, useTranslation, ...
+  i18n/               UI translations + lookup runtime
+  screens/            home, search, details, player, downloads, settings, library
+  services/
+    device/           device identity (secure storage)
+    locale/           country detection + locale holder
+    recognition/      intro/credits detection
+    unified/          metadata adapters, stream resolution, subtitles
+    downloadManager/  queue + HLS download + FFmpeg remux
+  store/zustand/      persisted app state
+  types/              shared domain types
+  utils/              storage, formatting, download storage
+.github/workflows/    android.yml (the only workflow)
+```
 
-### 🔒 Type Safety
-All components now have proper TypeScript types. Convert your existing JavaScript files to TypeScript by renaming:
-- \.js\ → \.ts\
-- \.jsx\ → \.tsx\
+## Commands
 
-### 🎯 Next Steps
-1. Convert remaining JavaScript files to TypeScript
-2. Add more components with proper types
-3. Set up Expo EAS Build
-4. Configure deployment
+- `npm run type-check` — `tsc --noEmit`
+- `npm test` — Jest
+- `npm run lint` / `npm run format`
+- `npm run build` — type-check then `expo export`
+
+## Conventions
+
+- `strict` is on; no implicit `any`, and `any` at a boundary is a last resort
+  that should carry a comment saying why.
+- Shared shapes live in `src/types/` or alongside their service. Two overlapping
+  definitions of the same concept is the thing to avoid.
+- A native module with no JS fallback needs a mock in `jest.setup.js` before any
+  test can import the module that uses it.
