@@ -397,7 +397,7 @@ function AppContent() {
   }, [servicesReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ============================================
-  // APP UPDATE CHECK — JS bundle + native APK
+  // APP UPDATE CHECK — JS bundle + published release
   // ============================================
   useEffect(() => {
     if (!isInitialized) return;

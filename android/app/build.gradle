@@ -104,16 +104,9 @@ android {
         }
     }
 
-    // Name the release APK the same way CI does, so a local `assembleRelease`
-    // and the workflow produce identical filenames. The in-app updater and the
-    // release asset name both key off `netflix-pro-<version>.apk`.
-    applicationVariants.all { variant ->
-        if (variant.buildType.name == 'release') {
-            variant.outputs.all { output ->
-                outputFileName = "netflix-pro-${variant.versionName}.apk"
-            }
-        }
-    }
+    // The release artifact is a bundle (`bundleRelease`), named by the workflow
+    // as it copies it out of build/outputs/bundle/. No APK output is configured
+    // here because no APK is produced.
 }
 
 dependencies {
