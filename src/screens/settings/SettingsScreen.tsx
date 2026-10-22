@@ -24,6 +24,16 @@ import { getDownloadStorageUsage, formatFileSize, getAllDownloads, clearAllDownl
 import downloadManager from '../../services/downloadManager';
 import OptionPickerModal, { PickerOption } from '../../components/OptionPickerModal';
 import { getSubtitleStylePrefs, saveSubtitleStylePrefs, saveSubtitleLanguagePreference } from '../../utils/storage';
+import { useTranslation } from '../../hooks/useTranslation';
+import { LOCALES, LOCALE_NAMES, type Locale } from '../../i18n';
+import { setLocaleSnapshot } from '../../services/locale/localeState';
+
+// The languages the interface can be shown in. `follow` is the default: the
+// detected locale wins until the user says otherwise.
+const APP_LANGUAGE_OPTIONS: PickerOption[] = [
+  { value: '', label: 'Automatic' },
+  ...LOCALES.map((code: Locale) => ({ value: code, label: LOCALE_NAMES[code] })),
+];
 
 // The ladder the player can actually offer. `auto` is the default because the
 // native player adapts to bandwidth, which is what a viewer wants unless they
@@ -48,11 +58,12 @@ const SUBTITLE_LANGUAGE_OPTIONS: PickerOption[] = [
   { value: 'zh', label: 'Chinese' },
 ];
 
-type PickerKind = 'quality' | 'language' | null;
+type PickerKind = 'quality' | 'language' | 'appLanguage' | null;
 
 const SettingsScreen = () => {
   const { colors, isDark } = useTheme();
   const { showToast, showDestructiveAlert } = useAlert();
+  const { t } = useTranslation();
 
   // Zustand state
   const {
@@ -74,6 +85,8 @@ const SettingsScreen = () => {
     setDefaultPlayerQuality,
     setSubtitleLanguage,
     setSubtitleSize,
+    appLanguage,
+    setAppLanguage,
     setSkipIntro,
     setSkipCredits,
     setAutoPlayNext,
@@ -187,6 +200,12 @@ const SettingsScreen = () => {
 
   // Same idea for language: the store field was written but `useSubtitles`
   // reads its own persisted preference, so the pick never reached playback.
+  const handleAppLanguageChange = useCallback((code: string) => {
+    setAppLanguage(code);
+    // Empty means "follow detection", so only override when one was chosen.
+    if (code) setLocaleSnapshot({ language: code });
+  }, [setAppLanguage]);
+
   const handleSubtitleLanguageChange = useCallback((code: string) => {
     setSubtitleLanguage(code);
     saveSubtitleLanguagePreference(code).catch(() => { /* Non-fatal. */ });
@@ -225,7 +244,7 @@ const SettingsScreen = () => {
         {/* Theme Section — device-driven, no control. The theme follows the
             phone's light/dark setting, so there is nothing to pick here. */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.accent }]}>Appearance</Text>
+          <Text style={[styles.sectionTitle, { color: colors.accent }]}>{t('settings.appearance')}</Text>
           <View style={[styles.appearanceItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <View style={styles.settingLeft}>
               <View style={[styles.iconContainer, { backgroundColor: colors.surfaceRaised }]}>
@@ -240,11 +259,32 @@ const SettingsScreen = () => {
               </View>
             </View>
           </View>
+          <TouchableOpacity
+            style={[styles.settingItem, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            onPress={() => setPicker('appLanguage')}
+            accessibilityRole="button"
+            accessibilityLabel={t('settings.language')}
+          >
+            <View style={styles.settingLeft}>
+              <View style={[styles.iconContainer, { backgroundColor: colors.surfaceRaised }]}>
+                <Ionicons name="language" size={20} color={colors.accent} />
+              </View>
+              <View style={styles.settingContent}>
+                <Text style={[styles.settingTitle, { color: colors.text }]}>{t('settings.language')}</Text>
+                <Text style={[styles.settingDescription, { color: colors.textSub }]}>
+                  {t('settings.languageDescription')}
+                </Text>
+              </View>
+            </View>
+            <Text style={[styles.settingValue, { color: colors.textSub }]}>
+              {APP_LANGUAGE_OPTIONS.find((o) => o.value === appLanguage)?.label || 'Automatic'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Playback Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.accent }]}>Playback</Text>
+          <Text style={[styles.sectionTitle, { color: colors.accent }]}>{t('settings.playback')}</Text>
           {renderSetting(
             'play-skip-forward',
             'Auto-play Next Episode',
@@ -333,7 +373,7 @@ const SettingsScreen = () => {
 
         {/* Downloads Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.accent }]}>Downloads</Text>
+          <Text style={[styles.sectionTitle, { color: colors.accent }]}>{t('settings.downloads')}</Text>
           {renderSetting(
             'wifi',
             'WiFi-Only Downloads',
@@ -405,38 +445,46 @@ const SettingsScreen = () => {
           </View>
 
           <TouchableOpacity style={[styles.clearButton, { backgroundColor: colors.surfaceRaised }]} onPress={handleClearAllDownloads}>
-            <Text style={[styles.clearButtonText, { color: colors.error }]}>Clear All Downloads</Text>
+            <Text style={[styles.clearButtonText, { color: colors.error }]}>{t('downloads.clearAll')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* About Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.accent }]}>About</Text>
+          <Text style={[styles.sectionTitle, { color: colors.accent }]}>{t('settings.about')}</Text>
           <View style={[styles.aboutItem, { borderBottomColor: colors.border }]}>
             <Text style={[styles.aboutLabel, { color: colors.textSub }]}>Version</Text>
             <Text style={[styles.aboutValue, { color: colors.text }]}>{Constants.expoConfig?.version || '1.0.0'}</Text>
           </View>
           <View style={[styles.aboutItem, { borderBottomColor: colors.border }]}>
-            <Text style={[styles.aboutLabel, { color: colors.textSub }]}>Storage Used</Text>
+            <Text style={[styles.aboutLabel, { color: colors.textSub }]}>{t('downloads.storageUsed')}</Text>
             <Text style={[styles.aboutValue, { color: colors.text }]}>{storageUsageValue} {storageUsageUnit}</Text>
           </View>
           <TouchableOpacity style={[styles.resetButton, { backgroundColor: colors.surfaceRaised }]} onPress={handleResetSettings}>
-            <Text style={[styles.resetButtonText, { color: colors.error }]}>Reset All Settings</Text>
+            <Text style={[styles.resetButtonText, { color: colors.error }]}>{t('settings.resetAll')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
 
       <OptionPickerModal
         visible={picker === 'quality'}
-        title="Default Quality"
+        title={t('settings.defaultQuality')}
         options={QUALITY_OPTIONS}
         selected={defaultPlayerQuality}
         onSelect={setDefaultPlayerQuality}
         onClose={() => setPicker(null)}
       />
       <OptionPickerModal
+        visible={picker === 'appLanguage'}
+        title={t('settings.language')}
+        options={APP_LANGUAGE_OPTIONS}
+        selected={appLanguage}
+        onSelect={handleAppLanguageChange}
+        onClose={() => setPicker(null)}
+      />
+      <OptionPickerModal
         visible={picker === 'language'}
-        title="Subtitle Language"
+        title={t('settings.subtitleLanguage')}
         options={SUBTITLE_LANGUAGE_OPTIONS}
         selected={subtitleLanguage}
         onSelect={handleSubtitleLanguageChange}
@@ -457,6 +505,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#222',
   },
   sectionTitle: { fontSize: 16, fontWeight: '600', marginBottom: 12 },
+  settingValue: { fontSize: 14 },
   settingItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',

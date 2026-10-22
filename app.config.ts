@@ -48,7 +48,8 @@ export default {
         "supportsPictureInPicture": true
       }],
       "expo-secure-store",
-      "expo-background-task"
+      "expo-background-task",
+      "expo-localization"
     ],
     assetBundlePatterns: ["**/*"],
     owner: "King-Fisher000",

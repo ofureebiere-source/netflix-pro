@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ScreenOrientation from 'expo-screen-orientation';
-import { VideoView, useVideoPlayer } from 'expo-video';
+import { VideoView, useVideoPlayer, isPictureInPictureSupported } from 'expo-video';
 import { StatusBar } from 'expo-status-bar';
 import { useEventListener } from 'expo';
 import { GestureHandlerRootView, GestureDetector } from 'react-native-gesture-handler';
@@ -30,6 +30,7 @@ import { usePlaybackSpeed } from '../../hooks/usePlaybackSpeed';
 import { useAspectRatio } from '../../hooks/useAspectRatio';
 import { useScreenLock } from '../../hooks/useScreenLock';
 import { usePlayerTracks } from '../../hooks/usePlayerTracks';
+import { useSkipMarkers } from '../../hooks/useSkipMarkers';
 
 import SubtitlesModal from '../../components/SubtitlesModal';
 import PlaybackSpeedModal from '../../components/video/PlaybackSpeedModal';
@@ -187,6 +188,7 @@ const getStreamHeaders = (
 const VideoPlayerScreen = () => {
   const router = useRouter();
   const routerRef = useRef(router);
+  const videoViewRef = useRef<VideoView | null>(null);
 
   const params = useLocalSearchParams();
 
@@ -502,7 +504,7 @@ const VideoPlayerScreen = () => {
 
   // Quality and audio come from the tracks the native player reports, seeded
   // from the viewer's saved preferences.
-  const { defaultPlayerQuality, dataSaver } = useAppStore();
+  const { defaultPlayerQuality, dataSaver, skipIntro, skipCredits } = useAppStore();
   const playerTracks = usePlayerTracks({
     player: activePlayer,
     defaultQuality: defaultPlayerQuality,
@@ -513,6 +515,37 @@ const VideoPlayerScreen = () => {
     videoTracks, audioTracks, selectedVideoId, selectedAudioId,
     selectVideoTrack, selectAudioTrack, qualityLabel, trackCount,
   } = playerTracks;
+
+  // PiP was configured on the view (`allowsPictureInPicture`) but never
+  // entered, because nothing called into the native view. This is the trigger.
+  const togglePictureInPicture = useCallback(async () => {
+    if (!isPictureInPictureSupported()) return;
+    try {
+      await videoViewRef.current?.startPictureInPicture();
+    } catch (e: any) {
+      logWarn('Picture-in-picture unavailable', e?.message);
+    }
+  }, []);
+
+  // The recognition engine's markers, driving the skip-intro and skip-credits
+  // affordances. `skipIntro` / `skipCredits` were persisted and rendered with
+  // nothing reading them until this.
+  const skipMarkers = useSkipMarkers({
+    // Router params are `string | string[]`; the hook wants a scalar.
+    mediaId: Array.isArray(mediaId) ? mediaId[0] : mediaId,
+    season: Array.isArray(season) ? season[0] : season,
+    episode: Array.isArray(episode) ? episode[0] : episode,
+    position,
+    duration,
+    skipIntro,
+    skipCredits,
+    isSeries: mediaType === 'tv',
+    onSeek: (seconds: number) => {
+      if (!activePlayer) return;
+      try { activePlayer.currentTime = seconds; } catch {}
+      setPosition(seconds);
+    },
+  });
 
   // Keep the refs the player listeners read in step with the resolved sources.
   useEffect(() => {
@@ -938,6 +971,7 @@ const VideoPlayerScreen = () => {
         <GestureDetector gesture={videoAreaGestures}>
           <Animated.View style={[styles.video, { transform: [{ scale: animatedScale }] }]}>
             <VideoView
+              ref={videoViewRef}
               player={activePlayer} style={StyleSheet.absoluteFill}
               nativeControls={false} allowsPictureInPicture={true}
               startsPictureInPictureAutomatically={true}
@@ -1007,6 +1041,7 @@ const VideoPlayerScreen = () => {
               onTogglePlayPause={() => { if (isPlaying) activePlayer.pause(); else activePlayer.play(); }}
               onToggleMute={toggleMute} onSeekBackward={seekBackward} onSeekForward={seekForward}
               onToggleEpisodes={toggleEpisodesModal} onToggleSubtitles={toggleSubtitlesModal}
+              onTogglePictureInPicture={togglePictureInPicture}
               subtitlesEnabled={subtitlesEnabled} selectedLanguage={selectedLanguage || 'en'}
               isChangingSource={isChangingSource} isInitialLoading={isInitialLoading}
               videoUrl={directStreamUrl || videoUrl || ''} player={activePlayer}
@@ -1088,6 +1123,17 @@ const VideoPlayerScreen = () => {
               position={position} duration={duration} opacityAnim={opacityAnim}
               onPress={() => { trackEndHandledRef.current = false; handleSkipToNext(); }}
             />
+            {skipMarkers.showSkipCredits && !isLiveStream && (
+              <TouchableOpacity
+                style={styles.skipCreditsButton}
+                onPress={skipMarkers.skipToCreditsEnd}
+                accessibilityRole="button"
+                accessibilityLabel="Skip credits"
+              >
+                <Text style={styles.skipCreditsText}>Skip Credits</Text>
+                <Ionicons name="play-skip-forward" size={18} color="#000" />
+              </TouchableOpacity>
+            )}
             {mediaType === 'tv' && (
               <EpisodesModal
                 visible={showEpisodesModal} onClose={() => setShowEpisodesModal(false)}
@@ -1157,6 +1203,23 @@ const VideoPlayerScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  skipCreditsButton: {
+    position: 'absolute',
+    bottom: 120,
+    right: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 4,
+    backgroundColor: '#FFFFFF',
+  },
+  skipCreditsText: {
+    color: '#000000',
+    fontSize: 14,
+    fontWeight: '700',
+  },
   gestureHandlerRoot: { flex: 1 },
   container: { flex: 1, backgroundColor: '#000' },
   video: { flex: 1, backgroundColor: '#000' },

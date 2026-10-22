@@ -4,9 +4,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from '../../src/hooks/useTranslation';
 
 export default function TabsLayout() {
   const { colors, isDark } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   
   const getBottomPadding = () => {
@@ -95,19 +97,19 @@ export default function TabsLayout() {
       <Tabs.Screen 
         name="index" 
         options={{ 
-          title: 'Home',
+          title: t('tabs.home'),
         }} 
       />
       <Tabs.Screen 
         name="library" 
         options={{ 
-          title: 'Library',
+          title: t('tabs.library'),
         }} 
       />
       <Tabs.Screen 
         name="settings" 
         options={{ 
-          title: 'Settings',
+          title: t('tabs.settings'),
         }} 
       />
     </Tabs>

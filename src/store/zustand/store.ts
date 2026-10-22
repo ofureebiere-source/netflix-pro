@@ -14,6 +14,8 @@ export interface AppState {
   defaultPlayerQuality: string;
   subtitleLanguage: string;
   subtitleSize: number;
+  /** UI language. Empty means "follow the detected locale". */
+  appLanguage: string;
   skipIntro: boolean;
   skipCredits: boolean;
   dataSaver: boolean;
@@ -45,6 +47,7 @@ export interface AppState {
   setDefaultPlayerQuality: (quality: string) => void;
   setSubtitleLanguage: (lang: string) => void;
   setSubtitleSize: (size: number) => void;
+  setAppLanguage: (lang: string) => void;
   setSkipIntro: (enabled: boolean) => void;
   setSkipCredits: (enabled: boolean) => void;
   setDataSaver: (enabled: boolean) => void;
@@ -79,6 +82,7 @@ const defaultSettings = {
   defaultPlayerQuality: 'auto',
   subtitleLanguage: 'en',
   subtitleSize: 100,
+  appLanguage: '',
   skipIntro: true,
   skipCredits: false,
   dataSaver: false,
@@ -120,6 +124,7 @@ export const useAppStore = create<AppState>()(
       setDefaultPlayerQuality: (quality) => set({ defaultPlayerQuality: quality }),
       setSubtitleLanguage: (lang) => set({ subtitleLanguage: lang }),
       setSubtitleSize: (size) => set({ subtitleSize: size }),
+      setAppLanguage: (lang) => set({ appLanguage: lang }),
       setSkipIntro: (enabled) => set({ skipIntro: enabled }),
       setSkipCredits: (enabled) => set({ skipCredits: enabled }),
       setDataSaver: (enabled) => set({ dataSaver: enabled }),
@@ -159,6 +164,7 @@ export const useAppStore = create<AppState>()(
         defaultPlayerQuality: state.defaultPlayerQuality,
         subtitleLanguage: state.subtitleLanguage,
         subtitleSize: state.subtitleSize,
+        appLanguage: state.appLanguage,
         skipIntro: state.skipIntro,
         skipCredits: state.skipCredits,
         dataSaver: state.dataSaver,
@@ -189,6 +195,7 @@ export const useSettings = () => {
     defaultPlayerQuality: state.defaultPlayerQuality,
     subtitleLanguage: state.subtitleLanguage,
     subtitleSize: state.subtitleSize,
+    appLanguage: state.appLanguage,
     skipIntro: state.skipIntro,
     skipCredits: state.skipCredits,
     dataSaver: state.dataSaver,

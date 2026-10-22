@@ -6,9 +6,11 @@ const BASE_URL = 'https://api.themoviedb.org/3';
 const IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 const HIGH_RES_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w1280';
 
-// Define popular US providers (Netflix, Prime Video, Hulu, Disney+, Max)
-const US_PROVIDERS_STRING = '8|9|15|337|1899';
-const US_REGION = 'US';
+// Region, language and provider filter come from the resolved locale rather
+// than being pinned to the US, so a viewer in France gets a French catalogue
+// and French metadata. The holder is primed with the old US defaults, so a
+// fetch that races detection behaves exactly as it did before.
+import { getRegion, getLanguage, getProviderFilter } from '../../locale/localeState';
 
 // Helper function to get today's date in YYYY-MM-DD format
 const getTodayDateString = () => {
@@ -41,7 +43,7 @@ export const fetchTrending = async (
 ): Promise<any[]> => {
   try {
     const response = await axios.get(`${BASE_URL}/trending/${mediaType}/${timeWindow}`, {
-      params: { api_key: TMDB_API_KEY }
+      params: { api_key: TMDB_API_KEY, language: getLanguage() }
     });
     return response.data.results || [];
   } catch (error: any) {
@@ -60,8 +62,9 @@ export const fetchPopularMovies = async (): Promise<any[]> => {
       params: {
         api_key: TMDB_API_KEY,
         sort_by: 'popularity.desc',
-        watch_region: US_REGION,
-        with_watch_providers: US_PROVIDERS_STRING,
+        watch_region: getRegion(),
+        with_watch_providers: getProviderFilter(),
+        language: getLanguage(),
         include_adult: false,
         'primary_release_date.lte': getTodayDateString(),
       },
@@ -79,8 +82,9 @@ export const fetchPopularTVShows = async (): Promise<any[]> => {
       params: {
         api_key: TMDB_API_KEY,
         sort_by: 'popularity.desc',
-        watch_region: US_REGION,
-        with_watch_providers: US_PROVIDERS_STRING,
+        watch_region: getRegion(),
+        with_watch_providers: getProviderFilter(),
+        language: getLanguage(),
         include_adult: false,
         'first_air_date.lte': getTodayDateString(),
       },
@@ -136,8 +140,9 @@ export const fetchNewReleaseMovies = async (): Promise<any[]> => {
     const response = await axios.get(`${BASE_URL}/discover/movie`, {
       params: {
         api_key: TMDB_API_KEY,
-        watch_region: US_REGION,
-        with_watch_providers: US_PROVIDERS_STRING,
+        watch_region: getRegion(),
+        with_watch_providers: getProviderFilter(),
+        language: getLanguage(),
         include_adult: false,
         'primary_release_date.gte': formattedOneMonthAgo,
         'primary_release_date.lte': formattedToday,
@@ -163,8 +168,9 @@ export const fetchNewReleaseTVShows = async (): Promise<any[]> => {
     const response = await axios.get(`${BASE_URL}/discover/tv`, {
       params: {
         api_key: TMDB_API_KEY,
-        watch_region: US_REGION,
-        with_watch_providers: US_PROVIDERS_STRING,
+        watch_region: getRegion(),
+        with_watch_providers: getProviderFilter(),
+        language: getLanguage(),
         include_adult: false,
         'first_air_date.gte': formattedOneMonthAgo,
         'first_air_date.lte': formattedToday,
@@ -229,8 +235,9 @@ export const fetchRecommendedMovies = async (params: any = {}): Promise<any[]> =
         api_key: TMDB_API_KEY,
         sort_by: 'popularity.desc',
         include_adult: false,
-        watch_region: US_REGION,
-        with_watch_providers: US_PROVIDERS_STRING,
+        watch_region: getRegion(),
+        with_watch_providers: getProviderFilter(),
+        language: getLanguage(),
         'primary_release_date.lte': getTodayDateString(),
         ...params
       },
@@ -249,8 +256,9 @@ export const fetchRecommendedTVShows = async (params: any = {}): Promise<any[]> 
         api_key: TMDB_API_KEY,
         sort_by: 'popularity.desc',
         include_adult: false,
-        watch_region: US_REGION,
-        with_watch_providers: US_PROVIDERS_STRING,
+        watch_region: getRegion(),
+        with_watch_providers: getProviderFilter(),
+        language: getLanguage(),
         'first_air_date.lte': getTodayDateString(),
         ...params
       },
@@ -488,8 +496,9 @@ export const fetchMediaByGenre = async (mediaType: 'movie' | 'tv', genreId: numb
         api_key: TMDB_API_KEY,
         sort_by: 'popularity.desc',
         include_adult: false,
-        watch_region: US_REGION,
-        with_watch_providers: US_PROVIDERS_STRING,
+        watch_region: getRegion(),
+        with_watch_providers: getProviderFilter(),
+        language: getLanguage(),
         with_genres: genreId,
         ...(mediaType === 'movie' && { 'primary_release_date.lte': getTodayDateString() }),
         ...(mediaType === 'tv' && { 'first_air_date.lte': getTodayDateString() }),
@@ -509,8 +518,12 @@ export const fetchMediaByGenre = async (mediaType: 'movie' | 'tv', genreId: numb
 
 export const searchMedia = async (query: string): Promise<any[]> => {
   try {
+    // Deliberately no region or language *filter*: the home catalogue is
+    // locale-filtered, so search must stay able to surface an English title to
+    // a French viewer who types its name. `language` only localizes the
+    // returned titles, it does not narrow the results.
     const response = await axios.get(`${BASE_URL}/search/multi`, {
-      params: { api_key: TMDB_API_KEY, query, include_adult: false },
+      params: { api_key: TMDB_API_KEY, query, include_adult: false, language: getLanguage() },
     });
     return response.data.results?.filter((item: any) => item.poster_path) || [];
   } catch (error: any) {

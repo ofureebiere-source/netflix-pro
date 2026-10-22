@@ -44,6 +44,7 @@ const VideoControlsOverlay = ({
   onSeekForward,
   onToggleEpisodes,
   onToggleSubtitles,
+  onTogglePictureInPicture,
   subtitlesEnabled,
   selectedLanguage,
   player: _player,
@@ -136,6 +137,17 @@ const VideoControlsOverlay = ({
             {mediaType === 'tv' && !isLiveStream && (
               <TouchableOpacity onPress={onToggleEpisodes} style={styles.iconGlassButton} activeOpacity={0.7}>
                 <Ionicons name="albums-outline" size={20} color="white" />
+              </TouchableOpacity>
+            )}
+            {onTogglePictureInPicture && (
+              <TouchableOpacity
+                onPress={onTogglePictureInPicture}
+                style={styles.iconGlassButton}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Picture in picture"
+              >
+                <Ionicons name="browsers-outline" size={20} color="white" />
               </TouchableOpacity>
             )}
             {!isLiveStream && (

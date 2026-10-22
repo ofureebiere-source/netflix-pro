@@ -54,3 +54,20 @@ Persistent notes for this repository. Keep entries short and factual.
 - Secrets (`android/app/release.keystore`, `android/keystore.properties`) are gitignored;
   never commit them.
 - `gradlew` must stay executable (`100755`) in git.
+
+## Feature wiring (post-audit)
+
+The following were previously persisted-but-unread settings or missing pieces,
+and are now wired. See `TODO.md` for the original audit.
+
+| Area | Entry point |
+|------|-------------|
+| UI language + content locale | `src/i18n/`, `src/hooks/useTranslation.ts`, `src/hooks/useLocale.ts` |
+| Country detection | `src/services/locale/countryService.ts` (ipapi.co, cached 7d, device fallback) |
+| Locale for TMDB calls | `src/services/locale/localeState.ts` — module holder read by `TMDBMetadata` |
+| Device identity (no accounts) | `src/services/device/deviceIdentity.ts` |
+| Recognition engine | `src/services/recognition/introDetection.ts` (intro fingerprint + runtime credits) |
+| Skip intro/credits | `src/hooks/useSkipMarkers.ts`, mounted in `VideoPlayerScreen` |
+
+`jest.setup.js` registers the AsyncStorage/SecureStore/expo-localization mocks;
+native modules with no JS fallback need an entry there before a suite can import them.

@@ -34,6 +34,7 @@ import { networkService } from '../src/services/networkService';
 
 // Download Manager
 import downloadManager from '../src/services/downloadManager/DownloadManager';
+import { useLocale } from '../src/hooks/useLocale';
 
 // Thriller Preloader
 import { thrillerPreloader } from '../src/services/preloader/ThrillerPreloader';
@@ -380,6 +381,10 @@ function AppContent() {
   // ============================================
   // INITIALIZATION
   // ============================================
+  // Resolve the device's country and language before content loads, so the
+  // first catalogue fetch is locale-aware rather than US-defaulted.
+  useLocale();
+
   useEffect(() => {
     // Wait for services to be ready before preloading content
     if (!servicesReady) return;
