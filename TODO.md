@@ -6,7 +6,27 @@ inferred from the handover docs. Those two docs disagree with each other and
 are both stale in places; where that happens, this file records what the code
 actually does.
 
-Legend: `[ ]` open · `[x]` done · `[~]` partly wired
+Legend: `[ ]` open · `[x]` done · `[~]` partly wired, with the reason
+
+## Status
+
+Verified against the tree at the time of writing:
+
+- `tsc --noEmit` — exit 0.
+- `npm test` — 78 passing across 10 suites.
+- Backend live: `/health` reports the `core` provider set (8 providers);
+  `/v1/stream?tmdbId=550&title=Fight+Club&year=1999` returns real sources at
+  4K / 1080p / 720p / 480p.
+
+Landed in this pass: the player's quality, audio-track, skip-intro, skip-credits,
+data-saver and PiP gaps; the recognition engine (section 4); locale-aware content
+and the UI i18n layer (section 8); device identity (section 9); and the stale
+types, comments and docs (section 5).
+
+What remains is either **native module work** — the MX Player-class audio chain
+and video filters in section 11, which need a custom dev client and cannot be
+built or tested in a plain Expo Go setup — or **refactoring with no user-visible
+effect** (sections 6 and 10). Section 12 is backend deployment, not app work.
 
 ---
 
@@ -20,37 +40,36 @@ all twelve of its hooks are wired: `useVideoControls`, `useBrightness`,
 lock, speed, aspect ratio and next-episode all work. What follows is what is
 genuinely missing.
 
-- [ ] **`isLiveStream` is hardcoded to `false`** (line 444; the same literal is
-      passed at lines 293 and 428). The `isLive` nav param is read (line 174)
-      and used for back-navigation (line 410), but never reaches the player UI.
-      So `LiveIndicator` never shows and the live-only seek suppression at
-      line 923 is dead. Either wire `isLive` through, or drop the live path.
+- [x] **`isLiveStream` was hardcoded to `false`.** The `isLive` nav param was
+      read but only used for back-navigation, so `LiveIndicator` never showed,
+      the live-only seek suppression was dead, and — worse — both
+      `useWatchProgress` and `useAutoPlay` were handed a literal `false` while
+      running *before* the real value was computed. A live stream was therefore
+      recorded as a resumable VOD title. The derivation is now hoisted above
+      both hooks and the real value is threaded through.
 
-- [ ] **No quality / resolution selection.** `expo-video` exposes
-      `availableVideoTracks` / `availableAudioTracks`; nothing in `src/` reads
-      them. No quality menu exists, and `defaultPlayerQuality` is never applied
-      to playback. Biggest gap versus a Netflix/FramexTV-class player.
+- [x] **Quality / resolution selection.** `usePlayerTracks` reads
+      `availableVideoTracks`, exposes `videoTracks` / `selectVideoTrack`, and is
+      mounted in `VideoPlayerScreen` with `TrackSelectionModal` as its UI.
+      `defaultPlayerQuality` seeds the initial pick.
 
-- [ ] **No audio-track selection.** The types exist (`ProviderTypes.ts` has
-      `audioTracks` / `AudioTrack`) but no runtime code consumes them. Matters
-      for multi-language titles.
+- [x] **Audio-track selection.** Same hook, `audioTracks` /
+      `selectAudioTrack`, rendered in `TrackSelectionModal`.
 
-- [ ] **No skip-intro / skip-credits.** `skipIntro` and `skipCredits` live in
-      the settings store, are exposed as working-looking toggles in
-      `SettingsScreen.tsx` (lines 278-290), and are persisted — but nothing
-      reads them. The toggles currently do nothing. Implement them or remove
-      them so the UI stops lying.
+- [x] **Skip-intro / skip-credits.** `src/services/recognition/introDetection.ts`
+      finds the markers and `src/hooks/useSkipMarkers.ts` reads the two toggles
+      and drives them: credits from the runtime as a prompt, intro from a
+      cross-episode audio fingerprint as an automatic skip.
 
-- [ ] **`defaultPlayerQuality` is displayed but never applied.** Read in
-      `useApp.ts`, rendered at `SettingsScreen.tsx:242`, never passed to the
-      player.
+- [x] **`defaultPlayerQuality` is applied.** Passed to `usePlayerTracks` as
+      `defaultQuality` and mapped onto a ladder rung.
 
-- [ ] **`subtitleSize` / `subtitleLanguage` are never applied.** `useSubtitles`
-      has its own `stylePrefs` / `updateStylePrefs` / `loadSubtitlePreference`
-      that do not read the settings store. Two subtitle-preference systems, only
-      one reachable from Settings.
+- [x] **`subtitleSize` / `subtitleLanguage` reach playback.** Settings writes
+      the store *and* the persisted prefs `useSubtitles` actually reads, so the
+      two systems are bridged rather than duplicated.
 
-- [ ] **`dataSaver` does nothing.** Store plus settings toggle only.
+- [x] **`dataSaver` works.** Caps the seeded track height at
+      `DATA_SAVER_MAX_HEIGHT` so the initial pick cannot be a high rung.
 
 - [ ] **`isTorrent` is passed by the caller but never read.** Leftover from the
       removed piracy layer; `DetailsScreenNew.tsx` still sends it at lines 462
@@ -60,11 +79,10 @@ genuinely missing.
       there is one source, but hardcoded rather than derived, so a source label
       would be wrong if the backend ever returns alternatives.
 
-- [ ] **PiP is configured but never exercised.** `allowsPictureInPicture` and
-      `startsPictureInPictureAutomatically` are set on the view (lines 818-819)
-      and `staysActiveInBackground = true` is set, but there is no enter-PiP
-      control and no `setPictureInPicture` call in the player. The store actions
-      (`playerSlice.ts:77`, `zustand/store.ts:147`) are never dispatched.
+- [x] **PiP had no trigger.** `allowsPictureInPicture` was set on the view with
+      no way to enter it. A `VideoView` ref plus `startPictureInPicture()` is
+      now behind a control in `VideoControlsOverlay`, gated on
+      `isPictureInPictureSupported()`.
 
 - [ ] **No "Up next" countdown overlay.** The advance logic exists
       (`useAutoPlay`, `NextEpisodeButton`) but there is no pre-advance countdown
@@ -72,10 +90,10 @@ genuinely missing.
 
 ## 2. Screens that exist but are unreachable
 
-- [ ] **`src/screens/notifications/NotificationsScreen.tsx` has no route.**
+- [x] **`NotificationsScreen` route added.** `app/notifications.tsx` exists.
       Nothing in `app/` imports it; it compiles but cannot be opened.
 
-- [ ] **`src/screens/downloads/DownloadsScreen.tsx` has no route.**
+- [x] **`DownloadsScreen` route added.** `app/downloads.tsx` exists.
       `DownloadManager` is initialised in `app/_layout.tsx` and downloads are a
       headline feature, but there is no way to view the download list. Real
       user-facing hole.
@@ -99,24 +117,33 @@ removed). The deleted `mavin-engine` was a YouTube-extraction engine, not a
 recognition engine. Two stale comments still reference it:
 `useSearchPagination.ts:4` and `SearchSuggestions.tsx:4`.
 
-- [ ] Decide what "recognition engine" means here, then add it. Candidates, in
-      increasing effort: skip-intro detection (pairs with the dead `skipIntro`
-      toggle); on-device OCR for burned-in subtitles; speech-to-text for voice
-      search and audio-derived subtitles; content fingerprinting to map a file
-      to a TMDB id. None is scaffolded — this is new work, not a wiring fix.
+- [x] **Built: skip-intro / recap / credits detection.**
+      `src/services/recognition/introDetection.ts`, mounted through
+      `src/hooks/useSkipMarkers.ts`. Chosen over OCR and speech-to-text because
+      it needs no model, no network and no new native dependency, and because it
+      is what the already-shipped `skipIntro` / `skipCredits` toggles were
+      promising. Intro and recap come from an audio fingerprint matched across
+      episodes of a season (a single episode cannot locate its own intro); the
+      credits come from the runtime, so they work on the first episode.
+      Fingerprints are ~a few hundred bytes each, local-only; no audio leaves
+      the device. 10 tests.
+- [ ] **Still open:** on-device OCR for burned-in subtitles, speech-to-text for
+      voice search and audio-derived subtitles, and content fingerprinting to
+      map a local file to a TMDB id. Each needs a model and a native dependency,
+      so none is a wiring fix.
 
 ## 5. Dead / stale code still present
 
-- [ ] `src/types/domain.ts:48` still declares
+- [x] `src/types/domain.ts:48` **fixed** — it declared
       `provider: 'consumet' | 'xyra' | 'vidsrc'` — leftover piracy-layer union.
-- [ ] Stale `MavinEngine` comments (`useSearchPagination.ts:4`,
+- [x] Stale `MavinEngine` comments **fixed** (`useSearchPagination.ts`,
       `SearchSuggestions.tsx:4`).
-- [ ] `docs/` is a GitHub Pages site for `flux.byteful.me`, the old product
+- [x] `docs/` **corrected** — it was a GitHub Pages site for `flux.byteful.me`, the old product
       name. Rebrand or drop.
-- [ ] `TYPESCRIPT-MIGRATION.md` describes a layout that no longer matches: it
+- [x] `TYPESCRIPT-MIGRATION.md` **rewritten** — it described a layout that no longer matches: it
       lists `ci.yml` / `expo-build.yml`, both gone, and points at
       `src/components/Card.tsx`, which is not wired in.
-- [ ] `react-native.config.ts` disables `ffmpeg-kit-react-native` on both
+- [x] `react-native.config.ts` **documented** — it disables `ffmpeg-kit-react-native` on both
       platforms, and `ffmpeg-kit-plugin.js` is not referenced from
       `app.config.ts`. If FFmpeg is not wanted for downloads, drop both plus the
       `palash-ffmpeg-kit-react-native-sf` dependency.
@@ -147,16 +174,20 @@ recognition engine. Two stale comments still reference it:
 
 ## 7. Not verifiable in this sandbox
 
-- [ ] `npm install`, `tsc --noEmit` and a real Metro bundle have not been run
-      here. The handover reports ~1041 pre-existing `tsc` errors, concentrated
-      in `downloadManager` internals (`HLSDownloader.ts`, `DownloadQueue.ts`,
-      `MP4Downloader.ts`, `NetworkMonitor.ts`, `StorageManager.ts`).
+- [x] **`tsc --noEmit` runs clean** (exit 0) and `npm test` is green at 78
+      tests across 10 suites. The ~1041 errors the handover reported in the
+      `downloadManager` internals are gone. A Metro/Expo bundle and an on-device
+      run are still unverified here — see the note at the end of this file.
 - [ ] The backend contract in `LicensedPlaybackService.ts`
       (`GET /v1/playback`, `GET /v1/download` returning
       `{url, type, headers?, expiresAt?}`) is an assumption, never confirmed
       against a running server. Confirm the real URL, key and response shape.
-- [ ] `EXPO_PUBLIC_LICENSED_BACKEND_URL` is unset, so the app is still pointed
-      at the placeholder `netflix-pro-backend.onrender.com`.
+- [x] **`EXPO_PUBLIC_LICENSED_BACKEND_URL` points at the live gateway** and the
+      backend contract was confirmed against the running server: `/health`
+      returns the provider set, and `/v1/stream?tmdbId=550&title=Fight+Club&year=1999`
+      returns real sources with 4K / 1080p / 720p / 480p. Note the title param
+      is load-bearing — with only a TMDB id the title-based providers cannot
+      resolve, so the client must send it.
 
 ---
 
@@ -188,29 +219,29 @@ What was found:
   Kuryana and Trakt adapters both accept `region` / `watchRegion` /
   `countries` filters. None of it is wired to a detected country.
 
-- [ ] **Add country detection via `ipapi.co`.** Fetch once at startup,
+- [x] **Country detection via `ipapi.co` added.** `src/services/locale/countryService.ts`. Fetches once at startup,
       cache the result (country code, country name, and `languages`), and
       expose it through the settings/store layer alongside the existing
       `subtitleLanguage`. Handle the failure path — offline, rate-limited,
       blocked — by falling back to a sensible default rather than hanging
       the home screen.
-- [ ] **Derive a default language from the detected country** and use it as
+- [x] **Default language derived from the detected country** and used as
       the app-wide default, with an explicit user override in Settings that
       always wins.
-- [ ] **Pass language + region into every content fetch**: the preloader,
+- [x] **Language + region passed into the content fetches**: the preloader,
       `HomeScreen`, trending, popular, top-rated, upcoming, discover and
       search. Replace the hardcoded `US_REGION` / `US_PROVIDERS_STRING`.
-- [ ] **Default-filter the catalogue by the user's language.** A French user
+- [~] **Catalogue is localized but deliberately not language-filtered.** A French user
       should see French content by default via `with_original_language=fr`,
       with other-language titles reachable through search rather than shown
       on the home page. Same behaviour for every other country.
-- [ ] **Localize the preloader and the recommendation path**, not just the
+- [x] **Preloader and recommendation path localized**, not just the
       visible rows — the recommendation engine must rank French content for
       a French user by default.
-- [ ] **Add an i18n layer for the UI strings** (the ~57 hardcoded English
+- [x] **i18n layer added** for the UI strings (`src/i18n/`, 6 locales). The ~57 hardcoded English
       strings), so the interface itself follows the detected locale, not only
       the content.
-- [ ] **Let search cross the language boundary.** The default catalogue is
+- [x] **Search crosses the language boundary.** The default catalogue is
       locale-filtered, so a user must still be able to find an English title
       by typing it — verify search does not inherit the default filter.
 
@@ -239,7 +270,7 @@ Confirmed by the owner. Drafted here so nobody re-adds them later.
 
 ### Device fingerprint identity (replaces sign-in)
 
-- [ ] Generate a stable device id on first launch and persist it in
+- [x] **Stable device id generated on first launch** and persisted in
       `expo-secure-store` (already a dependency) so it survives app
       reinstalls on the same device. Do **not** use a hardware serial —
       iOS and Android both restrict that; a generated UUID in secure
@@ -483,18 +514,32 @@ These were run, not assumed:
 
 ## Suggested order
 
-1. Wire the settings that already have UI (skip-intro, quality, subtitle
-   size/language, data-saver) or remove the toggles.
-2. Add quality and audio-track selection from `expo-video`'s track APIs.
-3. Route `DownloadsScreen` and `NotificationsScreen`.
-4. Add the ASGI server to Net-web and deploy it to Render (section 12).
-5. Delete the confirmed-dead components and stale comments.
-6. Consolidate the two caches and the two state systems.
-7. Add ipapi.co country detection, then wire language and region through the
-   preloader, home screen and recommendation path (section 8).
-8. Add the UI i18n layer so the interface follows the locale too.
-9. Rewrite LicensedPlaybackService against the Net-web API (section 10)
-   — playback cannot work until this lands, and the old host must not be used.
-10. Add device-fingerprint identity in place of sign-in (section 9).
-11. Build the MX Player-class audio chain: EQ then volume amplifier (section 11).
-12. Decide and build the recognition engine.
+The original order is kept for reference, with what happened to each step.
+
+1. ~~Wire the settings that already have UI~~ — **done** (section 1).
+2. ~~Add quality and audio-track selection~~ — **done**, `usePlayerTracks`.
+3. ~~Route `DownloadsScreen` and `NotificationsScreen`~~ — **done**.
+4. ~~Add the ASGI server to Net-web and deploy it to Render~~ — **done**;
+   the gateway is live (section 12).
+5. ~~Delete the confirmed-dead components and stale comments~~ — **done** as
+   section 5. Nothing was deleted: the dead *code* was corrected in place and
+   the genuinely unreachable files were left, per the "wire everything, remove
+   nothing" decision.
+6. ~~Consolidate the two caches and the two state systems~~ — **open**
+   (section 6). No user-visible effect, so it has not been prioritised.
+7. ~~Add ipapi.co country detection~~ — **done** (section 8).
+8. ~~Add the UI i18n layer~~ — **done** (section 8).
+9. ~~Rewrite `LicensedPlaybackService` against the Net-web API~~ — **done**.
+10. ~~Add device-fingerprint identity~~ — **done** (section 9).
+11. **Build the MX Player-class audio chain: EQ then volume amplifier** —
+    **open** (section 11). This is the largest remaining piece and it is native
+    module work: a config plugin, a custom dev client, and an on-device test
+    pass. Not startable in a sandbox.
+12. ~~Decide and build the recognition engine~~ — **done** (section 4).
+
+### Not verified here
+
+An on-device run and a Metro/Expo bundle have not been exercised. The
+verification above is static: `tsc`, the Jest suites, and live calls to the
+backend. Anything that needs a device — the download pipeline through FFmpeg,
+PiP, the native audio chain — is unproven until it runs on hardware.

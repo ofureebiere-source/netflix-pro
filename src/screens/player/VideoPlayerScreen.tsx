@@ -198,6 +198,12 @@ const VideoPlayerScreen = () => {
     subtitles: subtitlesParam,
   } = params;
 
+  // Derived from the nav param rather than hardcoded. Declared here because the
+  // progress and autoplay hooks below run before the rest of the setup and need
+  // the real value: passed a literal `false`, they recorded a live stream as a
+  // resumable VOD title.
+  const isLiveStream = isLive === 'true';
+
   // The backend needs a title and year to reach the title-based providers —
   // with only a TMDB id it resolves nothing. Prefer an explicit `year`, else
   // take the year off whichever date param the caller supplied.
@@ -348,7 +354,7 @@ const VideoPlayerScreen = () => {
     mediaId: String(mediaId || ''), mediaType: String(mediaType || 'movie'),
     season: season ? Number(season) : undefined, episode: episode ? Number(episode) : undefined,
     title: String(title || ''), episodeTitle: String(episodeTitle || ''),
-    poster_path: String(poster_path || ''), isLiveStream: false, isUnmounting,
+    poster_path: String(poster_path || ''), isLiveStream, isUnmounting,
   });
   const {
     resumeTime, position, duration, lastPositionRef, lastPositionTimeRef,
@@ -481,7 +487,7 @@ const VideoPlayerScreen = () => {
     season: season ? Number(season) : undefined, episode: episode ? Number(episode) : undefined,
     title: String(title || ''), poster_path: String(poster_path || ''),
     year: playbackYear, releaseDate: String(releaseDate || ''),
-    position, duration, isLiveStream: false, player: activePlayer, router,
+    position, duration, isLiveStream, player: activePlayer, router,
     handleGoBack, setIsUnmounting,
   });
   const {
@@ -497,10 +503,6 @@ const VideoPlayerScreen = () => {
   });
   const { videoUrl, isResolved: streamExtractionComplete, isLoading: isChangingSource, error: playbackError, sources: playbackSources, activeIndex: playbackActiveIndex, selectSource: selectPlaybackSource } = playback;
   const currentPlayingSourceName = 'licensed';
-  // Derived from the nav param rather than hardcoded. The param was already
-  // read (see `isLive` above) but only used for back-navigation, so
-  // `LiveIndicator` never rendered and the live-only seek suppression was dead.
-  const isLiveStream = isLive === 'true';
 
   // Quality and audio come from the tracks the native player reports, seeded
   // from the viewer's saved preferences.
