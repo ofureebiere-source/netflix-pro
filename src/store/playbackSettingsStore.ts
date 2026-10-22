@@ -46,7 +46,10 @@ export const EQ_PRESETS: EqPreset[] = [
  * the native layer takes millibels.
  */
 export const MIN_GAIN_PERCENT = 100;
-export const MAX_GAIN_PERCENT = 300;
+// 200% is +10 dB, which is the native module's MAX_GAIN_MB (1000 mB). Going
+// higher here would be silently clamped on the device, so the slider would
+// travel past a value it cannot reach.
+export const MAX_GAIN_PERCENT = 200;
 
 /**
  * Above this the limiter starts working hard enough to pump on percussive
@@ -155,8 +158,8 @@ export const resolvePresetBands = (
 export const gainPercentToMb = (percent: number): number => {
   const clamped = Math.max(MIN_GAIN_PERCENT, Math.min(MAX_GAIN_PERCENT, percent));
   if (clamped <= MIN_GAIN_PERCENT) return 0;
-  // 100% -> 0 mB (unity). Each further 100% is +10 dB, which is the native
-  // module's documented ceiling.
+  // 100% -> 0 mB (unity) and 200% -> 1000 mB (+10 dB), matching the native
+  // ceiling.
   return Math.round(((clamped - MIN_GAIN_PERCENT) / 100) * 1000);
 };
 

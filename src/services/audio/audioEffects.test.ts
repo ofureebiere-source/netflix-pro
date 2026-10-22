@@ -84,9 +84,12 @@ describe('gainPercentToMb', () => {
     expect(gainPercentToMb(MIN_GAIN_PERCENT)).toBe(0);
   });
 
-  it('maps each further 100 percent to ten decibels', () => {
-    expect(gainPercentToMb(200)).toBe(1000);
-    expect(gainPercentToMb(300)).toBe(2000);
+  it('maps the ceiling to the ten decibels the native stage accepts', () => {
+    // 1000 mB is the module's MAX_GAIN_MB. Anything the slider can reach must
+    // map to a value the device will not clamp, or the top of the range would
+    // be a dead zone.
+    expect(gainPercentToMb(MAX_GAIN_PERCENT)).toBe(1000);
+    expect(gainPercentToMb(150)).toBe(500);
   });
 
   it('clamps below unity to zero rather than attenuating', () => {

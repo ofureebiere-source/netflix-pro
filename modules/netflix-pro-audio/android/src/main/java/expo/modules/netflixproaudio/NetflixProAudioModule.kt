@@ -1,10 +1,8 @@
 package expo.modules.netflixproaudio
 
-import android.content.Context
 import android.media.AudioManager
 import android.media.audiofx.Equalizer
 import android.media.audiofx.LoudnessEnhancer
-import android.os.Build
 import android.util.Log
 import expo.modules.kotlin.exception.CodedException
 import expo.modules.kotlin.modules.Module
@@ -40,7 +38,7 @@ import expo.modules.kotlin.modules.ModuleDefinition
  * loudness while holding the peaks — so pushing it past 100% does not simply
  * multiply the signal into hard clipping the way a naive gain would. It is
  * still possible to drive it far enough to distort, which is why the JS layer
- * warns above 150% and why the range is capped at 300%.
+ * warns above 150% and why the range stops at 200% (+10 dB, [MAX_GAIN_MB]).
  */
 class NetflixProAudioModule : Module() {
 
@@ -50,16 +48,18 @@ class NetflixProAudioModule : Module() {
   /** The device's own bands, read once when the EQ is first created. */
   private var bandLevelRange: ShortArray? = null
 
-  private val context: Context
-    get() = appContext.reactContext ?: throw MissingContextException()
-
   override fun definition() = ModuleDefinition {
     Name("NetflixProAudio")
 
     // Reported to JS so the UI can say "not supported on this device" instead
     // of offering controls that silently do nothing.
+    //
+    // Probed by actually constructing the effect: every Android device has an
+    // AudioManager, so checking for one would report support on hardware whose
+    // vendor omitted the equaliser, and the UI would then show sliders that do
+    // nothing. Construction is cached, so this costs one effect at most.
     Function("isSupported") {
-      audioManager() != null
+      ensureEqualizer() != null
     }
 
     // How many bands the hardware actually has, and the gain each accepts in
@@ -132,9 +132,6 @@ class NetflixProAudioModule : Module() {
       releaseAll()
     }
   }
-
-  private fun audioManager(): AudioManager? =
-    context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
 
   /**
    * Create the equaliser on first use, or return the existing one.
@@ -226,10 +223,6 @@ class NetflixProAudioModule : Module() {
     const val DEFAULT_PRIORITY = 0
   }
 }
-
-/** Raised when a react context is unavailable, which only happens at teardown. */
-class MissingContextException :
-  CodedException("NetflixProAudio could not reach the react context")
 
 /** Raised when the device has no usable audio effect implementation. */
 class EffectsUnavailableException :
