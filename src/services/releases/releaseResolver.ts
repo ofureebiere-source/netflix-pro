@@ -2,11 +2,15 @@
 //
 // Single source of truth for where this app's Android build is published.
 //
-// Downloads are served straight from GitHub Releases — no third-party host,
-// no mirror, no redirector. The release workflow (.github/workflows/android.yml)
-// builds a signed *release* APK and uploads it to the rolling `android-latest`
-// tag as `netflix-pro-<version>.apk`, so the asset name always carries the real
-// version rather than `app-debug.apk`.
+// The build is an Android App Bundle (`.aab`) — the Play Store's upload format.
+// A bundle is not installable by itself: Play regenerates a split APK per device
+// from it, which is why the app no longer downloads and installs its own update
+// the way it did when the workflow published an APK. The release page is where a
+// user goes; Play does the installing.
+//
+// The release workflow (.github/workflows/android.yml) builds a signed release
+// bundle and uploads it to the rolling `android-latest` tag as
+// `netflix-pro-<version>.aab`, so the asset name always carries the real version.
 //
 // The resolver reads the release through the GitHub API and falls back to the
 // predictable direct asset URL when the API is unavailable. The API path is
@@ -22,24 +26,24 @@ export const RELEASE_TAG = 'android-latest';
 export const RELEASE_API_URL = `https://api.github.com/repos/${RELEASE_OWNER}/${RELEASE_REPO}/releases/tags/${RELEASE_TAG}`;
 export const RELEASE_PAGE_URL = `https://github.com/${RELEASE_OWNER}/${RELEASE_REPO}/releases/tag/${RELEASE_TAG}`;
 
-/** `netflix-pro-1.2.3.apk` — the asset name the workflow uploads. */
-export function apkAssetName(version: string): string {
-  return `netflix-pro-${version}.apk`;
+/** `netflix-pro-1.2.3.aab` — the asset name the workflow uploads. */
+export function aabAssetName(version: string): string {
+  return `netflix-pro-${version}.aab`;
 }
 
 /** The direct asset URL for a known version, used when the API is unreachable. */
-export function directApkUrl(version: string): string {
-  return `https://github.com/${RELEASE_OWNER}/${RELEASE_REPO}/releases/download/${RELEASE_TAG}/${apkAssetName(version)}`;
+export function directAabUrl(version: string): string {
+  return `https://github.com/${RELEASE_OWNER}/${RELEASE_REPO}/releases/download/${RELEASE_TAG}/${aabAssetName(version)}`;
 }
 
 export interface ResolvedRelease {
   /** Version parsed from the asset name, the tag, or the release body. */
   version: string;
-  /** Direct download URL of the `.apk` asset. */
-  apkUrl: string;
-  /** Human-facing release page, used when a direct install is not possible. */
+  /** Direct URL of the `.aab` asset. Useful to a maintainer, not installable. */
+  aabUrl: string;
+  /** Human-facing release page, where the user is actually sent. */
   releaseUrl: string;
-  /** Whether `apkUrl` came from the API or the deterministic fallback. */
+  /** Whether `aabUrl` came from the API or the deterministic fallback. */
   source: 'api' | 'fallback';
 }
 
@@ -71,31 +75,31 @@ export function parseVersion(release: GitHubRelease, assetName?: string): string
   return '';
 }
 
-/** The APK asset in a release, preferring the versioned name. */
-export function findApkAsset(release: GitHubRelease) {
-  const apks = (release.assets || []).filter((asset) =>
-    asset?.name?.toLowerCase().endsWith('.apk')
+/** The bundle asset in a release, preferring the versioned name. */
+export function findAabAsset(release: GitHubRelease) {
+  const bundles = (release.assets || []).filter((asset) =>
+    asset?.name?.toLowerCase().endsWith('.aab')
   );
-  // The workflow publishes two names for the same bytes: `netflix-pro-1.2.3.apk`
-  // and the stable `netflix-pro.apk` alias. Prefer the versioned one, since the
+  // The workflow publishes two names for the same bytes: `netflix-pro-1.2.3.aab`
+  // and the stable `netflix-pro.aab` alias. Prefer the versioned one, since the
   // version it carries is what the updater compares against the installed app;
   // asset order in the API response is not guaranteed.
-  return apks.find((asset) => /\d+\.\d+\.\d+/.test(asset.name || '')) || apks[0];
+  return bundles.find((asset) => /\d+\.\d+\.\d+/.test(asset.name || '')) || bundles[0];
 }
 
 /**
  * Turn a release payload into a download target.
  *
- * Returns null when the release carries no APK at all — an empty answer, not an
- * error, so callers can fall back rather than surface a failure to the user.
+ * Returns null when the release carries no bundle at all — an empty answer, not
+ * an error, so callers can fall back rather than surface a failure to the user.
  */
 export function resolveFromRelease(release: GitHubRelease): ResolvedRelease | null {
-  const asset = findApkAsset(release);
+  const asset = findAabAsset(release);
   if (!asset?.browser_download_url) return null;
 
   return {
     version: parseVersion(release, asset.name),
-    apkUrl: asset.browser_download_url,
+    aabUrl: asset.browser_download_url,
     releaseUrl: RELEASE_PAGE_URL,
     source: 'api',
   };
@@ -106,21 +110,21 @@ export function resolveFromRelease(release: GitHubRelease): ResolvedRelease | nu
  *
  * The asset name embeds the version, so the fallback needs one. `knownVersion`
  * is the caller's best guess (typically the installed version); when it is
- * absent the release page is the only honest answer, and `apkUrl` points there
- * so the user still lands somewhere they can download from.
+ * absent the release page is the only honest answer, and `aabUrl` points there
+ * so the caller still lands somewhere real.
  */
 export function fallbackRelease(knownVersion?: string): ResolvedRelease {
   if (knownVersion) {
     return {
       version: knownVersion,
-      apkUrl: directApkUrl(knownVersion),
+      aabUrl: directAabUrl(knownVersion),
       releaseUrl: RELEASE_PAGE_URL,
       source: 'fallback',
     };
   }
   return {
     version: '',
-    apkUrl: RELEASE_PAGE_URL,
+    aabUrl: RELEASE_PAGE_URL,
     releaseUrl: RELEASE_PAGE_URL,
     source: 'fallback',
   };
@@ -148,7 +152,7 @@ export async function fetchLatestRelease(
 }
 
 /** Fetch and resolve in one call, falling back when the API is unreadable. */
-export async function resolveLatestApk(
+export async function resolveLatestRelease(
   knownVersion?: string,
   fetchImpl: typeof fetch = fetch
 ): Promise<ResolvedRelease> {

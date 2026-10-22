@@ -1,14 +1,26 @@
-name: Android Release APK
+name: Android Release AAB
 
-# Builds a signed *release* APK (not a debug build) and publishes it to the
-# rolling `android-latest` release as `netflix-pro-<version>.apk`, which is the
-# asset name the in-app updater looks for (src/services/releases/releaseResolver.ts).
+# Builds a signed *release* Android App Bundle (`.aab`) — the Play Store upload
+# format — and publishes it to the rolling `android-latest` release as
+# `netflix-pro-<version>.aab`, which is the asset name the in-app updater looks
+# for (src/services/releases/releaseResolver.ts).
 #
-# Signing: if the `ANDROID_KEYSTORE_BASE64` secret is present the release is
-# signed with it; otherwise Gradle falls back to the debug keystore so a build
-# still succeeds on a fork or before the secret is configured. Set the secret
-# (plus ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_ALIAS / ANDROID_KEY_PASSWORD)
-# to ship an installable, upgradeable production build.
+# Why a bundle and not an APK: Play requires an `.aab` and regenerates a split
+# APK per device from it, which is smaller for the user and is the only format
+# that supports Play's per-device optimisation. The trade-off is that a bundle
+# cannot be sideloaded — it is not installable by itself — so the app's updater
+# sends users to the release page rather than handing a file to a package
+# installer.
+#
+# Signing: the bundle is signed with the release keystore. If the
+# `ANDROID_KEYSTORE_BASE64` secret is absent, Gradle falls back to the debug
+# keystore so a fork still builds; set the secret (plus
+# ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_ALIAS / ANDROID_KEY_PASSWORD) for a
+# production bundle.
+#
+# Play upload (optional): when `PLAY_SERVICE_ACCOUNT_JSON` is set, the bundle is
+# also uploaded to the Play internal track. Without it the job stops after
+# publishing the GitHub release.
 
 on:
   push:
@@ -28,14 +40,19 @@ on:
         description: 'Force a fresh build (clear Gradle and npm caches)'
         type: boolean
         default: false
+      play_track:
+        description: 'Play track to upload to when PLAY_SERVICE_ACCOUNT_JSON is set'
+        type: choice
+        options: [internal, alpha, beta, production]
+        default: internal
 
 concurrency:
   group: android-release-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build-release-apk:
-    name: Build Release APK
+  build-release-aab:
+    name: Build Release AAB
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -56,6 +73,11 @@ jobs:
           node-version: '20.x'
           cache: 'npm'
 
+      # JDK 17, not 21: expo-modules-core requests a Java 17 toolchain
+      # (`kotlin.jvmToolchain(17)`). With only a newer JDK installed, Gradle tries
+      # to provision 17 and the foojay resolver bundled with the React Native
+      # Gradle plugin throws NoSuchFieldError on Gradle 9 — it references
+      # JvmVendorSpec.IBM_SEMERU, which Gradle 9 removed.
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -111,7 +133,6 @@ jobs:
       - name: Create local.properties
         run: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
-          echo "ndk.dir=$ANDROID_SDK_ROOT/ndk/27.1.12297006" >> android/local.properties
 
       - name: Restore release keystore
         id: keystore
@@ -122,7 +143,7 @@ jobs:
             echo "Using the configured release keystore."
           else
             echo "signed=false" >> $GITHUB_OUTPUT
-            echo "::warning::ANDROID_KEYSTORE_BASE64 is not set — the release APK will be signed with the debug key and is not suitable for distribution."
+            echo "::warning::ANDROID_KEYSTORE_BASE64 is not set — the bundle will be signed with the debug key and is not suitable for distribution."
           fi
 
       - name: Generate debug keystore (fallback signing)
@@ -139,14 +160,14 @@ jobs:
         run: |
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Building netflix-pro-$VERSION.apk"
+          echo "Building netflix-pro-$VERSION.aab"
 
-      - name: Build Release APK
+      - name: Build Release AAB
         run: |
           cd android
           chmod +x gradlew
           [ "${{ github.event.inputs.fresh_build }}" = 'true' ] && ./gradlew clean
-          ./gradlew assembleRelease \
+          ./gradlew bundleRelease \
             --no-daemon --build-cache --stacktrace \
             -PreactNativeArchitectures=arm64-v8a,x86_64
         env:
@@ -156,13 +177,13 @@ jobs:
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
-      - name: Rename APK to its release name
+      - name: Rename AAB to its release name
         id: rename
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          SRC=$(find android/app/build/outputs/apk/release -name '*.apk' | head -n 1)
+          SRC=$(find android/app/build/outputs/bundle/release -name '*.aab' | head -n 1)
           if [ -z "$SRC" ]; then
-            echo "::error::No release APK was produced."
+            echo "::error::No release bundle was produced."
             exit 1
           fi
           mkdir -p dist
@@ -170,17 +191,17 @@ jobs:
           # updater matches on, and the unversioned alias is a stable target
           # that never 404s when the version is bumped, so the website's
           # fallback link stays valid even with the release API unreachable.
-          OUT="dist/netflix-pro-${VERSION}.apk"
+          OUT="dist/netflix-pro-${VERSION}.aab"
           cp "$SRC" "$OUT"
-          cp "$SRC" "dist/netflix-pro.apk"
+          cp "$SRC" "dist/netflix-pro.aab"
           ls -lh dist
-          echo "apk=$OUT" >> $GITHUB_OUTPUT
+          echo "aab=$OUT" >> $GITHUB_OUTPUT
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: netflix-pro-${{ steps.version.outputs.version }}
-          path: dist/*.apk
+          name: netflix-pro-${{ steps.version.outputs.version }}-aab
+          path: dist/*.aab
           retention-days: 30
 
       - name: Publish to GitHub Release
@@ -188,7 +209,7 @@ jobs:
         with:
           tag_name: android-latest
           name: Netflix Pro (Android)
-          files: dist/*.apk
+          files: dist/*.aab
           make_latest: 'true'
           body: |
             Latest Android release build of Netflix Pro.
@@ -197,7 +218,35 @@ jobs:
             **Commit:** ${{ github.sha }}
             **Signed:** ${{ steps.keystore.outputs.signed == 'true' && 'release keystore' || 'debug keystore (not for distribution)' }}
 
-            Download `netflix-pro-${{ steps.version.outputs.version }}.apk` and install it
-            directly. The in-app updater reads this release.
+            This release contains `netflix-pro-${{ steps.version.outputs.version }}.aab`,
+            an Android App Bundle. A bundle is the Play Store upload format and is
+            **not installable directly** — Play generates a device-specific APK from
+            it. Install or update through the Play Store listing.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # `secrets` is not one of the contexts a step-level `if` may read, so the
+      # presence of the credential is decided in a shell step and consumed as an
+      # output. Writing `if: secrets.X != ''` silently evaluates to empty and the
+      # upload never runs.
+      - name: Check for Play credentials
+        id: play
+        env:
+          PLAY_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -n "$PLAY_JSON" ]; then
+            echo "enabled=true" >> $GITHUB_OUTPUT
+          else
+            echo "enabled=false" >> $GITHUB_OUTPUT
+            echo "PLAY_SERVICE_ACCOUNT_JSON is not set — skipping the Play upload."
+          fi
+
+      - name: Upload to Play Store
+        if: steps.play.outputs.enabled == 'true'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.netflixpro.app
+          releaseFiles: dist/netflix-pro-${{ steps.version.outputs.version }}.aab
+          track: ${{ github.event.inputs.play_track || 'internal' }}
+          status: completed
