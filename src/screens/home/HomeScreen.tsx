@@ -48,6 +48,7 @@ import ContinueWatchingPanel from '../../components/ContinueWatchingPanel';
 // Hooks
 import { useThrillerGrid } from '../../hooks/content/useThrillerGrid';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useTranslation } from '../../hooks/useTranslation';
 import { useAlert } from '../../contexts/AlertContext';
 
 // Cache
@@ -183,6 +184,7 @@ const EdgeSwipeZone = React.memo(
 
 const HomeScreen = () => {
   const { colors, isDark } = useTheme();
+  const { t } = useTranslation();
   const { showToast } = useAlert();
   const router = useRouter();
   const { networkStatus, setLoading: setAppLoading } = useAppStore();
@@ -316,42 +318,42 @@ const HomeScreen = () => {
 
       rowData.push({
         id: 'continue-watching',
-        title: 'Continue Watching',
+        title: t('row.continueWatching'),
         type: 'continue_watching',
         data: sortedContinueWatching,
       });
     }
 
     const topPicks = shuffleArray([...recommendedMoviesData, ...recommendedTVData]).slice(0, 20);
-    rowData.push({ id: 'top-picks', title: 'Top Picks For You', type: 'recommendations', data: topPicks });
-    rowData.push({ id: 'trending', title: 'Trending Now', type: 'trending', data: shuffleArray(trendingData).slice(0, 20) });
+    rowData.push({ id: 'top-picks', title: t('row.topPicks'), type: 'recommendations', data: topPicks });
+    rowData.push({ id: 'trending', title: t('row.trending'), type: 'trending', data: shuffleArray(trendingData).slice(0, 20) });
 
     const popularData = shuffleArray([...popularMoviesData, ...popularTVData]).slice(0, 20);
-    rowData.push({ id: 'popular', title: 'Popular on Netflix Pro', type: 'popular', data: popularData });
+    rowData.push({ id: 'popular', title: t('row.popular'), type: 'popular', data: popularData });
 
     const newReleases = shuffleArray([...newMoviesData, ...newTVData]).slice(0, 20);
-    rowData.push({ id: 'new-releases', title: 'New Releases', type: 'new_releases', data: newReleases });
+    rowData.push({ id: 'new-releases', title: t('row.newReleases'), type: 'new_releases', data: newReleases });
 
     const becauseYouWatched = shuffleArray([...recommendedMoviesData, ...recommendedTVData]).slice(0, 20);
-    rowData.push({ id: 'because-you-watched', title: 'Because You Watched', type: 'recommendations', data: becauseYouWatched });
+    rowData.push({ id: 'because-you-watched', title: t('row.becauseYouWatched'), type: 'recommendations', data: becauseYouWatched });
 
     const top10 = shuffleArray([...topRatedMoviesData, ...topRatedTVData]).slice(0, 10);
-    rowData.push({ id: 'top-10', title: 'Top 10 Today', type: 'top_10', data: top10 });
+    rowData.push({ id: 'top-10', title: t('row.top10'), type: 'top_10', data: top10 });
 
-    rowData.push({ id: 'blockbuster', title: 'Blockbuster Movies', type: 'blockbuster', data: shuffleArray(topRatedMoviesData).slice(0, 20) });
-    rowData.push({ id: 'dramas', title: 'Dramas', type: 'dramas', data: shuffleArray(dramaData).slice(0, 20) });
-    rowData.push({ id: 'anime', title: 'Anime', type: 'anime', data: shuffleArray(animationData).slice(0, 20) });
+    rowData.push({ id: 'blockbuster', title: t('row.blockbuster'), type: 'blockbuster', data: shuffleArray(topRatedMoviesData).slice(0, 20) });
+    rowData.push({ id: 'dramas', title: t('row.dramas'), type: 'dramas', data: shuffleArray(dramaData).slice(0, 20) });
+    rowData.push({ id: 'anime', title: t('row.anime'), type: 'anime', data: shuffleArray(animationData).slice(0, 20) });
 
     const actionAdventure = shuffleArray([...actionData, ...adventureData]).slice(0, 20);
-    rowData.push({ id: 'action-adventure', title: 'Action & Adventure', type: 'action_adventure', data: actionAdventure });
-    rowData.push({ id: 'comedy', title: 'Comedy', type: 'comedy', data: shuffleArray(comedyData).slice(0, 20) });
+    rowData.push({ id: 'action-adventure', title: t('row.actionAdventure'), type: 'action_adventure', data: actionAdventure });
+    rowData.push({ id: 'comedy', title: t('row.comedy'), type: 'comedy', data: shuffleArray(comedyData).slice(0, 20) });
 
     const sciFiFantasy = shuffleArray([...sciFiData, ...fantasyData]).slice(0, 20);
-    rowData.push({ id: 'sci-fi', title: 'Sci-Fi & Fantasy', type: 'sci_fi', data: sciFiFantasy });
-    rowData.push({ id: 'romance', title: 'Romance', type: 'romance', data: shuffleArray(romanceData).slice(0, 20) });
-    rowData.push({ id: 'horror', title: 'Horror', type: 'horror', data: shuffleArray(horrorData).slice(0, 20) });
-    rowData.push({ id: 'documentaries', title: 'Documentaries', type: 'documentaries', data: shuffleArray(documentaryData).slice(0, 20) });
-    rowData.push({ id: 'kids-family', title: 'Kids & Family', type: 'kids_family', data: shuffleArray(kidsData).slice(0, 20) });
+    rowData.push({ id: 'sci-fi', title: t('row.sciFiFantasy'), type: 'sci_fi', data: sciFiFantasy });
+    rowData.push({ id: 'romance', title: t('row.romance'), type: 'romance', data: shuffleArray(romanceData).slice(0, 20) });
+    rowData.push({ id: 'horror', title: t('row.horror'), type: 'horror', data: shuffleArray(horrorData).slice(0, 20) });
+    rowData.push({ id: 'documentaries', title: t('row.documentaries'), type: 'documentaries', data: shuffleArray(documentaryData).slice(0, 20) });
+    rowData.push({ id: 'kids-family', title: t('row.kidsFamily'), type: 'kids_family', data: shuffleArray(kidsData).slice(0, 20) });
 
     const staffPicks = shuffleArray([
       ...popularMoviesData.slice(0, 5),
@@ -359,10 +361,10 @@ const HomeScreen = () => {
       ...topRatedMoviesData.slice(0, 5),
       ...topRatedTVData.slice(0, 5),
     ]).slice(0, 20);
-    rowData.push({ id: 'staff-picks', title: 'Staff Picks', type: 'staff_picks', data: staffPicks });
+    rowData.push({ id: 'staff-picks', title: t('row.staffPicks'), type: 'staff_picks', data: staffPicks });
 
     const recentlyAdded = shuffleArray([...upcomingMoviesData, ...airingTodayData, ...onTheAirData]).slice(0, 20);
-    rowData.push({ id: 'recently-added', title: 'Recently Added', type: 'recently_added', data: recentlyAdded });
+    rowData.push({ id: 'recently-added', title: t('row.recentlyAdded'), type: 'recently_added', data: recentlyAdded });
 
     const hasWatchedFn = (item: any) => watchedIds.has(item.id);
     return rowData.map((row) =>
