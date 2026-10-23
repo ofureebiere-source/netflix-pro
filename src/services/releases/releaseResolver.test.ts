@@ -30,7 +30,7 @@ describe('bundle asset naming', () => {
 
   it('points the direct URL at the bundle', () => {
     expect(directAabUrl('1.2.3')).toBe(
-      'https://github.com/King-Fisher000/netflix-pro/releases/download/android-latest/netflix-pro-1.2.3.aab'
+      'https://github.com/ofureebiere-source/netflix-pro/releases/download/android-latest/netflix-pro-1.2.3.aab'
     );
   });
 });

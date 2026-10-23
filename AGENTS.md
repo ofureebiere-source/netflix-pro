@@ -1,10 +1,10 @@
-# AGENTS.md — netflix-pro (King-Fisher000/netflix-pro)
+# AGENTS.md — netflix-pro (ofureebiere-source/netflix-pro)
 
 Persistent notes for this repository. Keep entries short and factual.
 
 ## Repo identity
 
-- React Native + Expo 55 (RN 0.83.6), TypeScript strict. Remote `King-Fisher000/netflix-pro`,
+- React Native + Expo 55 (RN 0.83.6), TypeScript strict. Remote `ofureebiere-source/netflix-pro`,
   default branch `main`.
 - Ships as an **Android App Bundle only**. There is no APK anywhere: not built, not
   published, not downloaded, not installed. Do not reintroduce one.

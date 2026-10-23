@@ -31,7 +31,7 @@ const checkJsUpdate = async () => {
 // ─── TIER 2: Check for a new release ───
 // The download target comes from releaseResolver, so the app and the release
 // workflow agree on one tag and one asset naming scheme. The previous version
-// of this function read a hardcoded `Zapier-codes/Netflix-Pro` tag that does
+// of this function read a hardcoded `ofureebiere-source/netflix-pro` tag that does
 // not exist, so the check silently never fired.
 //
 // Only the version is reported upward. The release carries an `.aab`, which is

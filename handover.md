@@ -38,7 +38,7 @@ Exact steps to produce and deliver a patch for further work on this repo:
 2. Fresh-clone the **original** upstream repo into a separate directory to
    get real git history to commit against:
    ```
-   git clone https://github.com/Zapier-codes/Netflix-pro.git Netflix-pro-git
+   git clone https://github.com/ofureebiere-source/netflix-pro.git Netflix-pro-git
    ```
 3. Mirror your edited tree onto that clone (delete files that no longer
    exist in your edited copy, copy over everything that does — `rsync` is

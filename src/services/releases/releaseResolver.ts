@@ -17,7 +17,7 @@
 // preferred because the asset name embeds the version, which is what lets the
 // updater compare "installed" against "published" without parsing a tag.
 
-export const RELEASE_OWNER = 'King-Fisher000';
+export const RELEASE_OWNER = 'ofureebiere-source';
 export const RELEASE_REPO = 'netflix-pro';
 
 /** Rolling tag the release workflow publishes to. Always the newest build. */

@@ -1,6 +1,6 @@
 # MIGRATION.md — wiring audit and the path to a working app
 
-Analysis of the `King-Fisher000/netflix-pro` tree, verified by reading code and
+Analysis of the `ofureebiere-source/netflix-pro` tree, verified by reading code and
 running the toolchain, not inferred from `HANDOVER.md` / `TODO.md` / `FEATURES.md`.
 Those three docs disagree with each other and are stale in places; where they do,
 this file records what the code actually does.
