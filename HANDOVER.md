@@ -15,7 +15,7 @@ marked ✅. Do not silently expand scope into later phases.
 
 ## 0. REPO BASICS
 
-- **Repo:** `https://github.com/Zapier-codes/Netflix-pro`
+- **Repo:** `https://github.com/ofureebiere-source/netflix-pro`
 - **Branch: `termux` — NOT `main`.** All work since patch 0012 lives on
   a branch called `termux`, which forked from `main` at commit
   `8635d39` ("fixed all component issues"). `main` has since moved on
@@ -48,7 +48,7 @@ marked ✅. Do not silently expand scope into later phases.
 ### Clone instructions (for every session)
 
 ```bash
-git clone https://github.com/Zapier-codes/Netflix-pro.git
+git clone https://github.com/ofureebiere-source/netflix-pro.git
 cd Netflix-pro
 git checkout termux         # NOT main — see "Branch" note in section 0 above
 git log --oneline -5        # sanity check you're on latest
