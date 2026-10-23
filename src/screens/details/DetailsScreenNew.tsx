@@ -525,17 +525,24 @@ const DetailsScreenNew: React.FC = () => {
   }, [isOffline, streamData, selectedSeason, extractStreamFromAPI, showToast, navigateToPlayer]);
 
   // ─── Watch Now Handler ───
-  const handleWatchNow = useCallback(() => {
+  // One tap must start the film. The stream is resolved in the background as
+  // soon as the details screen opens, so by the time a viewer has read the
+  // synopsis it is almost always ready. When it is not — a slow provider, or a
+  // tap within the first second — the tap waits for that same in-flight
+  // resolve instead of refusing with "Stream is loading, please wait...", which
+  // is what forced a second tap. A tap that resolves nothing says so once.
+  const handleWatchNow = useCallback(async () => {
     if (isOffline) { showToast("You're offline — connect to the internet to watch"); return; }
-    if (!streamData) { showToast('Stream is loading, please wait...'); return; }
-    if (!streamData.url) { showToast('No stream available'); return; }
     if (isTVShow) {
       // Industry standard: Watch Now starts from Season 1, Episode 1
       handlePlayEpisode(1, 1, seasonData?.episodes?.[0]?.name);
-    } else {
-      navigateToPlayer(streamData.url);
+      return;
     }
-  }, [isOffline, streamData, isTVShow, showToast, handlePlayEpisode, navigateToPlayer, seasonData]);
+    if (streamData?.url) { navigateToPlayer(streamData.url); return; }
+    const result = await extractStreamFromAPI();
+    if (result?.url) navigateToPlayer(result.url);
+    else showToast('No stream available');
+  }, [isOffline, streamData, isTVShow, showToast, handlePlayEpisode, navigateToPlayer, seasonData, extractStreamFromAPI]);
 
   const handleToggleWatchlist = useCallback(() => {
     if (!mediaId) return;

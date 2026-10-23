@@ -9,6 +9,8 @@ import {
   getDownloadSource,
   getSubtitles,
   checkBackendHealth,
+  clearPlaybackSourceCache,
+  invalidatePlaybackSources,
   NoSourceAvailableError,
 } from './LicensedPlaybackService';
 
@@ -77,6 +79,10 @@ describe('LicensedPlaybackService — Net-web contract', () => {
     (global as any).fetch = originalFetch;
   });
 
+  // The resolve cache is module-level, so a test that resolves tmdbId 550 would
+  // otherwise hand its result to the next one instead of exercising a request.
+  beforeEach(() => clearPlaybackSourceCache());
+
   it('requests /v1/stream with tmdbId and mediaType', async () => {
     const calls = mockFetchOnce(REAL_STREAM_BODY);
     await getPlaybackSource({ tmdbId: 550, mediaType: 'movie' });
@@ -126,6 +132,53 @@ describe('LicensedPlaybackService — Net-web contract', () => {
     const all = await getPlaybackSources({ tmdbId: 550, mediaType: 'movie' });
     expect(all).toHaveLength(2);
     expect(all.map((s) => s.quality)).toEqual(['720p | English', '480p']);
+  });
+
+  it('reuses a resolved source list so entering the player does not re-resolve', async () => {
+    const calls = mockFetchOnce(REAL_STREAM_BODY);
+    // The details screen resolves on mount; the player then asks for the same
+    // title. One request must serve both, or the player spends its first
+    // seconds re-running the whole provider fan-out.
+    await getPlaybackSources({ tmdbId: 550, mediaType: 'movie' });
+    const second = await getPlaybackSources({ tmdbId: 550, mediaType: 'movie' });
+    expect(calls).toHaveLength(1);
+    expect(second).toHaveLength(2);
+  });
+
+  it('joins an in-flight resolve instead of starting a second one', async () => {
+    let resolveFetch: ((value: unknown) => void) | null = null;
+    const calls: string[] = [];
+    (global as any).fetch = async (url: string) => {
+      calls.push(url);
+      const body = await new Promise((resolve) => { resolveFetch = resolve; });
+      return { ok: true, status: 200, json: async () => body } as unknown as Response;
+    };
+    const first = getPlaybackSources({ tmdbId: 550, mediaType: 'movie' });
+    const second = getPlaybackSources({ tmdbId: 550, mediaType: 'movie' });
+    // Both callers are waiting on the one request the first one started.
+    expect(calls).toHaveLength(1);
+    resolveFetch!(REAL_STREAM_BODY);
+    expect((await first)).toHaveLength(2);
+    expect((await second)).toHaveLength(2);
+  });
+
+  it('does not cache an empty resolve, so a title is not stuck unavailable', async () => {
+    const calls = mockFetchOnce({ status: 'ok', sources: [] });
+    const first = await getPlaybackSources({ tmdbId: 550, mediaType: 'movie' });
+    expect(first).toHaveLength(0);
+    // A provider that answered empty can answer non-empty moments later; the
+    // empty body must not be held for the whole TTL.
+    const second = await getPlaybackSources({ tmdbId: 550, mediaType: 'movie' });
+    expect(second).toHaveLength(0);
+    expect(calls).toHaveLength(2);
+  });
+
+  it('drops a cached resolve when it is invalidated', async () => {
+    const calls = mockFetchOnce(REAL_STREAM_BODY);
+    await getPlaybackSources({ tmdbId: 550, mediaType: 'movie' });
+    invalidatePlaybackSources({ tmdbId: 550, mediaType: 'movie' });
+    await getPlaybackSources({ tmdbId: 550, mediaType: 'movie' });
+    expect(calls).toHaveLength(2);
   });
 
   it('sends season and episode for tv only', async () => {

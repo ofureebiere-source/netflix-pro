@@ -72,6 +72,27 @@ and are now wired. See `TODO.md` for the original audit.
 `jest.setup.js` registers the AsyncStorage/SecureStore/expo-localization mocks;
 native modules with no JS fallback need an entry there before a suite can import them.
 
+## Stream resolution and the details → player handoff
+
+The details screen resolves the stream as soon as it opens (`extractStreamFromAPI`),
+and the player asks for the same title a moment later. Two rules keep that from
+costing a second resolve, and both were bugs before:
+
+- **`getPlaybackSources` caches a non-empty resolve and de-dupes in-flight ones.**
+  The backend fans out to every provider and answers only when the last one does,
+  so a second resolve is the most expensive thing the app can do. The cache
+  (`SOURCE_CACHE_TTL_MS`) makes the player's resolve a lookup; the in-flight map
+  makes a concurrent ask join the request already running. An **empty** result is
+  deliberately not cached — providers answer empty on one ask and non-empty
+  moments later, and holding the empty body is what makes a title look
+  unavailable until restart. `invalidatePlaybackSources` forces a re-resolve.
+- **Watch Now waits for that resolve rather than refusing.** It used to toast
+  "Stream is loading, please wait..." when `streamData` had not landed yet, so a
+  tap within the first second did nothing and the viewer tapped again. It now
+  awaits `extractStreamFromAPI()` — which rides the in-flight request — so one
+  tap starts the film. Keep the tap handler async; do not reintroduce an early
+  return on `!streamData`.
+
 ## Player features (MX-Player-style)
 
 Android-only. The equaliser needs a native module, so it does nothing in Expo Go

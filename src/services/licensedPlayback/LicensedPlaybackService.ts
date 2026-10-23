@@ -291,6 +291,41 @@ function flattenSource(
 }
 
 /**
+ * How long a resolved source list stays reusable.
+ *
+ * A resolve is the most expensive call in the app: the backend fans out to
+ * every provider and only answers when the last one does. The details screen
+ * resolves on mount and the player then asks for the same title a moment
+ * later, so without this the whole fan-out runs twice — which is why entering
+ * the player used to spend the first seconds re-resolving a stream the details
+ * screen had already found. Long enough to cover the details → player hop and
+ * a quick return, short enough that a provider's signed URL has not expired by
+ * the time it is reused.
+ */
+const SOURCE_CACHE_TTL_MS = 5 * 60 * 1000;
+
+interface SourceCacheEntry {
+  at: number;
+  sources: LicensedPlaybackSource[];
+}
+
+const sourceCache = new Map<string, SourceCacheEntry>();
+const inflightResolves = new Map<string, Promise<LicensedPlaybackSource[]>>();
+
+/** Drop a title's cached resolution, so a retry genuinely re-resolves. */
+export function invalidatePlaybackSources(req: LicensedPlaybackRequest): void {
+  const key = buildQuery(req);
+  sourceCache.delete(key);
+  inflightResolves.delete(key);
+}
+
+/** Drop every cached resolution. Used by tests, and by a global "retry". */
+export function clearPlaybackSourceCache(): void {
+  sourceCache.clear();
+  inflightResolves.clear();
+}
+
+/**
  * Resolve playable sources for a title.
  *
  * Returns the list in the backend's order, which is the server's own
@@ -298,17 +333,44 @@ function flattenSource(
  * answered). An empty list is not an error — it means no provider had the
  * title — but it is reported as NoSourceAvailableError by
  * getPlaybackSource() so callers get a clear "not available" state.
+ *
+ * A successful resolve is cached for SOURCE_CACHE_TTL_MS and a concurrent
+ * caller joins the in-flight request instead of starting a second one. Both
+ * matter for the details → player transition: the player's resolve is then a
+ * lookup, so playback starts on the source the details screen already paid
+ * for. An empty result is deliberately NOT cached — providers answer empty on
+ * one ask and non-empty moments later, and holding the empty body is what
+ * makes a title look unavailable until the app is restarted.
  */
 export async function getPlaybackSources(
   req: LicensedPlaybackRequest
 ): Promise<LicensedPlaybackSource[]> {
-  const data = await getJson<RawStreamResponse>('/v1/stream', buildQuery(req));
-  const out: LicensedPlaybackSource[] = [];
-  for (const entry of data?.sources || []) {
-    const flat = flattenSource(entry);
-    if (flat) out.push(flat);
+  const key = buildQuery(req);
+
+  const cached = sourceCache.get(key);
+  if (cached && Date.now() - cached.at < SOURCE_CACHE_TTL_MS) return cached.sources;
+
+  const pending = inflightResolves.get(key);
+  if (pending) return pending;
+
+  const request = (async () => {
+    const data = await getJson<RawStreamResponse>('/v1/stream', key);
+    const out: LicensedPlaybackSource[] = [];
+    for (const entry of data?.sources || []) {
+      const flat = flattenSource(entry);
+      if (flat) out.push(flat);
+    }
+    return out;
+  })();
+
+  inflightResolves.set(key, request);
+  try {
+    const out = await request;
+    if (out.length > 0) sourceCache.set(key, { at: Date.now(), sources: out });
+    return out;
+  } finally {
+    inflightResolves.delete(key);
   }
-  return out;
 }
 
 /**
