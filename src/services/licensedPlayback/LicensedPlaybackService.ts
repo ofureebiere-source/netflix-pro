@@ -1,6 +1,6 @@
 // src/services/licensedPlayback/LicensedPlaybackService.ts
 //
-// Client for the Net-web backend (King-Fisher000/Net-web), the project's own
+// Client for the Net-web backend (ofureebiere-source/Net-web), the project's own
 // HTTP service. It wraps the same `netweb.scraping` modules the terminal UI
 // uses, so the app and the TUI resolve streams through one code path.
 //

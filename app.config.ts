@@ -52,7 +52,7 @@ export default {
       "expo-localization"
     ],
     assetBundlePatterns: ["**/*"],
-    owner: "King-Fisher000",
+    owner: "ofureebiere-source",
     extra: {
       buildDate: new Date().toISOString()
     }
