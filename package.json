@@ -1,7 +1,7 @@
 {
   "name": "netflix-pro",
-  "version": "1.2.4",
-  "version-iteration": 13,
+  "version": "1.2.5",
+  "version-iteration": 14,
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start --scheme netflixpro",
